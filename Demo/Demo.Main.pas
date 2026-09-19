@@ -4,8 +4,10 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Data.DB, Datasnap.DBClient,
-  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters, LarGridPivot.Grid;
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs,
+  Data.DB, Datasnap.DBClient,
+  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
+  LarGridPivot.Grid;
 
 type
   TFrmLarGridPivotDemo = class(TForm)
@@ -14,11 +16,23 @@ type
     FSource: TDataSource;
     FPivot: TLarGridPivot;
     FTop: TPanel;
-    FFilter: TComboBox;
-    FLabel: TLabel;
+    FAreaPanel: TPanel;
+    FAvailable, FRows, FColumns, FValues, FFilters: TListBox;
+    FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
+    FBtnSave, FBtnLoad: TButton;
+    FLayout: string;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer);
     procedure ConfigurePivot;
-    procedure FilterChanged(Sender: TObject);
+    procedure RefreshAreaLists;
+    function SelectedFieldName: string;
+    procedure MoveSelected(AArea: TLarPivotArea);
+    procedure ToRows(Sender: TObject);
+    procedure ToColumns(Sender: TObject);
+    procedure ToValues(Sender: TObject);
+    procedure ToFilters(Sender: TObject);
+    procedure RemoveField(Sender: TObject);
+    procedure SaveLayout(Sender: TObject);
+    procedure LoadLayout(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -28,17 +42,30 @@ var FrmLarGridPivotDemo: TFrmLarGridPivotDemo;
 implementation
 
 constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
+  procedure MakeList(var L: TListBox; ALeft: Integer; const ATitle: string);
+  var Lab: TLabel;
+  begin
+    Lab:=TLabel.Create(Self); Lab.Parent:=FAreaPanel; Lab.Left:=ALeft; Lab.Top:=6;
+    Lab.Caption:=ATitle; Lab.Font.Style:=[fsBold];
+    L:=TListBox.Create(Self); L.Parent:=FAreaPanel; L.Left:=ALeft; L.Top:=25;
+    L.Width:=150; L.Height:=82;
+  end;
+  procedure MakeButton(var B:TButton; ALeft,ATop:Integer; const ACaption:string; AClick:TNotifyEvent);
+  begin
+    B:=TButton.Create(Self); B.Parent:=FTop; B.Left:=ALeft; B.Top:=ATop;
+    B.Width:=105; B.Height:=27; B.Caption:=ACaption; B.OnClick:=AClick;
+  end;
 begin
   inherited CreateNew(AOwner);
-  Caption := 'LarGridPivot v1 - Hito 4 Filtros';
-  Width := 1100; Height := 560; Position := poScreenCenter;
+  Caption:='LarGridPivot v1 - Hito 4 Areas y vistas';
+  Width:=1180; Height:=650; Position:=poScreenCenter;
 
-  FData := TClientDataSet.Create(Self);
-  FData.FieldDefs.Add('VENDEDOR', ftString, 40);
-  FData.FieldDefs.Add('MES', ftString, 20);
-  FData.FieldDefs.Add('SUCURSAL', ftString, 20);
-  FData.FieldDefs.Add('VENTA', ftCurrency);
-  FData.FieldDefs.Add('CANTIDAD', ftInteger);
+  FData:=TClientDataSet.Create(Self);
+  FData.FieldDefs.Add('VENDEDOR',ftString,40);
+  FData.FieldDefs.Add('MES',ftString,20);
+  FData.FieldDefs.Add('SUCURSAL',ftString,20);
+  FData.FieldDefs.Add('VENTA',ftCurrency);
+  FData.FieldDefs.Add('CANTIDAD',ftInteger);
   FData.CreateDataSet;
   AddSale('JUAN','ENERO','CENTRO',125420,10);
   AddSale('JUAN','FEBRERO','CENTRO',145210,12);
@@ -46,19 +73,33 @@ begin
   AddSale('PEDRO','FEBRERO','NORTE',120000,9);
   AddSale('JUAN','ENERO','NORTE',10000,2);
 
-  FSource := TDataSource.Create(Self); FSource.DataSet := FData;
+  FSource:=TDataSource.Create(Self); FSource.DataSet:=FData;
 
-  FTop := TPanel.Create(Self); FTop.Parent := Self; FTop.Align := alTop; FTop.Height := 48; FTop.BevelOuter := bvNone;
-  FLabel := TLabel.Create(Self); FLabel.Parent := FTop; FLabel.Left := 12; FLabel.Top := 16; FLabel.Caption := 'Filtro SUCURSAL:';
-  FFilter := TComboBox.Create(Self); FFilter.Parent := FTop; FFilter.Left := 120; FFilter.Top := 11; FFilter.Width := 180; FFilter.Style := csDropDownList;
-  FFilter.Items.Add('TODAS'); FFilter.Items.Add('CENTRO'); FFilter.Items.Add('NORTE'); FFilter.ItemIndex := 0; FFilter.OnChange := FilterChanged;
+  FTop:=TPanel.Create(Self); FTop.Parent:=Self; FTop.Align:=alTop; FTop.Height:=40;
+  FTop.BevelOuter:=bvNone;
+  MakeButton(FBtnToRows,8,6,'A Filas',ToRows);
+  MakeButton(FBtnToColumns,118,6,'A Columnas',ToColumns);
+  MakeButton(FBtnToValues,228,6,'A Datos',ToValues);
+  MakeButton(FBtnToFilters,338,6,'A Filtros',ToFilters);
+  MakeButton(FBtnRemove,448,6,'Quitar',RemoveField);
+  MakeButton(FBtnSave,690,6,'Guardar vista',SaveLayout);
+  MakeButton(FBtnLoad,800,6,'Restaurar vista',LoadLayout);
 
-  FPivot := TLarGridPivot.Create(Self); FPivot.Parent := Self; FPivot.Align := alClient;
-  FPivot.DataSource := FSource; FPivot.Font.Name := 'Segoe UI'; FPivot.Font.Size := 10;
+  FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
+  FAreaPanel.Height:=115; FAreaPanel.BevelOuter:=bvNone;
+  MakeList(FAvailable,8,'DISPONIBLES');
+  MakeList(FRows,168,'FILAS');
+  MakeList(FColumns,328,'COLUMNAS');
+  MakeList(FValues,488,'DATOS');
+  MakeList(FFilters,648,'FILTROS');
+
+  FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
+  FPivot.DataSource:=FSource; FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=10;
   ConfigurePivot;
+  RefreshAreaLists;
 end;
 
-procedure TFrmLarGridPivotDemo.AddSale(const AVendedor, AMes, ASucursal:string; AVenta:Currency; ACantidad:Integer);
+procedure TFrmLarGridPivotDemo.AddSale(const AVendedor,AMes,ASucursal:string; AVenta:Currency; ACantidad:Integer);
 begin
   FData.Append;
   FData.FieldByName('VENDEDOR').AsString:=AVendedor;
@@ -77,18 +118,67 @@ begin
     F:=FPivot.FieldByName('VENDEDOR'); F.Area:=paRow; F.AreaIndex:=0;
     F:=FPivot.FieldByName('MES'); F.Area:=paColumn; F.AreaIndex:=0;
     F:=FPivot.FieldByName('SUCURSAL'); F.Area:=paFilter; F.AreaIndex:=0;
-    F:=FPivot.FieldByName('VENTA'); F.Caption:='Venta'; F.Area:=paData; F.AreaIndex:=0; F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
-    F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paData; F.AreaIndex:=1; F.SummaryType:=psSum; F.DisplayFormat:='#,##0'; F.Alignment:=pvaRight;
+    F:=FPivot.FieldByName('VENTA'); F.Caption:='Venta'; F.Area:=paData; F.AreaIndex:=0;
+    F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
+    F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paData; F.AreaIndex:=1;
+    F.SummaryType:=psSum; F.DisplayFormat:='#,##0'; F.Alignment:=pvaRight;
   finally FPivot.EndUpdate; end;
 end;
 
-procedure TFrmLarGridPivotDemo.FilterChanged(Sender:TObject);
-var F:TLarPivotFilter;
+procedure TFrmLarGridPivotDemo.RefreshAreaLists;
+var I:Integer; F:TLarPivotField; L:TListBox;
 begin
-  F := FPivot.Engine.Filters.Ensure('SUCURSAL');
-  F.Clear;
-  if FFilter.ItemIndex > 0 then F.AddValue(FFilter.Text);
-  FPivot.Rebuild;
+  FAvailable.Clear; FRows.Clear; FColumns.Clear; FValues.Clear; FFilters.Clear;
+  for I:=0 to FPivot.Fields.Count-1 do begin
+    F:=FPivot.Fields[I];
+    case F.Area of
+      paRow: L:=FRows;
+      paColumn: L:=FColumns;
+      paData: L:=FValues;
+      paFilter: L:=FFilters;
+    else L:=FAvailable;
+    end;
+    L.Items.AddObject(F.Caption,TObject(F));
+  end;
+end;
+
+function TFrmLarGridPivotDemo.SelectedFieldName:string;
+var L:TListBox; F:TLarPivotField;
+begin
+  Result:='';
+  for L in [FAvailable,FRows,FColumns,FValues,FFilters] do
+    if L.ItemIndex>=0 then begin
+      F:=TLarPivotField(L.Items.Objects[L.ItemIndex]);
+      Exit(F.FieldName);
+    end;
+end;
+
+procedure TFrmLarGridPivotDemo.MoveSelected(AArea:TLarPivotArea);
+var N:string;
+begin
+  N:=SelectedFieldName;
+  if N='' then begin ShowMessage('Seleccione primero un campo.'); Exit; end;
+  FPivot.MoveField(N,AArea);
+  RefreshAreaLists;
+end;
+
+procedure TFrmLarGridPivotDemo.ToRows(Sender:TObject); begin MoveSelected(paRow); end;
+procedure TFrmLarGridPivotDemo.ToColumns(Sender:TObject); begin MoveSelected(paColumn); end;
+procedure TFrmLarGridPivotDemo.ToValues(Sender:TObject); begin MoveSelected(paData); end;
+procedure TFrmLarGridPivotDemo.ToFilters(Sender:TObject); begin MoveSelected(paFilter); end;
+procedure TFrmLarGridPivotDemo.RemoveField(Sender:TObject); begin MoveSelected(paNone); end;
+
+procedure TFrmLarGridPivotDemo.SaveLayout(Sender:TObject);
+begin
+  FLayout:=FPivot.SaveLayoutToString;
+  ShowMessage('Vista guardada en memoria.');
+end;
+
+procedure TFrmLarGridPivotDemo.LoadLayout(Sender:TObject);
+begin
+  if FLayout='' then begin ShowMessage('Primero guarde una vista.'); Exit; end;
+  FPivot.LoadLayoutFromString(FLayout);
+  RefreshAreaLists;
 end;
 
 end.
