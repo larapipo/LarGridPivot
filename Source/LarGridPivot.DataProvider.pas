@@ -22,6 +22,7 @@ type
   private
     FDataSet: TDataSet;
     FBookmark: TBookmark;
+    FHasBookmark: Boolean;
     FControlsDisabled: Boolean;
     procedure RestoreState;
   public
@@ -51,7 +52,10 @@ begin
     FDataSet.DisableControls;
     FControlsDisabled := True;
     if not FDataSet.IsEmpty then
+    begin
       FBookmark := FDataSet.Bookmark;
+      FHasBookmark := True;
+    end;
   end;
 end;
 
@@ -64,8 +68,9 @@ end;
 procedure TLarDataSetPivotProvider.RestoreState;
 begin
   if FDataSet = nil then Exit;
-  if FDataSet.Active and (Length(FBookmark) > 0) and FDataSet.BookmarkValid(FBookmark) then
+  if FDataSet.Active and FHasBookmark and FDataSet.BookmarkValid(FBookmark) then
     FDataSet.Bookmark := FBookmark;
+  FHasBookmark := False;
   FBookmark := nil;
   if FControlsDisabled then
   begin
