@@ -4,22 +4,25 @@ interface
 
 uses
   System.SysUtils, System.Variants, System.Generics.Collections,
-  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.DataProvider,
-  LarGridPivot.Model;
+  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
+  LarGridPivot.DataProvider, LarGridPivot.Model;
 
 type
   TLarPivotEngine = class
   private
     FFields: TLarPivotFields;
+    FFilters: TLarPivotFilters;
     FModel: TLarPivotModel;
     function FieldsForArea(AArea: TLarPivotArea): TList<TLarPivotField>;
     function BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
+    function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
   public
     constructor Create(AFields: TLarPivotFields);
     destructor Destroy; override;
     procedure Build(const AProvider: ILarPivotDataProvider);
     property Model: TLarPivotModel read FModel;
+    property Filters: TLarPivotFilters read FFilters;
   end;
 
 const
@@ -32,12 +35,14 @@ begin
   inherited Create;
   if AFields = nil then raise EArgumentNilException.Create('AFields');
   FFields := AFields;
+  FFilters := TLarPivotFilters.Create;
   FModel := TLarPivotModel.Create;
 end;
 
 destructor TLarPivotEngine.Destroy;
 begin
   FModel.Free;
+  FFilters.Free;
   inherited;
 end;
 
@@ -53,9 +58,7 @@ begin
   for I := 0 to Result.Count - 2 do
     for J := I + 1 to Result.Count - 1 do
       if Result[I].AreaIndex > Result[J].AreaIndex then
-      begin
-        T := Result[I]; Result[I] := Result[J]; Result[J] := T;
-      end;
+      begin T := Result[I]; Result[I] := Result[J]; Result[J] := T; end;
 end;
 
 function TLarPivotEngine.BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
@@ -70,13 +73,24 @@ begin
       if Result <> '' then Result := Result + ' | ';
       if VarIsNull(V) then Result := Result + '(null)' else Result := Result + VarToStr(V);
     end;
-  finally
-    L.Free;
-  end;
+  finally L.Free; end;
 end;
 
-procedure TLarPivotEngine.AddValue(const ARowKey, AColKey: string;
-  AField: TLarPivotField; const AValue: Variant);
+function TLarPivotEngine.RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
+var L: TList<TLarPivotField>; F: TLarPivotField; Filter: TLarPivotFilter;
+begin
+  Result := True;
+  L := FieldsForArea(paFilter);
+  try
+    for F in L do
+    begin
+      Filter := FFilters.Find(F.FieldName);
+      if (Filter <> nil) and not Filter.Accepts(AProvider.GetValue(F.FieldName)) then Exit(False);
+    end;
+  finally L.Free; end;
+end;
+
+procedure TLarPivotEngine.AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
 var Cell: TLarPivotResultCell;
 begin
   Cell := FModel.EnsureCell(ARowKey, AColKey, AField.FieldName);
@@ -84,11 +98,7 @@ begin
 end;
 
 procedure TLarPivotEngine.Build(const AProvider: ILarPivotDataProvider);
-var
-  RowKey, ColKey: string;
-  DataFields: TList<TLarPivotField>;
-  F: TLarPivotField;
-  V: Variant;
+var RowKey, ColKey: string; DataFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
 begin
   if AProvider = nil then raise EArgumentNilException.Create('AProvider');
   FModel.Clear;
@@ -98,23 +108,24 @@ begin
     if not AProvider.First then Exit;
     while not AProvider.EOF do
     begin
-      RowKey := BuildKey(AProvider, paRow);
-      ColKey := BuildKey(AProvider, paColumn);
-      for F in DataFields do
+      if RecordAccepted(AProvider) then
       begin
-        V := AProvider.GetValue(F.FieldName);
-        AddValue(RowKey, ColKey, F, V);
-        AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
-        AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
-        AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
+        RowKey := BuildKey(AProvider, paRow);
+        ColKey := BuildKey(AProvider, paColumn);
+        for F in DataFields do
+        begin
+          V := AProvider.GetValue(F.FieldName);
+          AddValue(RowKey, ColKey, F, V);
+          AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
+          AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
+          AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
+        end;
       end;
       AProvider.Next;
     end;
     FModel.RowKeys.Remove(LAR_PIVOT_TOTAL_KEY);
     FModel.ColumnKeys.Remove(LAR_PIVOT_TOTAL_KEY);
-  finally
-    DataFields.Free;
-  end;
+  finally DataFields.Free; end;
 end;
 
 end.
