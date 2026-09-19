@@ -5,8 +5,9 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Data.DB,
-  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.DataProvider,
-  LarGridPivot.Model, LarGridPivot.Engine;
+  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
+  LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
+  LarGridPivot.Engine;
 
 type
   TLarGridPivot = class(TCustomControl)
@@ -20,6 +21,7 @@ type
     function DataFields: TList<TLarPivotField>;
     function DefaultAlignment(AField: TLarPivotField): TAlignment;
     function FormatCellValue(const V: Variant; AField: TLarPivotField): string;
+    procedure NormalizeAreaIndexes(AArea: TLarPivotArea);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Paint; override; procedure Resize; override;
@@ -27,6 +29,14 @@ type
     constructor Create(AOwner: TComponent); override; destructor Destroy; override;
     procedure BeginUpdate; procedure EndUpdate; procedure RefreshFields; procedure Rebuild;
     function FieldByName(const AFieldName: string): TLarPivotField;
+    procedure MoveField(const AFieldName: string; AArea: TLarPivotArea; AIndex: Integer = -1);
+    procedure RemoveField(const AFieldName: string);
+    function SaveLayoutToString: string;
+    procedure LoadLayoutFromString(const ALayout: string);
+    procedure SaveLayoutToFile(const AFileName: string);
+    procedure LoadLayoutFromFile(const AFileName: string);
+    procedure SaveLayoutToStream(AStream: TStream);
+    procedure LoadLayoutFromStream(AStream: TStream);
     property Engine: TLarPivotEngine read FEngine;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
@@ -75,6 +85,57 @@ var P:ILarPivotDataProvider;
 begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; Invalidate; Exit; end;
  if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; Invalidate; finally FRebuilding:=False; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
+
+procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
+var L:TList<TLarPivotField>; I,J:Integer; F,T:TLarPivotField;
+begin
+ L:=TList<TLarPivotField>.Create; try
+  for I:=0 to FFields.Count-1 do if FFields[I].Area=AArea then L.Add(FFields[I]);
+  for I:=0 to L.Count-2 do for J:=I+1 to L.Count-1 do if L[I].AreaIndex>L[J].AreaIndex then begin T:=L[I];L[I]:=L[J];L[J]:=T;end;
+  for I:=0 to L.Count-1 do L[I].AreaIndex:=I;
+ finally L.Free; end;
+end;
+
+procedure TLarGridPivot.MoveField(const AFieldName:string; AArea:TLarPivotArea; AIndex:Integer);
+var F:TLarPivotField; I,MaxIndex:Integer;
+begin
+ F:=FieldByName(AFieldName); BeginUpdate;
+ try
+  F.Area:=AArea;
+  if AArea=paNone then F.AreaIndex:=-1 else begin
+   MaxIndex:=-1; for I:=0 to FFields.Count-1 do if (FFields[I]<>F) and (FFields[I].Area=AArea) and (FFields[I].AreaIndex>MaxIndex) then MaxIndex:=FFields[I].AreaIndex;
+   if AIndex<0 then AIndex:=MaxIndex+1;
+   for I:=0 to FFields.Count-1 do if (FFields[I]<>F) and (FFields[I].Area=AArea) and (FFields[I].AreaIndex>=AIndex) then FFields[I].AreaIndex:=FFields[I].AreaIndex+1;
+   F.AreaIndex:=AIndex;
+  end;
+  NormalizeAreaIndexes(AArea);
+ finally EndUpdate; end;
+end;
+
+procedure TLarGridPivot.RemoveField(const AFieldName:string);
+begin MoveField(AFieldName,paNone,-1); end;
+
+function TLarGridPivot.SaveLayoutToString:string;
+begin Result:=TLarPivotLayout.SaveToString(FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal); end;
+
+procedure TLarGridPivot.LoadLayoutFromString(const ALayout:string);
+begin
+ BeginUpdate; try TLarPivotLayout.LoadFromString(ALayout,FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal); finally EndUpdate; end;
+end;
+
+procedure TLarGridPivot.SaveLayoutToStream(AStream:TStream);
+var S:TStringStream;
+begin if AStream=nil then raise EArgumentNilException.Create('AStream'); S:=TStringStream.Create(SaveLayoutToString,TEncoding.UTF8); try S.Position:=0; AStream.CopyFrom(S,0); finally S.Free; end; end;
+procedure TLarGridPivot.LoadLayoutFromStream(AStream:TStream);
+var S:TStringStream;
+begin if AStream=nil then raise EArgumentNilException.Create('AStream'); S:=TStringStream.Create('',TEncoding.UTF8); try AStream.Position:=0; S.CopyFrom(AStream,0); LoadLayoutFromString(S.DataString); finally S.Free; end; end;
+procedure TLarGridPivot.SaveLayoutToFile(const AFileName:string);
+var FS:TFileStream;
+begin FS:=TFileStream.Create(AFileName,fmCreate); try SaveLayoutToStream(FS); finally FS.Free; end; end;
+procedure TLarGridPivot.LoadLayoutFromFile(const AFileName:string);
+var FS:TFileStream;
+begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
+
 function TLarGridPivot.DataFields:TList<TLarPivotField>;
 var I,J:Integer; T:TLarPivotField;
 begin Result:=TList<TLarPivotField>.Create; for I:=0 to FFields.Count-1 do if FFields[I].Visible and (FFields[I].Area=paData) then Result.Add(FFields[I]);
