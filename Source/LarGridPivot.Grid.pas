@@ -16,6 +16,9 @@ type
     FEngine: TLarPivotEngine; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
+    FFieldAreaHeight: Integer;
+    procedure DrawFieldAreas;
+    function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
     procedure DataChanged(Sender: TObject); procedure BuildFieldsFromDataSet;
     function DataFields: TList<TLarPivotField>;
@@ -63,7 +66,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
- FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFields:=TLarPivotFields.Create(Self);
+ FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
@@ -136,6 +139,46 @@ procedure TLarGridPivot.LoadLayoutFromFile(const AFileName:string);
 var FS:TFileStream;
 begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
 
+function TLarGridPivot.AreaCaption(AArea:TLarPivotArea):string;
+begin
+ case AArea of
+  paNone: Result:='CAMPOS DISPONIBLES';
+  paFilter: Result:='FILTROS';
+  paColumn: Result:='COLUMNAS';
+  paData: Result:='DATOS';
+  paRow: Result:='FILAS';
+ else Result:='';
+ end;
+end;
+
+procedure TLarGridPivot.DrawFieldAreas;
+const Areas:array[0..4] of TLarPivotArea=(paNone,paFilter,paColumn,paData,paRow);
+var I,J,X,Y,W,H,ChipW:Integer; A:TLarPivotArea; R:TRect; F:TLarPivotField; S:string;
+begin
+ H:=FFieldAreaHeight div 5; Y:=0;
+ Canvas.Font.Assign(Font);
+ for I:=0 to High(Areas) do begin
+  A:=Areas[I]; R:=Rect(0,Y,ClientWidth,Y+H);
+  Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(R);
+  Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(R);
+  Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
+  Canvas.TextOut(8,Y+6,AreaCaption(A));
+  X:=125; Canvas.Font.Style:=[];
+  for J:=0 to FFields.Count-1 do begin
+   F:=FFields[J]; if (F.Area<>A) or not F.Visible then Continue;
+   S:=F.Caption; if S='' then S:=F.FieldName;
+   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+   R:=Rect(X,Y+3,X+ChipW,Y+H-3);
+   Canvas.Brush.Color:=clWhite; Canvas.Pen.Color:=$00B8B8B8;
+   Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
+   Canvas.Font.Color:=clWindowText;
+   Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
+   X:=R.Right+6;
+  end;
+  Inc(Y,H);
+ end;
+end;
+
 function TLarGridPivot.DataFields:TList<TLarPivotField>;
 var I,J:Integer; T:TLarPivotField;
 begin Result:=TList<TLarPivotField>.Create; for I:=0 to FFields.Count-1 do if FFields[I].Visible and (FFields[I].Area=paData) then Result.Add(FFields[I]);
@@ -149,15 +192,15 @@ var R:TRect; Row,Col,D,BaseCols,VisibleCols,CellW,X,Y:Integer; RowKey,ColKey,S:s
  var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color; Canvas.FillRect(RR); Canvas.Pen.Color:=$00E0E0E0; Canvas.Rectangle(RR); InflateRect(RR,-6,-2); Canvas.Font.Assign(Font); if Bold then Canvas.Font.Style:=Canvas.Font.Style+[fsBold]; Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS; case Al of taRightJustify:Flags:=Flags or DT_RIGHT;taCenter:Flags:=Flags or DT_CENTER;else Flags:=Flags or DT_LEFT;end; DrawText(Canvas.Handle,PChar(Txt),Length(Txt),RR,Flags); end;
  function TextFor(const AR,AC:string;F:TLarPivotField):string; begin Cell:=FEngine.Model.FindCell(AR,AC,F.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(F.SummaryType) else V:=Null; Result:=FormatCellValue(V,F); end;
  function HeaderFor(const C:string;F:TLarPivotField):string; begin if DFs.Count=1 then Result:=C else Result:=C+' - '+F.Caption; end;
-begin Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DFs:=DataFields; try if (DFs.Count=0) or (FEngine.Model.ColumnKeys.Count=0) then begin Canvas.Font.Assign(Font);Canvas.Font.Color:=clGrayText;R:=ClientRect;InflateRect(R,-12,-12);DrawText(Canvas.Handle,'Configure campos Row, Column y Data y ejecute Rebuild.',-1,R,DT_LEFT or DT_TOP or DT_WORDBREAK);Exit;end;
+begin Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DrawFieldAreas; DFs:=DataFields; try if (DFs.Count=0) or (FEngine.Model.ColumnKeys.Count=0) then begin Canvas.Font.Assign(Font);Canvas.Font.Color:=clGrayText;R:=Rect(0,FFieldAreaHeight,ClientWidth,ClientHeight);InflateRect(R,-12,-12);DrawText(Canvas.Handle,'Configure campos de FILAS, COLUMNAS y DATOS.',-1,R,DT_LEFT or DT_TOP or DT_WORDBREAK);Exit;end;
  BaseCols:=FEngine.Model.ColumnKeys.Count*DFs.Count; VisibleCols:=BaseCols; if FShowRowTotals then Inc(VisibleCols,DFs.Count); CellW:=110; if VisibleCols>0 then CellW:=(ClientWidth-FRowHeaderWidth) div VisibleCols; if CellW<70 then CellW:=70;
- DrawCell(Rect(0,0,FRowHeaderWidth,FHeaderHeight),'',taLeftJustify,True); X:=FRowHeaderWidth;
- for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col]; for D:=0 to DFs.Count-1 do begin DF:=DFs[D];DrawCell(Rect(X,0,X+CellW,FHeaderHeight),HeaderFor(ColKey,DF),taCenter,True);Inc(X,CellW);end;end;
- if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; if DFs.Count=1 then S:='TOTAL' else S:='TOTAL - '+DF.Caption; DrawCell(Rect(X,0,X+CellW,FHeaderHeight),S,taCenter,True,True);Inc(X,CellW);end;
- for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin RowKey:=FEngine.Model.RowKeys[Row];Y:=FHeaderHeight+Row*FRowHeight;DrawCell(Rect(0,Y,FRowHeaderWidth,Y+FRowHeight),RowKey,taLeftJustify);X:=FRowHeaderWidth;
+ Y:=FFieldAreaHeight; DrawCell(Rect(0,Y,FRowHeaderWidth,Y+FHeaderHeight),'',taLeftJustify,True); X:=FRowHeaderWidth;
+ for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col]; for D:=0 to DFs.Count-1 do begin DF:=DFs[D];DrawCell(Rect(X,Y,X+CellW,Y+FHeaderHeight),HeaderFor(ColKey,DF),taCenter,True);Inc(X,CellW);end;end;
+ if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; if DFs.Count=1 then S:='TOTAL' else S:='TOTAL - '+DF.Caption; DrawCell(Rect(X,Y,X+CellW,Y+FHeaderHeight),S,taCenter,True,True);Inc(X,CellW);end;
+ for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin RowKey:=FEngine.Model.RowKeys[Row];Y:=FFieldAreaHeight+FHeaderHeight+Row*FRowHeight;DrawCell(Rect(0,Y,FRowHeaderWidth,Y+FRowHeight),RowKey,taLeftJustify);X:=FRowHeaderWidth;
   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col];for D:=0 to DFs.Count-1 do begin DF:=DFs[D];S:=TextFor(RowKey,ColKey,DF);DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF));Inc(X,CellW);end;end;
   if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D];S:=TextFor(RowKey,LAR_PIVOT_TOTAL_KEY,DF);DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True);Inc(X,CellW);end; end;
- if FShowColumnTotals then begin Row:=FEngine.Model.RowKeys.Count;Y:=FHeaderHeight+Row*FRowHeight;DrawCell(Rect(0,Y,FRowHeaderWidth,Y+FRowHeight),'TOTAL',taLeftJustify,True,True);X:=FRowHeaderWidth;
+ if FShowColumnTotals then begin Row:=FEngine.Model.RowKeys.Count;Y:=FFieldAreaHeight+FHeaderHeight+Row*FRowHeight;DrawCell(Rect(0,Y,FRowHeaderWidth,Y+FRowHeight),'TOTAL',taLeftJustify,True,True);X:=FRowHeaderWidth;
   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col];for D:=0 to DFs.Count-1 do begin DF:=DFs[D];S:=TextFor(LAR_PIVOT_TOTAL_KEY,ColKey,DF);DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True);Inc(X,CellW);end;end;
   if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; if FShowGrandTotal then S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF) else S:='';DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True);Inc(X,CellW);end; end;
  finally DFs.Free; end; end;
