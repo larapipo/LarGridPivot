@@ -19,6 +19,7 @@ type
     FRowHeight: Integer;
     FRowHeaderWidth: Integer;
     FUpdating: Integer;
+    FRebuilding: Boolean;
     procedure SetDataSource(const Value: TDataSource);
     procedure SetFields(const Value: TLarPivotFields);
     procedure DataChanged(Sender: TObject);
@@ -96,6 +97,7 @@ begin
   FHeaderHeight := 32;
   FRowHeight := 28;
   FRowHeaderWidth := 180;
+  FRebuilding := False;
   FFields := TLarPivotFields.Create(Self);
   FEngine := TLarPivotEngine.Create(FFields);
   FDataLink := TLarPivotDataLink.Create(Self);
@@ -145,7 +147,8 @@ end;
 
 procedure TLarGridPivot.DataChanged(Sender: TObject);
 begin
-  if FUpdating = 0 then Rebuild;
+  if (FUpdating = 0) and not FRebuilding then
+    Rebuild;
 end;
 
 procedure TLarGridPivot.BuildFieldsFromDataSet;
@@ -185,26 +188,41 @@ end;
 
 procedure TLarGridPivot.RefreshFields;
 begin
-  BuildFieldsFromDataSet;
-  Invalidate;
+  if FRebuilding then Exit;
+  FRebuilding := True;
+  try
+    BuildFieldsFromDataSet;
+    Invalidate;
+  finally
+    FRebuilding := False;
+  end;
 end;
 
 procedure TLarGridPivot.Rebuild;
-var Provider: ILarPivotDataProvider;
+var
+  Provider: ILarPivotDataProvider;
 begin
-  if FUpdating > 0 then Exit;
-  if (FDataSource = nil) or (FDataSource.DataSet = nil) or
-     not FDataSource.DataSet.Active then
-  begin
-    FEngine.Model.Clear;
+  if (FUpdating > 0) or FRebuilding then Exit;
+  FRebuilding := True;
+  try
+    if (FDataSource = nil) or (FDataSource.DataSet = nil) or
+       not FDataSource.DataSet.Active then
+    begin
+      FEngine.Model.Clear;
+      Invalidate;
+      Exit;
+    end;
+    if FFields.Count = 0 then BuildFieldsFromDataSet;
+    Provider := TLarDataSetPivotProvider.Create(FDataSource.DataSet);
+    try
+      FEngine.Build(Provider);
+    finally
+      Provider := nil;
+    end;
     Invalidate;
-    Exit;
+  finally
+    FRebuilding := False;
   end;
-  if FFields.Count = 0 then BuildFieldsFromDataSet;
-  Provider := TLarDataSetPivotProvider.Create(FDataSource.DataSet);
-  FEngine.Build(Provider);
-  Provider := nil;
-  Invalidate;
 end;
 
 function TLarGridPivot.FieldByName(const AFieldName: string): TLarPivotField;
