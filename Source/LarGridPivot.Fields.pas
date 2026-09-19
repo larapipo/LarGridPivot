@@ -6,6 +6,8 @@ uses
   System.Classes, System.SysUtils, LarGridPivot.Types;
 
 type
+  TLarPivotFields = class;
+
   TLarPivotField = class(TCollectionItem)
   private
     FFieldName: string;
@@ -43,10 +45,13 @@ type
   TLarPivotFields = class(TOwnedCollection)
   private
     function GetItem(Index: Integer): TLarPivotField;
+  protected
+    procedure Update(Item: TCollectionItem); override;
   public
     constructor Create(AOwner: TPersistent);
     function Add: TLarPivotField;
     function FindField(const AFieldName: string): TLarPivotField;
+    procedure NotifyChanged;
     property Items[Index: Integer]: TLarPivotField read GetItem; default;
   end;
 
@@ -67,8 +72,8 @@ end;
 
 procedure TLarPivotField.Changed;
 begin
-  if Collection <> nil then
-    Collection.Changed(False);
+  if Collection is TLarPivotFields then
+    TLarPivotFields(Collection).NotifyChanged;
 end;
 
 function TLarPivotField.GetDisplayName: string;
@@ -83,19 +88,29 @@ end;
 
 procedure TLarPivotField.SetArea(const Value: TLarPivotArea);
 begin
-  if FArea <> Value then begin FArea := Value; Changed; end;
+  if FArea <> Value then
+  begin
+    FArea := Value;
+    Changed;
+  end;
 end;
 
 procedure TLarPivotField.SetAreaIndex(const Value: Integer);
 begin
-  if FAreaIndex <> Value then begin FAreaIndex := Value; Changed; end;
+  if FAreaIndex <> Value then
+  begin
+    FAreaIndex := Value;
+    Changed;
+  end;
 end;
 
 procedure TLarPivotField.SetFieldName(const Value: string);
 begin
-  if FFieldName <> Value then begin
+  if FFieldName <> Value then
+  begin
     FFieldName := Value;
-    if FCaption = '' then FCaption := Value;
+    if FCaption = '' then
+      FCaption := Value;
     Changed;
   end;
 end;
@@ -111,16 +126,28 @@ begin
 end;
 
 function TLarPivotFields.FindField(const AFieldName: string): TLarPivotField;
-var I: Integer;
+var
+  I: Integer;
 begin
   Result := nil;
   for I := 0 to Count - 1 do
-    if SameText(Items[I].FieldName, AFieldName) then Exit(Items[I]);
+    if SameText(Items[I].FieldName, AFieldName) then
+      Exit(Items[I]);
 end;
 
 function TLarPivotFields.GetItem(Index: Integer): TLarPivotField;
 begin
   Result := TLarPivotField(inherited Items[Index]);
+end;
+
+procedure TLarPivotFields.NotifyChanged;
+begin
+  Changed(False);
+end;
+
+procedure TLarPivotFields.Update(Item: TCollectionItem);
+begin
+  inherited;
 end;
 
 end.
