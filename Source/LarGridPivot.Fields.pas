@@ -142,7 +142,7 @@ end;
 
 procedure TLarPivotFields.NotifyChanged;
 begin
-  Changed(False);
+  Changed;
 end;
 
 procedure TLarPivotFields.Update(Item: TCollectionItem);
