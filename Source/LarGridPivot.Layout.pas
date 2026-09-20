@@ -9,7 +9,7 @@ uses
 type
   TLarPivotLayout = class
   public const
-    CurrentVersion = 2;
+    CurrentVersion = 3;
   public
     class function SaveToString(AFields: TLarPivotFields;
       AFilters: TLarPivotFilters; AShowRowTotals, AShowColumnTotals,
