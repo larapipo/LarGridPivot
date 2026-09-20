@@ -1,4 +1,4 @@
-unit LarGridPivot.GestionDemo;
+unit Demo.Gestion;
 
 interface
 
