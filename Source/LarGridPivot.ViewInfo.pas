@@ -78,7 +78,7 @@ begin
 end;
 
 procedure TLarPivotViewInfo.AddHeaderNode(ANode:TLarPivotHeaderNode);
-var I:Integer; C:TLarPivotHeaderNode; Item:TLarPivotViewItem;
+var C:TLarPivotHeaderNode; Item:TLarPivotViewItem;
 begin
  Item:=TLarPivotViewItem.Create;
  Item.Kind:=pvekColumnValue;
