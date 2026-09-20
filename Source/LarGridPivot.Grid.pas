@@ -156,27 +156,8 @@ var FS:TFileStream;
 begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
 
 function TLarGridPivot.ResizeFieldAtPoint(AX,AY:Integer):TLarPivotField;
-var RFs,DFs,CFs:TList<TLarPivotField>; I,D,Col,X,Y0,HeaderLevels:Integer;
 begin
- Result:=nil; Y0:=FFieldAreaHeight;
- DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
- try
-  HeaderLevels:=CFs.Count; if DFs.Count>1 then Inc(HeaderLevels);
-  if HeaderLevels=0 then HeaderLevels:=1;
-  if (AY<Y0) or (AY>Y0+HeaderLevels*FHeaderHeight) then Exit;
-  X:=0;
-  for I:=0 to RFs.Count-1 do begin
-   Inc(X,RFs[I].Width); if Abs(AX-X)<=4 then Exit(RFs[I]);
-  end;
-  for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do
-   for D:=0 to DFs.Count-1 do begin
-    Inc(X,DFs[D].Width); if Abs(AX-X)<=4 then Exit(DFs[D]);
-   end;
-  if FShowRowTotals then
-   for D:=0 to DFs.Count-1 do begin
-    Inc(X,DFs[D].Width); if Abs(AX-X)<=4 then Exit(DFs[D]);
-   end;
- finally CFs.Free; RFs.Free; DFs.Free; end;
+ Result:=FViewInfo.FieldAtResizeEdge(AX,AY,4);
 end;
 
 function TLarGridPivot.AreaCaption(AArea:TLarPivotArea):string;
