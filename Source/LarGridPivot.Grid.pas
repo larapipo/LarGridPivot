@@ -34,6 +34,7 @@ type
     FSavedViews:TStringList;
     FHierarchyMenu:TPopupMenu;
     FHierarchyHit:TLarPivotHitTest;
+    FHierarchyMousePos:TPoint;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -917,15 +918,69 @@ begin
  if FileExists(AFileName) then FSavedViews.LoadFromFile(AFileName);
 end;
 
+procedure TLarGridPivot.HierarchyExpandClick(Sender:TObject);
+begin
+ if (FHierarchyHit.RowKey<>'') and (FCollapsedGroups.IndexOf(GroupID(FHierarchyHit.RowKey,FHierarchyHit.Level))>=0) then
+  ToggleGroup(FHierarchyHit.RowKey,FHierarchyHit.Level);
+end;
+
+procedure TLarGridPivot.HierarchyCollapseClick(Sender:TObject);
+begin
+ if (FHierarchyHit.RowKey<>'') and (FCollapsedGroups.IndexOf(GroupID(FHierarchyHit.RowKey,FHierarchyHit.Level))<0) then
+  ToggleGroup(FHierarchyHit.RowKey,FHierarchyHit.Level);
+end;
+
+procedure TLarGridPivot.HierarchyExpandAllClick(Sender:TObject);
+begin
+ FCollapsedGroups.Clear; Invalidate;
+end;
+
+procedure TLarGridPivot.HierarchyCollapseAllClick(Sender:TObject);
+var RFs:TList<TLarPivotField>; Row,Lvl:Integer; ID:string;
+begin
+ RFs:=AxisFields(paRow);
+ try
+  FCollapsedGroups.Clear;
+  if RFs.Count>1 then
+   for Row:=0 to FEngine.Model.RowKeys.Count-1 do
+    for Lvl:=0 to RFs.Count-2 do begin
+     ID:=GroupID(FEngine.Model.RowKeys[Row],Lvl);
+     if FCollapsedGroups.IndexOf(ID)<0 then FCollapsedGroups.Add(ID);
+    end;
+ finally RFs.Free; end;
+ Invalidate;
+end;
+
+procedure TLarGridPivot.ShowHierarchyMenu(X,Y:Integer;const AHit:TLarPivotHitTest);
+ procedure AddItem(const ACaption:string; AHandler:TNotifyEvent);
+ var M:TMenuItem;
+ begin M:=TMenuItem.Create(FHierarchyMenu); M.Caption:=ACaption; M.OnClick:=AHandler; FHierarchyMenu.Items.Add(M); end;
+var P:TPoint;
+begin
+ FHierarchyHit:=AHit; FHierarchyMenu.Items.Clear;
+ AddItem('Expandir',HierarchyExpandClick);
+ AddItem('Contraer',HierarchyCollapseClick);
+ AddItem('-',nil);
+ AddItem('Expandir todo',HierarchyExpandAllClick);
+ AddItem('Contraer todo',HierarchyCollapseAllClick);
+ P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
+end;
+
 procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
+var HT:TLarPivotHitTest;
 begin
  inherited;
- if Button<>mbLeft then Exit;
  if Y>=EffectiveFieldAreaHeight then begin
-  BuildViewInfo;
-  with FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos) do
-   if Kind=pvekExpandButton then begin ToggleGroup(RowKey,Level); Exit; end;
+  BuildViewInfo; HT:=FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos);
+  if Button=mbRight then begin
+   if HT.Kind in [pvekExpandButton,pvekRowValue,pvekTotalCell] then begin
+    if HT.Level<0 then HT.Level:=0;
+    ShowHierarchyMenu(X,Y,HT); Exit;
+   end;
+  end;
+  if (Button=mbLeft) and (HT.Kind=pvekExpandButton) then begin ToggleGroup(HT.RowKey,HT.Level); Exit; end;
  end;
+ if Button<>mbLeft then Exit;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
  if Assigned(FFilterButtonField) then begin ShowFieldFilter(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
  FFilterButtonField:=SortButtonAtPoint(X,Y);
