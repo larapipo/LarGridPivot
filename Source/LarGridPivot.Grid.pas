@@ -16,7 +16,6 @@ type
     FEngine: TLarPivotEngine; FLayoutEngine: TLarPivotLayoutEngine; FViewInfo: TLarPivotViewInfo; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
-    EffectiveFieldAreaHeight: Integer;
     FShowFieldPanel: Boolean;
     FFieldPanelFontSize: Integer;
     function EffectiveFieldAreaHeight:Integer;
@@ -103,7 +102,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
- FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; EffectiveFieldAreaHeight:=128;
+ FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
