@@ -13,10 +13,10 @@ type
   public
     class function SaveToString(AFields: TLarPivotFields;
       AFilters: TLarPivotFilters; AShowRowTotals, AShowColumnTotals,
-      AShowGrandTotal: Boolean): string; static;
+      AShowGrandTotal: Boolean; ATheme:TLarPivotTheme; ACollapsedGroups:TStrings): string; static;
     class procedure LoadFromString(const AJSON: string; AFields: TLarPivotFields;
       AFilters: TLarPivotFilters; out AShowRowTotals, AShowColumnTotals,
-      AShowGrandTotal: Boolean); static;
+      AShowGrandTotal: Boolean; out ATheme:TLarPivotTheme; ACollapsedGroups:TStrings); static;
   end;
 
 implementation
@@ -28,7 +28,7 @@ function AlignToInt(A: TLarPivotAlignment): Integer; begin Result := Ord(A); end
 
 class function TLarPivotLayout.SaveToString(AFields: TLarPivotFields;
   AFilters: TLarPivotFilters; AShowRowTotals, AShowColumnTotals,
-  AShowGrandTotal: Boolean): string;
+  AShowGrandTotal: Boolean; ATheme:TLarPivotTheme; ACollapsedGroups:TStrings): string;
 var Root, O, FO: TJSONObject; Arr, Vals: TJSONArray; I, J: Integer; F: TLarPivotField; Fil: TLarPivotFilter;
 begin
   Root := TJSONObject.Create;
@@ -37,6 +37,9 @@ begin
     Root.AddPair('showRowTotals', TJSONBool.Create(AShowRowTotals));
     Root.AddPair('showColumnTotals', TJSONBool.Create(AShowColumnTotals));
     Root.AddPair('showGrandTotal', TJSONBool.Create(AShowGrandTotal));
+    Root.AddPair('theme', TJSONNumber.Create(Ord(ATheme)));
+    Vals:=TJSONArray.Create; Root.AddPair('collapsedGroups',Vals);
+    if ACollapsedGroups<>nil then for I:=0 to ACollapsedGroups.Count-1 do Vals.Add(ACollapsedGroups[I]);
     Arr := TJSONArray.Create; Root.AddPair('fields', Arr);
     for I := 0 to AFields.Count - 1 do begin
       F := AFields[I]; O := TJSONObject.Create; Arr.AddElement(O);
@@ -64,7 +67,7 @@ end;
 
 class procedure TLarPivotLayout.LoadFromString(const AJSON: string;
   AFields: TLarPivotFields; AFilters: TLarPivotFilters;
-  out AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean);
+  out AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean; out ATheme:TLarPivotTheme; ACollapsedGroups:TStrings);
 var Root, O: TJSONObject; Arr, Vals: TJSONArray; I,J,N:Integer; F:TLarPivotField; Fil:TLarPivotFilter; V:TJSONValue;
   function JsonText(AObj:TJSONObject;const AName,ADefault:string):string;
   var JV:TJSONValue;
@@ -80,6 +83,11 @@ begin
     V:=Root.GetValue('showRowTotals'); AShowRowTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showColumnTotals'); AShowColumnTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showGrandTotal'); AShowGrandTotal:=(V=nil) or SameText(V.Value,'true');
+    ATheme:=TLarPivotTheme(JsonInt(Root,'theme',Ord(ptClassicBlue),Ord(Low(TLarPivotTheme)),Ord(High(TLarPivotTheme))));
+    if ACollapsedGroups<>nil then begin
+     ACollapsedGroups.Clear; Vals:=Root.GetValue('collapsedGroups') as TJSONArray;
+     if Vals<>nil then for I:=0 to Vals.Count-1 do ACollapsedGroups.Add(Vals.Items[I].Value);
+    end;
     Arr:=Root.GetValue('fields') as TJSONArray;
     if Arr<>nil then for I:=0 to Arr.Count-1 do begin
       O:=Arr.Items[I] as TJSONObject; if O=nil then Continue;
