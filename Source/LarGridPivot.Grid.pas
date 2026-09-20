@@ -370,4 +370,23 @@ begin
  end;
 end;
 
+function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,Y,ChipW:Integer; S:string; R,AR:TRect;
+begin
+ Result:=nil; A:=AreaFromPoint(AX,AY); AR:=AreaRect(A);
+ Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+ X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
+ L:=AreaFields(A);
+ try
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
+   if (A=paNone) and (X+ChipW>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
+   R:=Rect(X,Y,X+ChipW,Y+20);
+   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
+   X:=R.Right+4;
+  end;
+ finally L.Free; end;
+end;
+
 
