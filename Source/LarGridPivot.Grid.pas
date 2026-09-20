@@ -39,6 +39,8 @@ type
     FHierarchyHit:TLarPivotHitTest;
     FAutoSaveLayout:Boolean;
     FAutoSaveKey:string;
+    FViewDirty:Boolean;
+    FScrollDirty:Boolean;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -164,7 +166,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
- FAutoSaveLayout:=True; FAutoSaveKey:='';
+ FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
@@ -294,6 +296,7 @@ begin Result:=EffectiveFieldAreaHeight; end;
 procedure TLarGridPivot.UpdateScrollBars;
 var SI:TScrollInfo; RFs,DFs,CFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer; VI:TLarPivotViewItem;
 begin
+ if not FScrollDirty then Exit;
  RFs:=AxisFields(paRow); DFs:=DataFields; CFs:=AxisFields(paColumn);
  try
   W:=0; for I:=0 to RFs.Count-1 do Inc(W,RFs[I].Width);
@@ -323,6 +326,7 @@ begin
  if ClientHeight>ResultTop then SI.nPage:=ClientHeight-ResultTop else SI.nPage:=1;
  SI.nPos:=FVScrollPos;
  SetScrollInfo(Handle,SB_VERT,SI,True); FVScrollPos:=GetScrollPos(Handle,SB_VERT);
+ FScrollDirty:=False;
 end;
 
 procedure TLarGridPivot.WMHScroll(var Message:TWMHScroll);
@@ -398,7 +402,7 @@ procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuildi
 procedure TLarGridPivot.Rebuild;
 var P:ILarPivotDataProvider;
 begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
- if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; Invalidate; finally FRebuilding:=False; end; end;
+ if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
@@ -484,6 +488,7 @@ begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try Load
 procedure TLarGridPivot.BuildViewInfo;
 var DFs,RFs,CFs:TList<TLarPivotField>; Lvl,HeaderLevels,RowHeaderTotal:Integer;
 begin
+ if not FViewDirty then Exit;
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
@@ -500,6 +505,7 @@ begin
  finally
   CFs.Free; RFs.Free; DFs.Free;
  end;
+ FViewDirty:=False; FScrollDirty:=True;
 end;
 
 function TLarGridPivot.ResizeFieldAtPoint(AX,AY:Integer):TLarPivotField;
@@ -1145,7 +1151,7 @@ begin
  if Assigned(FResizingField) then begin
   FResizingField.Width:=FResizeStartWidth+(X-FResizeStartX);
   if FResizingField.Width<40 then FResizingField.Width:=40;
-  Cursor:=crHSplit; Invalidate; Exit;
+  FViewDirty:=True; FScrollDirty:=True; Cursor:=crHSplit; Invalidate; Exit;
  end;
  if not Assigned(FDragField) then begin
   if Assigned(ResizeFieldAtPoint(X,Y)) then Cursor:=crHSplit else Cursor:=crDefault;
@@ -1188,5 +1194,5 @@ begin
  end;
 end;
 
-procedure TLarGridPivot.Resize; begin inherited;Invalidate;end;
+procedure TLarGridPivot.Resize; begin inherited; FViewDirty:=True; FScrollDirty:=True; Invalidate;end;
 end.
