@@ -124,7 +124,7 @@ procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.As
 procedure TLarGridPivot.CreateParams(var Params:TCreateParams);
 begin
  inherited;
- Params.Style:=Params.Style or WS_HSCROLL or WS_VSCROLL;
+ Params.Style:=Params.Style or WS_HSCROLL;
 end;
 
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
@@ -190,9 +190,7 @@ begin
  SI.nMin:=0; SI.nMax:=FContentWidth-1; SI.nPage:=ClientWidth; SI.nPos:=FHScrollPos;
  SetScrollInfo(Handle,SB_HORZ,SI,True); FHScrollPos:=GetScrollPos(Handle,SB_HORZ);
 
- FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_RANGE or SIF_PAGE or SIF_POS;
- SI.nMin:=0; SI.nMax:=FContentHeight-ResultTop-1; SI.nPage:=ClientHeight-ResultTop; SI.nPos:=FVScrollPos;
- SetScrollInfo(Handle,SB_VERT,SI,True); FVScrollPos:=GetScrollPos(Handle,SB_VERT);
+
 end;
 
 procedure TLarGridPivot.WMHScroll(var Message:TWMHScroll);
