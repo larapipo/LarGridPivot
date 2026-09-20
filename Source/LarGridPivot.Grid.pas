@@ -102,7 +102,7 @@ begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSour
 procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
 procedure TLarGridPivot.Rebuild;
 var P:ILarPivotDataProvider;
-begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; Invalidate; Exit; end;
+begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
  if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; Invalidate; finally FRebuilding:=False; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
@@ -345,7 +345,7 @@ begin
  Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DrawFieldAreas;
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
-  if DFs.Count=0 then Exit;
+  if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
   HeaderLevels:=CFs.Count; if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
