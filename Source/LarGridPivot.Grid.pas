@@ -128,6 +128,10 @@ function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begi
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
 var L:TList<TLarPivotField>; I,J:Integer; F,T:TLarPivotField;
 begin
+ if AArea=paNone then begin
+  for I:=0 to FFields.Count-1 do if FFields[I].Area=paNone then FFields[I].AreaIndex:=-1;
+  Exit;
+ end;
  L:=TList<TLarPivotField>.Create; try
   for I:=0 to FFields.Count-1 do if FFields[I].Area=AArea then L.Add(FFields[I]);
   for I:=0 to L.Count-2 do for J:=I+1 to L.Count-1 do if L[I].AreaIndex>L[J].AreaIndex then begin T:=L[I];L[I]:=L[J];L[J]:=T;end;
@@ -177,8 +181,15 @@ function TLarGridPivot.SaveLayoutToString:string;
 begin Result:=TLarPivotLayout.SaveToString(FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal); end;
 
 procedure TLarGridPivot.LoadLayoutFromString(const ALayout:string);
+var A:TLarPivotArea;
 begin
- BeginUpdate; try TLarPivotLayout.LoadFromString(ALayout,FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal); finally EndUpdate; end;
+ BeginUpdate;
+ try
+  TLarPivotLayout.LoadFromString(ALayout,FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal);
+  for A:=Low(TLarPivotArea) to High(TLarPivotArea) do NormalizeAreaIndexes(A);
+ finally
+  EndUpdate;
+ end;
 end;
 
 procedure TLarGridPivot.SaveLayoutToStream(AStream:TStream);
