@@ -252,7 +252,9 @@ begin
   X:=0;
   for I:=0 to ARowFields.Count-1 do begin
    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
-   Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight);
+   Item.RowKey:=ARows[Row]; Item.Level:=I;
+   if (I=ARowFields.Count-1) or GroupStarts(Row,I) then Item.Caption:=KeyPart(ARows[Row],I) else Item.Caption:='';
+   Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight);
    FItems.Add(Item);
    if (I<ARowFields.Count-1) then begin
     { Keep the expand/collapse button on the group header. }
