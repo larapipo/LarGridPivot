@@ -33,6 +33,7 @@ type
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
     procedure ShowFieldFilter(AField: TLarPivotField);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
+    procedure ToggleFieldSort(AField: TLarPivotField);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
@@ -355,6 +356,17 @@ begin
  end;
 end;
 
+procedure TLarGridPivot.ToggleFieldSort(AField:TLarPivotField);
+begin
+ if AField=nil then Exit;
+ case AField.SortOrder of
+  psoNone: AField.SortOrder:=psoAscending;
+  psoAscending: AField.SortOrder:=psoDescending;
+ else AField.SortOrder:=psoNone;
+ end;
+ Rebuild;
+end;
+
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
 var Fil:TLarPivotFilter; Values:TStringList; S,Prompt:string;
 begin
@@ -402,7 +414,9 @@ begin
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
     Canvas.Font.Color:=clWindowText;
     Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
-    Canvas.Font.Style:=[fsBold]; Canvas.TextOut(R.Right-17,R.Top+5,'v'); Canvas.Font.Style:=[];
+    Canvas.Font.Style:=[fsBold];
+    case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-31,R.Top+5,'^'); psoDescending:Canvas.TextOut(R.Right-31,R.Top+5,'v'); end;
+    Canvas.TextOut(R.Right-17,R.Top+5,'v'); Canvas.Font.Style:=[];
     X:=R.Right+6;
    end;
   finally L.Free; end;
