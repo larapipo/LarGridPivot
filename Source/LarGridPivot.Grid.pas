@@ -477,7 +477,7 @@ begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
     ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
     if (A=paNone) and (X+ChipW>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
-    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.Pen.Width:=1; end;
+    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.MoveTo(X-7,Y+5); Canvas.LineTo(X-2,Y); Canvas.LineTo(X+3,Y+5); Canvas.MoveTo(X-7,Y+15); Canvas.LineTo(X-2,Y+20); Canvas.LineTo(X+3,Y+15); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
@@ -487,7 +487,7 @@ begin
     Canvas.TextOut(R.Right-14,R.Top+3,'v'); Canvas.Font.Style:=[]; X:=R.Right+4;
    end;
   finally L.Free; end;
-  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.Pen.Width:=1; end;
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.MoveTo(X-7,Y+5); Canvas.LineTo(X-2,Y); Canvas.LineTo(X+3,Y+5); Canvas.MoveTo(X-7,Y+15); Canvas.LineTo(X-2,Y+20); Canvas.LineTo(X+3,Y+15); Canvas.Pen.Width:=1; end;
  end;
 end;
 
