@@ -330,12 +330,13 @@ begin
 end;
 
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
-var DS:TDataSet; B:TBookmark; V:Variant; S:string;
+var DS:TDataSet; B:TBookmark; V:Variant; S:string; HasBookmark:Boolean;
 begin
  AValues.Clear;
  if (AField=nil) or (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
  DS:=FDataSource.DataSet; if not DS.Active or (DS.FindField(AField.FieldName)=nil) then Exit;
- B:=DS.GetBookmark;
+ HasBookmark:=not DS.IsEmpty;
+ if HasBookmark then B:=DS.GetBookmark;
  DS.DisableControls;
  try
   DS.First;
@@ -346,8 +347,11 @@ begin
    DS.Next;
   end;
  finally
-  if DS.BookmarkValid(B) then DS.GotoBookmark(B);
-  DS.FreeBookmark(B); DS.EnableControls;
+  if HasBookmark then begin
+   if DS.BookmarkValid(B) then DS.GotoBookmark(B);
+   DS.FreeBookmark(B);
+  end;
+  DS.EnableControls;
  end;
 end;
 
