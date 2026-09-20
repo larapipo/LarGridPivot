@@ -167,7 +167,7 @@ function TLarGridPivot.ResultTop:Integer;
 begin Result:=EffectiveFieldAreaHeight; end;
 
 procedure TLarGridPivot.UpdateScrollBars;
-var SI:TScrollInfo; RFs,DFs,CFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer;
+var SI:TScrollInfo; RFs,DFs,CFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer; VI:TLarPivotViewItem;
 begin
  RFs:=AxisFields(paRow); DFs:=DataFields; CFs:=AxisFields(paColumn);
  try
@@ -181,8 +181,11 @@ begin
   if HeaderLevels>0 then Inc(HeaderLevels);
   if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
-  H:=ResultTop+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight;
-  if FShowColumnTotals then Inc(H,FRowHeight);
+  H:=ResultTop+HeaderLevels*FHeaderHeight;
+  for VI in FViewInfo.Items do begin
+   if VI.Bounds.Right>W then W:=VI.Bounds.Right;
+   if VI.Bounds.Bottom>H then H:=VI.Bounds.Bottom;
+  end;
   FContentWidth:=W; FContentHeight:=H;
  finally CFs.Free; RFs.Free; DFs.Free; end;
 
