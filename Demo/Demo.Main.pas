@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.IOUtils,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes, Vcl.Clipbrd,
   Data.DB, Datasnap.DBClient,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Grid;
@@ -23,6 +23,7 @@ type
     FThemeCombo:TComboBox;
     FLayout: string;
     FStyleCombo:TComboBox;
+    FBtnGestionSQL:TButton;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
     procedure RefreshAreaLists;
@@ -40,6 +41,7 @@ type
     procedure ToggleFields(Sender:TObject);
     procedure ChangeTheme(Sender:TObject);
     procedure ChangeVclStyle(Sender:TObject);
+    procedure ShowGestionSQL(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -133,6 +135,7 @@ begin
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
+  MakeButton(FBtnGestionSQL,900,6,'SQL Gestión',ShowGestionSQL); FBtnGestionSQL.Width:=100;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -244,6 +247,23 @@ begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
 
 procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
 begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.ShowGestionSQL(Sender:TObject);
+const SQLGestion =
+ 'select c.sucursal, coalesce(c.vendedor, '''') vendedor, '+
+ 'r.detalle_rubro rubro, sr.detalle_subrubro subrubro, d.codigoarticulo, '+
+ 'coalesce(d.detalle, s.detalle_stk) articulo, extract(year from c.fechavta) anio, '+
+ 'extract(month from c.fechavta) mes, d.cantidad, d.total venta, '+
+ '(d.costo_total * d.cantidad) costo '+
+ 'from fcvtacab c join fcvtadet d on d.id_cabfac=c.id_fc '+
+ 'left join stock s on s.codigo_stk=d.codigoarticulo '+
+ 'left join rubros r on r.codigo_rubro=s.rubro_stk '+
+ 'left join subrubros sr on sr.codigo_subrubro=s.subrubro_stk and sr.codigo_rubro=s.rubro_stk '+
+ 'where c.fechavta>=:desde and c.fechavta<:hasta and c.anulado<>''S''';
+begin
+ Clipboard.AsText:=SQLGestion;
+ ShowMessage('SQL real de Gestión copiado al portapapeles. Asigná cualquier TDataSource con esta consulta al DataSource del LarGridPivot.');
+end;
 
 procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
 begin
