@@ -149,14 +149,16 @@ var F:TLarPivotField;
 begin
   FPivot.BeginUpdate;
   try
-    F:=FPivot.FieldByName('VENDEDOR'); F.Area:=paRow; F.AreaIndex:=0;
+    F:=FPivot.FieldByName('SUCURSAL'); F.Area:=paRow; F.AreaIndex:=0; F.ShowSubTotal:=True;
+    F:=FPivot.FieldByName('VENDEDOR'); F.Area:=paRow; F.AreaIndex:=1; F.ShowSubTotal:=False;
+    F:=FPivot.FieldByName('RUBRO'); F.Area:=paRow; F.AreaIndex:=2; F.ShowSubTotal:=False;
     F:=FPivot.FieldByName('MES'); F.Area:=paColumn; F.AreaIndex:=0;
-    F:=FPivot.FieldByName('SUCURSAL'); F.Area:=paNone; F.AreaIndex:=-1;
+    F:=FPivot.FieldByName('ANIO'); F.Area:=paNone; F.AreaIndex:=-1;
     F:=FPivot.FieldByName('VENTA'); F.Caption:='Venta'; F.Area:=paData; F.AreaIndex:=0;
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
-    F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paData; F.AreaIndex:=1;
+    F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paNone; F.AreaIndex:=-1;
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0'; F.Alignment:=pvaRight;
-    F:=FPivot.FieldByName('COSTO'); F.Caption:='Costo'; F.Area:=paNone; F.AreaIndex:=-1;
+    F:=FPivot.FieldByName('COSTO'); F.Caption:='Costo'; F.Area:=paData; F.AreaIndex:=1;
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
   finally FPivot.EndUpdate; end;
 end;
