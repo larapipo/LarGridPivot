@@ -2,7 +2,8 @@ program LarGridPivotDemo;
 
 uses
   Vcl.Forms,
-  Demo.Main in 'Demo.Main.pas' {FrmLarGridPivotDemo};
+  Demo.Main in 'Demo.Main.pas' {FrmLarGridPivotDemo},
+  Demo.Gestion in 'Demo.Gestion.pas' {FrmLarGridPivotGestionDemo};
 
 begin
   Application.Initialize;
