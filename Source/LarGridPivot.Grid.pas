@@ -988,7 +988,17 @@ begin
     ShowHierarchyMenu(X,Y,HT); Exit;
    end;
   end;
-  if (Button=mbLeft) and (HT.Kind=pvekExpandButton) then begin ToggleGroup(HT.RowKey,HT.Level); Exit; end;
+  if (Button=mbLeft) and (HT.Kind=pvekExpandButton) and (HT.RowKey<>'') then begin
+   if (FCollapsedGroups.IndexOf(GroupID(HT.RowKey,HT.Level))>=0) or
+      ((HT.Bounds.Left>=0) and (KeyPart(HT.RowKey,HT.Level)<>'')) then begin
+    { Continuation rail glyphs have no caption but share the same hit kind;
+      only toggle at the first row of a group or when it is collapsed. }
+    if (FCollapsedGroups.IndexOf(GroupID(HT.RowKey,HT.Level))>=0) or
+       (RowPrefix(HT.RowKey,HT.Level)<>RowPrefix(FEngine.Model.RowKeys[Max(0,FEngine.Model.RowKeys.IndexOf(HT.RowKey)-1)],HT.Level)) then
+      ToggleGroup(HT.RowKey,HT.Level);
+   end;
+   Exit;
+  end;
  end;
  if Button<>mbLeft then Exit;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
