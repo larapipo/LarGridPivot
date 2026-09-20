@@ -181,9 +181,9 @@ begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
 function TLarGridPivot.ThemeHeaderColor:TColor;
 begin
  case FTheme of
-  ptClassicBlue:Result:=$00E8D6B8;
-  ptSilver:Result:=$00E8E8E8;
-  ptOffice:Result:=$00F4E3C1;
+  ptClassicBlue:Result:=$00E6C9A5;
+  ptSilver:Result:=$00ECECEC;
+  ptOffice:Result:=$00F2E2C8;
   ptDark:Result:=$00404040;
  else Result:=$00F4F4F4; end;
 end;
@@ -191,23 +191,23 @@ end;
 function TLarGridPivot.ThemeTotalColor:TColor;
 begin
  case FTheme of
-  ptClassicBlue:Result:=$00E3C9A0;
-  ptSilver:Result:=$00D8D8D8;
-  ptOffice:Result:=$00EBD29E;
+  ptClassicBlue:Result:=$00DAB58A;
+  ptSilver:Result:=$00DEDEDE;
+  ptOffice:Result:=$00E8D1AA;
   ptDark:Result:=$00505050;
  else Result:=$00EAEAEA; end;
 end;
 
 function TLarGridPivot.ThemeGridColor:TColor;
 begin
- case FTheme of ptDark:Result:=$00686868; ptClassicBlue:Result:=$00B88E58;
+ case FTheme of ptDark:Result:=$00686868; ptClassicBlue:Result:=$00B98955;
  else Result:=$00D0D0D0; end;
 end;
 
 function TLarGridPivot.ThemePanelColor:TColor;
 begin
  case FTheme of
-  ptClassicBlue:Result:=$00C9823F;
+  ptClassicBlue:Result:=$00C78543;
   ptDark:Result:=$00353535;
   ptOffice:Result:=$00E5C48A;
   ptSilver:Result:=$00DCDCDC;
@@ -736,7 +736,7 @@ begin
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekExpandButton:
      begin
-      Canvas.Brush.Color:=ThemeHeaderColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=$00808080; Canvas.Rectangle(VI.Bounds);
+      Canvas.Brush.Color:=ThemeHeaderColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(VI.Bounds);
       Canvas.Font.Assign(Font); Canvas.Font.Style:=[fsBold]; Canvas.Font.Size:=8;
       DrawText(Canvas.Handle,PChar(VI.Caption),Length(VI.Caption),VI.Bounds,DT_CENTER or DT_VCENTER or DT_SINGLELINE);
      end;
