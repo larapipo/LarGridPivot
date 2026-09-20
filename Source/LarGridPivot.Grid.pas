@@ -466,6 +466,13 @@ begin
   Y:=FFieldAreaHeight;
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
+  { Show the field name above its member hierarchy, matching the PivotGrid
+    distinction between a field label and the values produced by that field. }
+  X:=RowHeaderTotal;
+  for Lvl:=0 to CFs.Count-1 do begin
+   S:=CFs[Lvl].Caption; if S='' then S:=CFs[Lvl].FieldName;
+   DrawCell(Rect(X,Y+Lvl*FHeaderHeight,X+CFs[Lvl].Width,Y+(Lvl+1)*FHeaderHeight),S,taLeftJustify,True);
+  end;
   for VI in FViewInfo.Items do
    case VI.Kind of
     pvekFieldHeader,pvekColumnValue:
