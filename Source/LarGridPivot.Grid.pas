@@ -385,14 +385,14 @@ procedure TLarGridPivot.RemoveField(const AFieldName:string);
 begin MoveField(AFieldName,paNone,-1); end;
 
 function TLarGridPivot.SaveLayoutToString:string;
-begin Result:=TLarPivotLayout.SaveToString(FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal); end;
+begin Result:=TLarPivotLayout.SaveToString(FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FTheme,FCollapsedGroups); end;
 
 procedure TLarGridPivot.LoadLayoutFromString(const ALayout:string);
 var A:TLarPivotArea;
 begin
  BeginUpdate;
  try
-  TLarPivotLayout.LoadFromString(ALayout,FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal);
+  TLarPivotLayout.LoadFromString(ALayout,FFields,FEngine.Filters,FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FTheme,FCollapsedGroups);
   for A:=Low(TLarPivotArea) to High(TLarPivotArea) do NormalizeAreaIndexes(A);
  finally
   EndUpdate;
