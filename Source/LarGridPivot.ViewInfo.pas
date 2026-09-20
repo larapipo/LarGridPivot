@@ -254,8 +254,12 @@ begin
    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
    Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight);
    FItems.Add(Item);
-   if (I<ARowFields.Count-1) and GroupStarts(Row,I) then begin
-    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Caption:='-';
+   if (I<ARowFields.Count-1) then begin
+    { Keep a hierarchy glyph in the grouped cell for every visible row.
+      Only group-start glyphs are actionable; continuation rows retain the
+      visual tree rail instead of looking detached from their parent. }
+    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=I;
+    if GroupStarts(Row,I) then Item.Caption:='-' else Item.Caption:='';
     Item.Bounds:=Rect(X+3,Y+(FRowHeight-11) div 2,X+14,Y+(FRowHeight-11) div 2+11); FItems.Add(Item);
    end;
    Inc(X,ARowFields[I].Width);
