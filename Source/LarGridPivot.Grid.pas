@@ -281,12 +281,13 @@ begin
 end;
 
 function TLarGridPivot.AreaFromPoint(AX,AY:Integer):TLarPivotArea;
-var A:TLarPivotArea; R:TRect;
+var R:TRect;
 begin
  Result:=paNone;
- for A in [paNone,paData,paColumn,paRow] do begin
-  R:=AreaRect(A); if PtInRect(R,Point(AX,AY)) then Exit(A);
- end;
+ R:=AreaRect(paNone); if PtInRect(R,Point(AX,AY)) then Exit(paNone);
+ R:=AreaRect(paData); if PtInRect(R,Point(AX,AY)) then Exit(paData);
+ R:=AreaRect(paColumn); if PtInRect(R,Point(AX,AY)) then Exit(paColumn);
+ R:=AreaRect(paRow); if PtInRect(R,Point(AX,AY)) then Exit(paRow);
 end;
 
 function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
