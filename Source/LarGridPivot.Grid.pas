@@ -288,7 +288,7 @@ begin
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
    R:=Rect(X,Y+3,X+ChipW,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=R.Right+6;
@@ -323,7 +323,7 @@ begin
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
-   R:=Rect(X+ChipW-22,Y+3,X+ChipW,Y+H-3);
+   R:=Rect(X+ChipW-24,Y+3,X+ChipW,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=X+ChipW+6;
   end;
@@ -341,7 +341,7 @@ begin
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
-   R:=Rect(X+ChipW-38,Y+3,X+ChipW-22,Y+H-3);
+   R:=Rect(X+ChipW-46,Y+3,X+ChipW-24,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=X+ChipW+6;
   end;
@@ -417,7 +417,7 @@ begin
   Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(R);
   Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(R);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
-  Canvas.TextOut(8,Y+6,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
+  Canvas.TextOut(8,Y+8,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
   L:=AreaFields(A);
   try
    for J:=0 to L.Count-1 do begin
@@ -433,8 +433,8 @@ begin
     Canvas.Font.Color:=clWindowText;
     Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
     Canvas.Font.Style:=[fsBold];
-    case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-31,R.Top+5,'^'); psoDescending:Canvas.TextOut(R.Right-31,R.Top+5,'v'); end;
-    Canvas.TextOut(R.Right-17,R.Top+5,'v'); Canvas.Font.Style:=[];
+    case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-42,R.Top+5,'^'); psoDescending:Canvas.TextOut(R.Right-42,R.Top+5,'v'); end;
+    Canvas.TextOut(R.Right-18,R.Top+5,'v'); Canvas.Font.Style:=[];
     X:=R.Right+6;
    end;
   finally L.Free; end;
