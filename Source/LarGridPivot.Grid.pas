@@ -29,6 +29,10 @@ type
     FFilterButtonField: TLarPivotField;
     FHScrollPos, FVScrollPos:Integer;
     FContentWidth, FContentHeight:Integer;
+    FCollapsedGroups:TStringList;
+    function RowPrefix(const ARowKey:string; ALevel:Integer):string;
+    function GroupID(const ARowKey:string; ALevel:Integer):string;
+    procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
     procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
     procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
@@ -114,9 +118,10 @@ constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -368,7 +373,7 @@ begin
   FViewInfo.RowHeight:=FRowHeight;
   FViewInfo.BuildHeaders(RFs,CFs,DFs,EffectiveFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
   FViewInfo.BuildBody(RFs,DFs,FEngine.Model.RowKeys,HeaderLevels,
-    FShowRowTotals,FShowColumnTotals,FShowGrandTotal);
+    FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FCollapsedGroups);
  finally
   CFs.Free; RFs.Free; DFs.Free;
  end;
@@ -589,6 +594,27 @@ end;
 function TLarGridPivot.AxisFields(AArea:TLarPivotArea):TList<TLarPivotField>;
 begin Result:=AreaFields(AArea); end;
 
+function TLarGridPivot.RowPrefix(const ARowKey:string;ALevel:Integer):string;
+var I:Integer;
+begin
+ Result:='';
+ for I:=0 to ALevel do begin
+  if I>0 then Result:=Result+#29;
+  Result:=Result+KeyPart(ARowKey,I);
+ end;
+end;
+
+function TLarGridPivot.GroupID(const ARowKey:string;ALevel:Integer):string;
+begin Result:=IntToStr(ALevel)+'|'+RowPrefix(ARowKey,ALevel); end;
+
+procedure TLarGridPivot.ToggleGroup(const ARowKey:string;ALevel:Integer);
+var S:string; I:Integer;
+begin
+ S:=GroupID(ARowKey,ALevel); I:=FCollapsedGroups.IndexOf(S);
+ if I>=0 then FCollapsedGroups.Delete(I) else FCollapsedGroups.Add(S);
+ Invalidate;
+end;
+
 function TLarGridPivot.KeyPart(const AKey:string;ALevel:Integer):string;
 var I,L,N:Integer; P:string;
 begin
@@ -654,6 +680,12 @@ begin
    case VI.Kind of
     pvekFieldHeader,pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
+    pvekExpandButton:
+     begin
+      Canvas.Brush.Color:=$00E7EEF8; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=$00808080; Canvas.Rectangle(VI.Bounds);
+      Canvas.Font.Assign(Font); Canvas.Font.Style:=[fsBold]; Canvas.Font.Size:=8;
+      DrawText(Canvas.Handle,PChar(VI.Caption),Length(VI.Caption),VI.Bounds,DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+     end;
     pvekRowValue:
      begin
       S:=KeyPart(VI.RowKey,VI.Level);
@@ -719,6 +751,11 @@ procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Inte
 begin
  inherited;
  if Button<>mbLeft then Exit;
+ if Y>=EffectiveFieldAreaHeight then begin
+  BuildViewInfo;
+  with FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos) do
+   if Kind=pvekExpandButton then begin ToggleGroup(RowKey,Level); Exit; end;
+ end;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
  if Assigned(FFilterButtonField) then begin ShowFieldFilter(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
  FFilterButtonField:=SortButtonAtPoint(X,Y);
