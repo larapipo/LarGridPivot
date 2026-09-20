@@ -92,7 +92,7 @@ begin
  FConnection.Params.Values['Server']:='127.0.0.1';
  FConnection.Params.Values['Port']:='3050';
  FConnection.Params.Values['User_Name']:='SYSDBA';
- FConnection.Params.Values['Password']:='regulador';
+ FConnection.Params.Values['Password']:=''; { configure locally; never commit DB passwords }
  FConnection.Params.Values['CharacterSet']:='WIN1252';
  FConnection.Params.Values['Database']:='C:\\Proyectos Delphi\\GestionComercial\\Tablas IB\\GESTIONV3.FDB';
 end;
@@ -111,11 +111,11 @@ begin
     FQuery.Close;
 
     FQuery.ParamByName('anio').AsInteger:=StrToIntDef(FAnio.Text,YearOf(Date));
-    FQuery.ParamByName('codigo').AsString:='***';
-    FQuery.ParamByName('cliente').AsString:='***';
+    FQuery.ParamByName('codigo').AsString:='********';
+    FQuery.ParamByName('cliente').AsString:='******';
     FQuery.ParamByName('suc').AsInteger:=-1;
     FQuery.ParamByName('mes').AsInteger:=StrToIntDef(FMes.Text,0);
-    FQuery.ParamByName('Tipo_Fecha').AsString:='F';
+    FQuery.ParamByName('Tipo_Fecha').AsString:='V';
     FQuery.Open;
     FPivot.RefreshFields;
     ConfigurarPivot;
