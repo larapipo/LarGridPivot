@@ -19,7 +19,7 @@ type
     FAreaPanel: TPanel;
     FAvailable, FRows, FColumns, FValues, FFilters: TListBox;
     FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
-    FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnGrandTotal: TButton;
+    FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals: TButton;
     FLayout: string;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL');
     procedure ConfigurePivot;
@@ -35,7 +35,6 @@ type
     procedure LoadLayout(Sender: TObject);
     procedure ToggleRowTotals(Sender:TObject);
     procedure ToggleColumnTotals(Sender:TObject);
-    procedure ToggleGrandTotal(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -207,8 +206,5 @@ begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
 
 procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
 begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
-
-procedure TFrmLarGridPivotDemo.ToggleGrandTotal(Sender:TObject);
-begin FPivot.ShowGrandTotal:=not FPivot.ShowGrandTotal; FPivot.Rebuild; end;
 
 end.
