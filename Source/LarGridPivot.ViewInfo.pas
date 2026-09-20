@@ -118,15 +118,16 @@ begin
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
 
- if AColumnFields.Count>0 then
+ if AColumnFields.Count>0 then begin
+  X:=FRowHeaderWidth;
   for I:=0 to AColumnFields.Count-1 do begin
    Item:=TLarPivotViewItem.Create;
    Item.Kind:=pvekFieldHeader; Item.Field:=AColumnFields[I]; Item.Level:=I;
    Item.Caption:=AColumnFields[I].Caption; if Item.Caption='' then Item.Caption:=AColumnFields[I].FieldName;
-   Item.Bounds:=Rect(FRowHeaderWidth,FHeaderTop+I*FHeaderHeight,
-     FRowHeaderWidth+FLayout.TotalWidth,FHeaderTop+(I+1)*FHeaderHeight);
-   FItems.Add(Item);
+   Item.Bounds:=Rect(X,FHeaderTop,X+AColumnFields[I].Width,FHeaderTop+FHeaderHeight);
+   FItems.Add(Item); Inc(X,AColumnFields[I].Width);
   end;
+ end;
  for Root in FLayout.Roots do AddHeaderNode(Root,AColumnFields);
 
  if ADataFields.Count>1 then
