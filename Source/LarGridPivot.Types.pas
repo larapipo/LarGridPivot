@@ -15,6 +15,7 @@ type
   TLarPivotSummaryType = (psSum, psCount, psAverage, psMin, psMax);
   TLarPivotSortOrder = (psoNone, psoAscending, psoDescending);
   TLarPivotAlignment = (pvaDefault, pvaLeft, pvaCenter, pvaRight);
+  TLarPivotTheme = (ptClassicBlue, ptLight, ptSilver, ptOffice, ptDark);
 
   TLarPivotCellType = (
     pctEmpty,
