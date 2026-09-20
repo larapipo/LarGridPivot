@@ -43,6 +43,7 @@ type
     destructor Destroy; override;
     procedure Clear;
     function EnsureCell(const ARowKey, AColumnKey, ADataField: string): TLarPivotResultCell;
+    function EnsureAggregateCell(const ARowKey,AColumnKey,ADataField:string):TLarPivotResultCell;
     function FindCell(const ARowKey, AColumnKey, ADataField: string): TLarPivotResultCell;
     property RowKeys: TList<string> read FRowKeys;
     property ColumnKeys: TList<string> read FColumnKeys;
@@ -124,6 +125,17 @@ begin
   end;
   AddUnique(FRowKeys, ARowKey);
   AddUnique(FColumnKeys, AColumnKey);
+end;
+
+function TLarPivotModel.EnsureAggregateCell(const ARowKey,AColumnKey,ADataField:string):TLarPivotResultCell;
+var K:string;
+begin
+ K:=MakeCellKey(ARowKey,AColumnKey,ADataField);
+ if not FCells.TryGetValue(K,Result) then begin
+  Result:=TLarPivotResultCell.Create;
+  Result.RowKey:=ARowKey; Result.ColumnKey:=AColumnKey; Result.DataField:=ADataField;
+  FCells.Add(K,Result);
+ end;
 end;
 
 function TLarPivotModel.FindCell(const ARowKey, AColumnKey, ADataField: string): TLarPivotResultCell;
