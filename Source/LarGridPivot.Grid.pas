@@ -694,7 +694,7 @@ end;
 
 procedure TLarGridPivot.DrawFieldAreas;
 const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
-var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
+var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; Fil:TLarPivotFilter; S:string; L:TList<TLarPivotField>;
 begin
  if not FShowFieldPanel then Exit;
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
@@ -718,6 +718,11 @@ begin
     Canvas.Font.Color:=clWindowText; Canvas.TextOut(R.Left+6,R.Top+3,S);
     Canvas.Font.Style:=[fsBold];
     case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-31,R.Top+3,'^'); psoDescending:Canvas.TextOut(R.Right-31,R.Top+3,'v'); end;
+    Fil:=FEngine.Filters.Find(F.FieldName);
+    if (Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0) then begin
+     Canvas.Brush.Color:=ThemeTotalColor; Canvas.FillRect(Rect(R.Right-18,R.Top+1,R.Right-1,R.Bottom-1));
+     Canvas.Font.Color:=ThemeTotalTextColor;
+    end;
     Canvas.TextOut(R.Right-14,R.Top+3,'v'); Canvas.Font.Style:=[]; X:=R.Right+4;
    end;
   finally L.Free; end;
