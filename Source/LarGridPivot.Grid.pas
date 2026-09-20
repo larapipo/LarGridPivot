@@ -39,6 +39,7 @@ type
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
     function SortButtonAtPoint(AX, AY: Integer): TLarPivotField;
+    function FieldChipRect(AField:TLarPivotField; out R:TRect):Boolean;
     procedure ShowFieldFilter(AField: TLarPivotField);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     procedure ToggleFieldSort(AField: TLarPivotField);
@@ -333,19 +334,34 @@ begin
  R:=AreaRect(paRow); if PtInRect(R,Point(AX,AY)) then Exit(paRow);
 end;
 
-function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
-var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+function TLarGridPivot.FieldChipRect(AField:TLarPivotField;out R:TRect):Boolean;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,Y,W:Integer; S:string; AR:TRect;
 begin
- Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=R.Left+125; L:=AreaFields(A);
+ Result:=False; R:=Rect(0,0,0,0); if AField=nil then Exit;
+ A:=AField.Area; AR:=AreaRect(A);
+ Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+ X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
+ L:=AreaFields(A);
  try
-  Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
-   R:=Rect(X,Y+3,X+ChipW,Y+H-3);
-   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
-   X:=R.Right+6;
+   W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
+   if (A=paNone) and (X+W>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
+   R:=Rect(X,Y,X+W,Y+20);
+   if L[I]=AField then Exit(True);
+   X:=R.Right+4;
   end;
+ finally L.Free; end;
+end;
+
+function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I:Integer; R:TRect;
+begin
+ Result:=nil; if not FShowFieldPanel then Exit;
+ A:=AreaFromPoint(AX,AY); L:=AreaFields(A);
+ try
+  for I:=0 to L.Count-1 do
+   if FieldChipRect(L[I],R) and PtInRect(R,Point(AX,AY)) then Exit(L[I]);
  finally L.Free; end;
 end;
 
@@ -366,35 +382,21 @@ begin
 end;
 
 function TLarGridPivot.FilterButtonAtPoint(AX,AY:Integer):TLarPivotField;
-var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+var F:TLarPivotField; R,B:TRect;
 begin
- Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
- try
-  Canvas.Font.Assign(Font);
-  for I:=0 to L.Count-1 do begin
-   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
-   R:=Rect(X+ChipW-24,Y+3,X+ChipW,Y+H-3);
-   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
-   X:=X+ChipW+6;
-  end;
- finally L.Free; end;
+ Result:=nil; F:=FieldAtPoint(AX,AY); if F=nil then Exit;
+ if not FieldChipRect(F,R) then Exit;
+ B:=Rect(R.Right-16,R.Top,R.Right,R.Bottom);
+ if PtInRect(B,Point(AX,AY)) then Result:=F;
 end;
 
 function TLarGridPivot.SortButtonAtPoint(AX,AY:Integer):TLarPivotField;
-var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+var F:TLarPivotField; R,B:TRect;
 begin
- Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
- try
-  Canvas.Font.Assign(Font);
-  for I:=0 to L.Count-1 do begin
-   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
-   R:=Rect(X+ChipW-46,Y+3,X+ChipW-24,Y+H-3);
-   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
-   X:=X+ChipW+6;
-  end;
- finally L.Free; end;
+ Result:=nil; F:=FieldAtPoint(AX,AY); if F=nil then Exit;
+ if not FieldChipRect(F,R) then Exit;
+ B:=Rect(R.Right-32,R.Top,R.Right-16,R.Bottom);
+ if PtInRect(B,Point(AX,AY)) then Result:=F;
 end;
 
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
@@ -652,7 +654,7 @@ begin
  end;
  F:=FDragField;
  try
-  if Assigned(F) and FDraggingField and (Y>=0) and (Y<FFieldAreaHeight) then begin
+  if Assigned(F) and FDraggingField and FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
    A:=AreaFromPoint(X,Y); N:=DropIndexAtPoint(A,X);
    MoveField(F.FieldName,A,N);
   end;
