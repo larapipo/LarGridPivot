@@ -36,8 +36,10 @@ type
     FCells: TObjectDictionary<string, TLarPivotResultCell>;
     FRowKeys: TList<string>;
     FColumnKeys: TList<string>;
+    FRowKeySet: TDictionary<string,Byte>;
+    FColumnKeySet: TDictionary<string,Byte>;
     class function MakeCellKey(const ARowKey, AColumnKey, ADataField: string): string; static;
-    procedure AddUnique(AList: TList<string>; const AValue: string);
+    procedure AddUnique(AList:TList<string>; ASet:TDictionary<string,Byte>; const AValue:string);
   public
     constructor Create;
     destructor Destroy; override;
@@ -91,16 +93,18 @@ begin
   FCells := TObjectDictionary<string, TLarPivotResultCell>.Create([doOwnsValues]);
   FRowKeys := TList<string>.Create;
   FColumnKeys := TList<string>.Create;
+  FRowKeySet:=TDictionary<string,Byte>.Create;
+  FColumnKeySet:=TDictionary<string,Byte>.Create;
 end;
 
 destructor TLarPivotModel.Destroy;
 begin
-  FColumnKeys.Free; FRowKeys.Free; FCells.Free; inherited;
+  FColumnKeySet.Free; FRowKeySet.Free; FColumnKeys.Free; FRowKeys.Free; FCells.Free; inherited;
 end;
 
 procedure TLarPivotModel.Clear;
 begin
-  FCells.Clear; FRowKeys.Clear; FColumnKeys.Clear;
+  FCells.Clear; FRowKeys.Clear; FColumnKeys.Clear; FRowKeySet.Clear; FColumnKeySet.Clear;
 end;
 
 class function TLarPivotModel.MakeCellKey(const ARowKey, AColumnKey, ADataField: string): string;
@@ -108,9 +112,9 @@ begin
   Result := ARowKey + #30 + AColumnKey + #30 + UpperCase(ADataField);
 end;
 
-procedure TLarPivotModel.AddUnique(AList: TList<string>; const AValue: string);
+procedure TLarPivotModel.AddUnique(AList:TList<string>;ASet:TDictionary<string,Byte>;const AValue:string);
 begin
-  if AList.IndexOf(AValue) < 0 then AList.Add(AValue);
+ if not ASet.ContainsKey(AValue) then begin ASet.Add(AValue,0); AList.Add(AValue); end;
 end;
 
 function TLarPivotModel.EnsureCell(const ARowKey, AColumnKey, ADataField: string): TLarPivotResultCell;
@@ -123,8 +127,8 @@ begin
     Result.RowKey := ARowKey; Result.ColumnKey := AColumnKey; Result.DataField := ADataField;
     FCells.Add(K, Result);
   end;
-  AddUnique(FRowKeys, ARowKey);
-  AddUnique(FColumnKeys, AColumnKey);
+  AddUnique(FRowKeys,FRowKeySet,ARowKey);
+  AddUnique(FColumnKeys,FColumnKeySet,AColumnKey);
 end;
 
 function TLarPivotModel.EnsureAggregateCell(const ARowKey,AColumnKey,ADataField:string):TLarPivotResultCell;
