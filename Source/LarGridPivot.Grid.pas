@@ -27,7 +27,8 @@ type
     FFilterButtonField: TLarPivotField;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
-    function AreaFromY(AY: Integer): TLarPivotArea;
+    function AreaFromPoint(AX, AY: Integer): TLarPivotArea;
+    function AreaRect(AArea:TLarPivotArea):TRect;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
@@ -266,24 +267,32 @@ begin
    end;
 end;
 
-function TLarGridPivot.AreaFromY(AY:Integer):TLarPivotArea;
-var H,N:Integer;
+function TLarGridPivot.AreaRect(AArea:TLarPivotArea):TRect;
+var BandH,WorkTop,HalfW:Integer;
+begin
+ BandH:=FFieldAreaHeight div 2; WorkTop:=BandH; HalfW:=ClientWidth div 2;
+ case AArea of
+  paNone: Result:=Rect(0,0,ClientWidth,BandH);
+  paData: Result:=Rect(0,WorkTop,HalfW,WorkTop+(BandH div 2));
+  paColumn: Result:=Rect(HalfW,WorkTop,ClientWidth,WorkTop+(BandH div 2));
+  paRow: Result:=Rect(0,WorkTop+(BandH div 2),ClientWidth,FFieldAreaHeight);
+ else Result:=Rect(0,0,0,0);
+ end;
+end;
+
+function TLarGridPivot.AreaFromPoint(AX,AY:Integer):TLarPivotArea;
+var A:TLarPivotArea; R:TRect;
 begin
  Result:=paNone;
- if (AY<0) or (AY>=FFieldAreaHeight) then Exit;
- H:=FFieldAreaHeight div 4; if H<=0 then Exit;
- N:=AY div H;
- case N of
-  0:Result:=paNone; 1:Result:=paColumn; 2:Result:=paData; 3:Result:=paRow;
+ for A in [paNone,paData,paColumn,paRow] do begin
+  R:=AreaRect(A); if PtInRect(R,Point(AX,AY)) then Exit(A);
  end;
 end;
 
 function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
- case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
- X:=125; L:=AreaFields(A);
+ Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
@@ -315,9 +324,7 @@ end;
 function TLarGridPivot.FilterButtonAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
- case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
- X:=125; L:=AreaFields(A);
+ Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
@@ -333,9 +340,7 @@ end;
 function TLarGridPivot.SortButtonAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
- case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
- X:=125; L:=AreaFields(A);
+ Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
@@ -408,41 +413,44 @@ begin
 end;
 
 procedure TLarGridPivot.DrawFieldAreas;
-const Areas:array[0..3] of TLarPivotArea=(paNone,paColumn,paData,paRow);
-var I,J,X,Y,H,ChipW:Integer; A:TLarPivotArea; R:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
+const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
+var I,J,X,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
 begin
- H:=FFieldAreaHeight div 4; Y:=0; Canvas.Font.Assign(Font);
+ Canvas.Font.Assign(Font);
  for I:=0 to High(Areas) do begin
-  A:=Areas[I]; R:=Rect(0,Y,ClientWidth,Y+H);
-  Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(R);
-  Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(R);
+  A:=Areas[I]; AR:=AreaRect(A);
+  Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(AR);
+  Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(AR);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
-  Canvas.TextOut(8,Y+8,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
+  Canvas.TextOut(8,AR.Top+8,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
   L:=AreaFields(A);
   try
-   for J:=0 to L.Count-1 do begin
+   Count:=L.Count;
+   for J:=0 to Count-1 do begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
-    ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+    ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
     if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin
      Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
-     Canvas.MoveTo(X-3,Y+4); Canvas.LineTo(X-3,Y+H-4); Canvas.Pen.Width:=1;
+     Canvas.MoveTo(X-3,AR.Top+4); Canvas.LineTo(X-3,AR.Bottom-4); Canvas.Pen.Width:=1;
     end;
-    R:=Rect(X,Y+3,X+ChipW,Y+H-3);
+    R:=Rect(X,AR.Top+3,X+ChipW,AR.Bottom-3);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
     Canvas.Font.Color:=clWindowText;
     Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
     Canvas.Font.Style:=[fsBold];
-    case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-42,R.Top+5,'^'); psoDescending:Canvas.TextOut(R.Right-42,R.Top+5,'v'); end;
+    case F.SortOrder of
+     psoAscending:Canvas.TextOut(R.Right-42,R.Top+5,'^');
+     psoDescending:Canvas.TextOut(R.Right-42,R.Top+5,'v');
+    end;
     Canvas.TextOut(R.Right-18,R.Top+5,'v'); Canvas.Font.Style:=[];
     X:=R.Right+6;
    end;
   finally L.Free; end;
-  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=L.Count) then begin
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin
    Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
-   Canvas.MoveTo(X-3,Y+4); Canvas.LineTo(X-3,Y+H-4); Canvas.Pen.Width:=1;
+   Canvas.MoveTo(X-3,AR.Top+4); Canvas.LineTo(X-3,AR.Bottom-4); Canvas.Pen.Width:=1;
   end;
-  Inc(Y,H);
  end;
 end;
 
@@ -490,7 +498,7 @@ begin
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
-  HeaderLevels:=CFs.Count; if DFs.Count>1 then Inc(HeaderLevels);
+  HeaderLevels:=CFs.Count; if CFs.Count>0 then Inc(HeaderLevels); if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
@@ -587,7 +595,7 @@ begin
  if (Abs(X-FDragStart.X)>=4) or (Abs(Y-FDragStart.Y)>=4) then FDraggingField:=True;
  if FDraggingField then begin
   if (Y>=0) and (Y<FFieldAreaHeight) then begin
-   FDragTargetArea:=AreaFromY(Y);
+   FDragTargetArea:=AreaFromPoint(X,Y);
    FDragTargetIndex:=DropIndexAtPoint(FDragTargetArea,X);
    Cursor:=crHandPoint;
   end else begin
@@ -609,7 +617,7 @@ begin
  F:=FDragField;
  try
   if Assigned(F) and FDraggingField and (Y>=0) and (Y<FFieldAreaHeight) then begin
-   A:=AreaFromY(Y); N:=DropIndexAtPoint(A,X);
+   A:=AreaFromPoint(X,Y); N:=DropIndexAtPoint(A,X);
    MoveField(F.FieldName,A,N);
   end;
  finally
