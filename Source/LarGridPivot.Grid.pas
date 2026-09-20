@@ -318,6 +318,8 @@ begin
   FLayoutEngine.Build(FEngine.Model,CFs,DFs,RowHeaderTotal);
   FViewInfo.RowHeight:=FRowHeight;
   FViewInfo.BuildHeaders(RFs,CFs,DFs,FFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
+  FViewInfo.BuildBody(RFs,DFs,FEngine.Model.RowKeys,HeaderLevels,
+    FShowRowTotals,FShowColumnTotals,FShowGrandTotal);
   Y:=FFieldAreaHeight;
   X:=0;
   if RFs.Count>0 then
