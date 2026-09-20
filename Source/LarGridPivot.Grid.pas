@@ -167,9 +167,9 @@ function TLarGridPivot.ResultTop:Integer;
 begin Result:=EffectiveFieldAreaHeight; end;
 
 procedure TLarGridPivot.UpdateScrollBars;
-var SI:TScrollInfo; RFs,DFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer;
+var SI:TScrollInfo; RFs,DFs,CFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer;
 begin
- RFs:=AxisFields(paRow); DFs:=DataFields;
+ RFs:=AxisFields(paRow); DFs:=DataFields; CFs:=AxisFields(paColumn);
  try
   W:=0; for I:=0 to RFs.Count-1 do Inc(W,RFs[I].Width);
   if W=0 then W:=FRowHeaderWidth;
@@ -177,14 +177,14 @@ begin
    if FLayoutEngine.Columns[I].Left+FLayoutEngine.Columns[I].Width>W then
     W:=FLayoutEngine.Columns[I].Left+FLayoutEngine.Columns[I].Width;
   if FShowRowTotals then for I:=0 to DFs.Count-1 do Inc(W,DFs[I].Width);
-  HeaderLevels:=AxisFields(paColumn).Count;
+  HeaderLevels:=CFs.Count;
   if HeaderLevels>0 then Inc(HeaderLevels);
   if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
   H:=ResultTop+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight;
   if FShowColumnTotals then Inc(H,FRowHeight);
   FContentWidth:=W; FContentHeight:=H;
- finally RFs.Free; DFs.Free; end;
+ finally CFs.Free; RFs.Free; DFs.Free; end;
 
  FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_RANGE or SIF_PAGE or SIF_POS;
  SI.nMin:=0; SI.nMax:=FContentWidth-1; SI.nPage:=ClientWidth; SI.nPos:=FHScrollPos;
@@ -635,8 +635,8 @@ begin
   UpdateScrollBars;
   SaveDC(Canvas.Handle);
   IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,ClientHeight);
-  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,-FVScrollPos,nil);
-  Y:=EffectiveFieldAreaHeight+FVScrollPos;
+  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,0,nil);
+  Y:=EffectiveFieldAreaHeight;
 
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
@@ -691,7 +691,7 @@ begin
 
   if RFs.Count=0 then
    for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-    Y:=EffectiveFieldAreaHeight+FVScrollPos+HeaderLevels*FHeaderHeight+Row*FRowHeight;
+    Y:=EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight;
     DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
 
