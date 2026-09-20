@@ -23,6 +23,7 @@ type
     procedure ConfigurarPivot;
   public
     constructor Create(AOwner:TComponent); override;
+    procedure UseConnection(AConnection:TFDConnection);
     property Connection:TFDConnection read FConnection;
   end;
 
@@ -76,6 +77,14 @@ begin
   FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=9;
   FPivot.Theme:=ptVclStyle;
   FPivot.DataSource:=FSource;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.UseConnection(AConnection:TFDConnection);
+begin
+ if AConnection=nil then Exit;
+ FQuery.Close;
+ FQuery.Connection:=AConnection;
+ FStatus.Caption:='Conexión FireDAC asignada: '+AConnection.Name;
 end;
 
 procedure TFrmLarGridPivotGestionDemo.AbrirDatos(Sender:TObject);
