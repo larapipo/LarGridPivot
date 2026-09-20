@@ -303,7 +303,7 @@ begin
   for I:=0 to L.Count-1 do begin
    if L[I]=FDragField then Continue;
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
    if AX < X+(ChipW div 2) then Exit(Result);
    Inc(Result); Inc(X,ChipW+6);
   end;
