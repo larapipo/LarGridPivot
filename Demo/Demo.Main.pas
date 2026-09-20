@@ -253,7 +253,6 @@ procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
 begin
  if (FStyleCombo.ItemIndex>=0) and
     (TStyleManager.ActiveStyle.Name<>FStyleCombo.Items[FStyleCombo.ItemIndex]) then begin
-  if TStyleManager.StyleNames.IndexOf(FStyleCombo.Items[FStyleCombo.ItemIndex])<0 then Exit;
   if not TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]) then Exit;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
