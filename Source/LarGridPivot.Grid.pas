@@ -115,7 +115,11 @@ procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation)
 procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
 
 function TLarGridPivot.EffectiveFieldAreaHeight:Integer;
-begin if FShowFieldPanel then Result:=EffectiveFieldAreaHeight else Result:=0; end;
+var R:TRect;
+begin
+ if not FShowFieldPanel then Exit(0);
+ R:=AreaRect(paRow); Result:=R.Bottom;
+end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
 begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
