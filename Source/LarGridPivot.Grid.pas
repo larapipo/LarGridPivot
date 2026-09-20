@@ -335,7 +335,7 @@ begin
     X:=R.Right+6;
    end;
   finally L.Free; end;
-  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=J) then begin
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=L.Count) then begin
    Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
    Canvas.MoveTo(X-3,Y+4); Canvas.LineTo(X-3,Y+H-4); Canvas.Pen.Width:=1;
   end;
