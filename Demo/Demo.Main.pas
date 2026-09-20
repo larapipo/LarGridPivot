@@ -23,6 +23,7 @@ type
     FThemeCombo:TComboBox;
     FLayout: string;
     FStyleCombo:TComboBox;
+    FBtnGestion:TButton;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
     procedure RefreshAreaLists;
@@ -40,6 +41,7 @@ type
     procedure ToggleFields(Sender:TObject);
     procedure ChangeTheme(Sender:TObject);
     procedure ChangeVclStyle(Sender:TObject);
+    procedure OpenGestionDemo(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -47,6 +49,8 @@ type
 var FrmLarGridPivotDemo: TFrmLarGridPivotDemo;
 
 implementation
+
+uses Demo.Gestion;
 
 constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
   procedure MakeList(var L: TListBox; ALeft: Integer; const ATitle: string);
@@ -133,6 +137,7 @@ begin
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
+  MakeButton(FBtnGestion,900,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -244,6 +249,13 @@ begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
 
 procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
 begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.OpenGestionDemo(Sender:TObject);
+var F:TForm;
+begin
+ F:=TFrmLarGridPivotGestionDemo.Create(Application);
+ F.Show;
+end;
 
 procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
 begin
