@@ -159,23 +159,52 @@ begin
 end;
 
 procedure TLarPivotEngine.Build(const AProvider: ILarPivotDataProvider);
-var RowKey, ColKey, PrefixKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant; Lvl:Integer;
+var RowKey, ColKey, PrefixKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant; Lvl,I:Integer; Mem:TLarMemoryPivotProvider; RowIdx,ColIdx,DataIdx:TArray<Integer>;
 begin
   if AProvider = nil then raise EArgumentNilException.Create('AProvider');
   FModel.Clear;
   DataFields := FieldsForArea(paData); RowFields:=FieldsForArea(paRow); ColumnFields:=FieldsForArea(paColumn);
   try
     if DataFields.Count = 0 then Exit;
+    Mem:=nil;
+    if AProvider is TLarMemoryPivotProvider then begin
+     Mem:=TLarMemoryPivotProvider(AProvider);
+     SetLength(RowIdx,RowFields.Count);
+     for I:=0 to RowFields.Count-1 do RowIdx[I]:=Mem.FieldIndexOf(RowFields[I].FieldName);
+     SetLength(ColIdx,ColumnFields.Count);
+     for I:=0 to ColumnFields.Count-1 do ColIdx[I]:=Mem.FieldIndexOf(ColumnFields[I].FieldName);
+     SetLength(DataIdx,DataFields.Count);
+     for I:=0 to DataFields.Count-1 do DataIdx[I]:=Mem.FieldIndexOf(DataFields[I].FieldName);
+    end;
     if not AProvider.First then Exit;
     while not AProvider.EOF do
     begin
       if RecordAccepted(AProvider) then
       begin
-        RowKey:=BuildKey(AProvider,RowFields);
-        ColKey:=BuildKey(AProvider,ColumnFields);
-        for F in DataFields do
+        if Mem<>nil then begin
+         RowKey:='';
+         for I:=0 to RowFields.Count-1 do begin
+          V:=Mem.GetValueByIndex(RowIdx[I]);
+          if RowKey<>'' then RowKey:=RowKey+#29;
+          if VarIsNull(V) then RowKey:=RowKey+EncodeKeyPart('(null)')
+          else RowKey:=RowKey+EncodeKeyPart(VarToStr(V));
+         end;
+         ColKey:='';
+         for I:=0 to ColumnFields.Count-1 do begin
+          V:=Mem.GetValueByIndex(ColIdx[I]);
+          if ColKey<>'' then ColKey:=ColKey+#29;
+          if VarIsNull(V) then ColKey:=ColKey+EncodeKeyPart('(null)')
+          else ColKey:=ColKey+EncodeKeyPart(VarToStr(V));
+         end;
+        end else begin
+         RowKey:=BuildKey(AProvider,RowFields);
+         ColKey:=BuildKey(AProvider,ColumnFields);
+        end;
+        for I:=0 to DataFields.Count-1 do
         begin
-          V := AProvider.GetValue(F.FieldName);
+          F:=DataFields[I];
+          if Mem<>nil then V:=Mem.GetValueByIndex(DataIdx[I])
+          else V:=AProvider.GetValue(F.FieldName);
           AddValue(RowKey, ColKey, F, V);
           AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
           { Prefix aggregates also back collapsed hierarchy rows, so keep them
