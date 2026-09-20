@@ -823,8 +823,8 @@ begin
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekExpandButton:
      begin
-      Canvas.Brush.Color:=ThemeHeaderColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(VI.Bounds);
-      Canvas.Font.Assign(Font); Canvas.Font.Style:=[fsBold]; Canvas.Font.Size:=8;
+      Canvas.Brush.Color:=ThemeChipColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(VI.Bounds);
+      Canvas.Font.Assign(Font); Canvas.Font.Style:=[]; Canvas.Font.Size:=7; Canvas.Font.Color:=ThemeHeaderTextColor;
       DrawText(Canvas.Handle,PChar(VI.Caption),Length(VI.Caption),VI.Bounds,DT_CENTER or DT_VCENTER or DT_SINGLELINE);
      end;
     pvekRowValue:
