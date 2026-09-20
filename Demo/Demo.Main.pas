@@ -129,7 +129,7 @@ begin
   FThemeCombo.ItemIndex:=0; FThemeCombo.OnChange:=ChangeTheme;
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=715; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
-  FStyleCombo.Items.Assign(TStyleManager.StyleNames);
+  for var StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
 
