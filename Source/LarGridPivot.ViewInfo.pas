@@ -16,6 +16,7 @@ type
     ColumnKey: string;
     Level: Integer;
     DataIndex: Integer;
+    Caption: string;
     constructor Create;
     function Contains(AX, AY: Integer): Boolean;
   end;
@@ -52,7 +53,7 @@ constructor TLarPivotViewItem.Create;
 begin
  inherited Create;
  Kind:=pvekNone; Bounds:=Rect(0,0,0,0); Field:=nil;
- Level:=-1; DataIndex:=-1;
+ Level:=-1; DataIndex:=-1; Caption:='';
 end;
 
 function TLarPivotViewItem.Contains(AX,AY:Integer):Boolean;
@@ -84,7 +85,7 @@ procedure TLarPivotViewInfo.AddHeaderNode(ANode:TLarPivotHeaderNode);
 var C:TLarPivotHeaderNode; Item:TLarPivotViewItem;
 begin
  Item:=TLarPivotViewItem.Create;
- Item.Kind:=pvekColumnValue;
+ Item.Kind:=pvekColumnValue; Item.Caption:=ANode.Caption;
  Item.Bounds:=Rect(ANode.Left,FHeaderTop+ANode.Level*FHeaderHeight,
    ANode.Left+ANode.Width,FHeaderTop+(ANode.Level+1)*FHeaderHeight);
  Item.ColumnKey:=ANode.KeyPrefix;
@@ -107,6 +108,7 @@ begin
  for I:=0 to ARowFields.Count-1 do begin
   Item:=TLarPivotViewItem.Create;
   Item.Kind:=pvekFieldHeader; Item.Field:=ARowFields[I]; Item.Level:=I;
+  Item.Caption:=ARowFields[I].Caption; if Item.Caption='' then Item.Caption:=ARowFields[I].FieldName;
   Item.Bounds:=Rect(X,FHeaderTop,X+ARowFields[I].Width,FHeaderTop+Levels*FHeaderHeight);
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
@@ -118,6 +120,7 @@ begin
    VC:=FLayout.Columns[I];
    Item:=TLarPivotViewItem.Create;
    Item.Kind:=pvekFieldHeader; Item.Field:=VC.DataField; Item.ColumnKey:=VC.ColumnKey;
+   Item.Caption:=VC.DataField.Caption; if Item.Caption='' then Item.Caption:=VC.DataField.FieldName;
    Item.DataIndex:=I; Item.Level:=AColumnFields.Count;
    Item.Bounds:=Rect(VC.Left,FHeaderTop+AColumnFields.Count*FHeaderHeight,
      VC.Left+VC.Width,FHeaderTop+(AColumnFields.Count+1)*FHeaderHeight);
@@ -126,6 +129,7 @@ begin
  else if (AColumnFields.Count=0) and (ADataFields.Count=1) then begin
   Item:=TLarPivotViewItem.Create;
   Item.Kind:=pvekFieldHeader; Item.Field:=ADataFields[0]; Item.DataIndex:=0; Item.Level:=0;
+  Item.Caption:=ADataFields[0].Caption; if Item.Caption='' then Item.Caption:=ADataFields[0].FieldName;
   Item.Bounds:=Rect(FRowHeaderWidth,FHeaderTop,FRowHeaderWidth+ADataFields[0].Width,
     FHeaderTop+FHeaderHeight);
   FItems.Add(Item);
