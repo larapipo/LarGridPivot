@@ -19,6 +19,12 @@ type
     FFieldAreaHeight: Integer;
     FShowFieldPanel:Boolean;
     FFieldPanelFontSize:Integer;
+    FTheme:TLarPivotTheme;
+    procedure SetTheme(const Value:TLarPivotTheme);
+    function ThemeHeaderColor:TColor;
+    function ThemeTotalColor:TColor;
+    function ThemeGridColor:TColor;
+    function ThemePanelColor:TColor;
     FDragField: TLarPivotField;
     FDragStart: TPoint;
     FDraggingField: Boolean;
@@ -102,6 +108,7 @@ type
     property ShowGrandTotal: Boolean read FShowGrandTotal write SetShowGrandTotal default True;
     property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
     property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
+    property Theme:TLarPivotTheme read FTheme write SetTheme default ptClassicBlue;
   end;
 
 implementation
@@ -117,7 +124,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
- FShowFieldPanel:=True; FFieldPanelFontSize:=8; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptClassicBlue; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
@@ -158,6 +165,45 @@ var R:TRect;
 begin
  if not FShowFieldPanel then Exit(0);
  R:=AreaRect(paRow); Result:=R.Bottom;
+end;
+
+procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
+begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
+
+function TLarGridPivot.ThemeHeaderColor:TColor;
+begin
+ case FTheme of
+  ptClassicBlue:Result:=$00E8D6B8;
+  ptSilver:Result:=$00E8E8E8;
+  ptOffice:Result:=$00F4E3C1;
+  ptDark:Result:=$00404040;
+ else Result:=$00F4F4F4; end;
+end;
+
+function TLarGridPivot.ThemeTotalColor:TColor;
+begin
+ case FTheme of
+  ptClassicBlue:Result:=$00E3C9A0;
+  ptSilver:Result:=$00D8D8D8;
+  ptOffice:Result:=$00EBD29E;
+  ptDark:Result:=$00505050;
+ else Result:=$00EAEAEA; end;
+end;
+
+function TLarGridPivot.ThemeGridColor:TColor;
+begin
+ case FTheme of ptDark:Result:=$00686868; ptClassicBlue:Result:=$00B88E58;
+ else Result:=$00D0D0D0; end;
+end;
+
+function TLarGridPivot.ThemePanelColor:TColor;
+begin
+ case FTheme of
+  ptClassicBlue:Result:=$00C9823F;
+  ptDark:Result:=$00353535;
+  ptOffice:Result:=$00E5C48A;
+  ptSilver:Result:=$00DCDCDC;
+ else Result:=$00F5F5F5; end;
 end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
@@ -566,7 +612,7 @@ begin
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
-  Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(AR); Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(AR);
+  Canvas.Brush.Color:=ThemePanelColor; Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
@@ -642,8 +688,8 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  R:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
- var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color;
-  Canvas.FillRect(RR); Canvas.Pen.Color:=$00E0E0E0; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
+ var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=ThemeTotalColor else Canvas.Brush.Color:=Color;
+  Canvas.FillRect(RR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
   Canvas.Font.Assign(Font); if Bold then Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
   Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
   case Al of taRightJustify:Flags:=Flags or DT_RIGHT;taCenter:Flags:=Flags or DT_CENTER;else Flags:=Flags or DT_LEFT;end;
@@ -682,7 +728,7 @@ begin
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekExpandButton:
      begin
-      Canvas.Brush.Color:=$00E7EEF8; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=$00808080; Canvas.Rectangle(VI.Bounds);
+      Canvas.Brush.Color:=ThemeHeaderColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=$00808080; Canvas.Rectangle(VI.Bounds);
       Canvas.Font.Assign(Font); Canvas.Font.Style:=[fsBold]; Canvas.Font.Size:=8;
       DrawText(Canvas.Handle,PChar(VI.Caption),Length(VI.Caption),VI.Bounds,DT_CENTER or DT_VCENTER or DT_SINGLELINE);
      end;
