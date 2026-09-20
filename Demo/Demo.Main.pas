@@ -21,7 +21,7 @@ type
     FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
     FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnFields: TButton;
     FLayout: string;
-    procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL');
+    procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
     procedure RefreshAreaLists;
     function SelectedFieldName: string;
@@ -71,6 +71,7 @@ begin
   FData.FieldDefs.Add('RUBRO',ftString,30);
   FData.FieldDefs.Add('VENTA',ftCurrency);
   FData.FieldDefs.Add('CANTIDAD',ftInteger);
+  FData.FieldDefs.Add('COSTO',ftCurrency);
   FData.CreateDataSet;
   AddSale('JUAN','ENERO','CENTRO',125420,10);
   AddSale('JUAN','FEBRERO','CENTRO',145210,12);
@@ -88,7 +89,20 @@ begin
   AddSale('PEDRO','MARZO','CENTRO',109900,9,2025,'PINTURAS');
   AddSale('JUAN','ABRIL','NORTE',118300,10,2025,'FERRETERIA');
   AddSale('MARTA','ENERO','CENTRO',96300,8,2026,'BAZAR');
-  AddSale('MARTA','FEBRERO','SUR',104200,9,2026,'BAZAR');
+  AddSale('MARTA','FEBRERO','SUR',104200,9,2026,'BAZAR',62500);
+  AddSale('ANA','MAYO','CENTRO',112500,9,2026,'FERRETERIA',71000);
+  AddSale('JUAN','JUNIO','CENTRO',168400,14,2026,'ELECTRICIDAD',103000);
+  AddSale('LUIS','JULIO','NORTE',94500,8,2026,'BAZAR',59000);
+  AddSale('PEDRO','AGOSTO','SUR',151300,12,2026,'PINTURAS',93000);
+  AddSale('MARTA','SEPTIEMBRE','CENTRO',127900,10,2026,'FERRETERIA',77000);
+  AddSale('ANA','OCTUBRE','NORTE',139600,11,2026,'ELECTRICIDAD',85000);
+  AddSale('JUAN','NOVIEMBRE','SUR',176200,15,2026,'BAZAR',108000);
+  AddSale('PEDRO','DICIEMBRE','CENTRO',184500,16,2026,'PINTURAS',111000);
+  AddSale('MARTA','MAYO','NORTE',88900,7,2025,'BAZAR',54000);
+  AddSale('ANA','JUNIO','SUR',103200,9,2025,'FERRETERIA',63000);
+  AddSale('LUIS','JULIO','CENTRO',119700,10,2025,'ELECTRICIDAD',72000);
+  AddSale('PEDRO','AGOSTO','NORTE',128800,11,2025,'PINTURAS',79000);
+  AddSale('JUAN','SEPTIEMBRE','SUR',142600,12,2025,'FERRETERIA',86000);
 
   FSource:=TDataSource.Create(Self); FSource.DataSet:=FData;
 
@@ -115,7 +129,7 @@ begin
   RefreshAreaLists;
 end;
 
-procedure TFrmLarGridPivotDemo.AddSale(const AVendedor,AMes,ASucursal:string; AVenta:Currency; ACantidad:Integer; AAnio:Integer; const ARubro:string);
+procedure TFrmLarGridPivotDemo.AddSale(const AVendedor,AMes,ASucursal:string; AVenta:Currency; ACantidad:Integer; AAnio:Integer; const ARubro:string; ACosto:Currency);
 begin
   FData.Append;
   FData.FieldByName('VENDEDOR').AsString:=AVendedor;
@@ -125,6 +139,8 @@ begin
   FData.FieldByName('CANTIDAD').AsInteger:=ACantidad;
   FData.FieldByName('ANIO').AsInteger:=AAnio;
   FData.FieldByName('RUBRO').AsString:=ARubro;
+  if ACosto=0 then ACosto:=AVenta*0.62;
+  FData.FieldByName('COSTO').AsCurrency:=ACosto;
   FData.Post;
 end;
 
@@ -140,6 +156,8 @@ begin
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
     F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paData; F.AreaIndex:=1;
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0'; F.Alignment:=pvaRight;
+    F:=FPivot.FieldByName('COSTO'); F.Caption:='Costo'; F.Area:=paNone; F.AreaIndex:=-1;
+    F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
   finally FPivot.EndUpdate; end;
 end;
 
