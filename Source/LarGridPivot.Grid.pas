@@ -27,6 +27,7 @@ type
     FFilterButtonField: TLarPivotField;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
+    procedure DrawColumnFieldBands(AFields:TList<TLarPivotField>; ALeft,ATop:Integer);
     function AreaFromY(AY: Integer): TLarPivotArea;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
@@ -446,6 +447,21 @@ begin
  end;
 end;
 
+procedure TLarGridPivot.DrawColumnFieldBands(AFields:TList<TLarPivotField>;ALeft,ATop:Integer);
+var I:Integer; S:string; R:TRect;
+begin
+ if (AFields=nil) or (AFields.Count=0) then Exit;
+ Canvas.Font.Assign(Font); Canvas.Font.Style:=[fsBold];
+ for I:=0 to AFields.Count-1 do begin
+  S:=AFields[I].Caption; if S='' then S:=AFields[I].FieldName;
+  R:=Rect(ALeft,ATop+I*FHeaderHeight,ClientWidth,ATop+(I+1)*FHeaderHeight);
+  Canvas.Brush.Color:=$00ECECEC; Canvas.FillRect(R);
+  Canvas.Pen.Color:=$00D0D0D0; Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left+6,R.Top+4,S);
+ end;
+ Canvas.Font.Style:=[];
+end;
+
 function TLarGridPivot.AxisFields(AArea:TLarPivotArea):TList<TLarPivotField>;
 begin Result:=AreaFields(AArea); end;
 
@@ -496,6 +512,7 @@ begin
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
   BuildViewInfo;
   Y:=FFieldAreaHeight;
+  DrawColumnFieldBands(CFs,RowHeaderTotal,Y);
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
   for VI in FViewInfo.Items do
