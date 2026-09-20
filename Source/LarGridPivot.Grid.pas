@@ -643,9 +643,6 @@ procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
 var
  Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
  CL:TCheckListBox; BtnOK,BtnCancel:TButton; I:Integer; AllSelected:Boolean;
-   CL.Checked[0]:=EveryChecked;
-  end;
- end;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
