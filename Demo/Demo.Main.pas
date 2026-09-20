@@ -62,6 +62,7 @@ constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
     B:=TButton.Create(Self); B.Parent:=FTop; B.Left:=ALeft; B.Top:=ATop;
     B.Width:=105; B.Height:=27; B.Caption:=ACaption; B.OnClick:=AClick;
   end;
+var StyleName:string;
 begin
   inherited CreateNew(AOwner);
   Caption:='LarGridPivot v1 - Pivot interactivo';
@@ -129,7 +130,7 @@ begin
   FThemeCombo.ItemIndex:=0; FThemeCombo.OnChange:=ChangeTheme;
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=715; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
-  for var StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
+  for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
 
