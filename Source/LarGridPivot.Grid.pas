@@ -784,7 +784,7 @@ end;
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
 var
  Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
- CL:TCheckListBox; BtnOK,BtnCancel:TButton; I:Integer; AllSelected:Boolean;
+ CL:TCheckListBox; BtnOK,BtnCancel:TButton; I,MaxTextW:Integer; AllSelected:Boolean;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
@@ -800,7 +800,7 @@ begin
   { Size the popup from its actual values.  Text-heavy fields such as article
     descriptions should not be forced into the old fixed 300px window. }
   Frm.Canvas.Font.Assign(Font);
-  var MaxTextW:=180;
+  MaxTextW:=180;
   for I:=0 to Values.Count-1 do
    if Frm.Canvas.TextWidth(Values[I])>MaxTextW then
     MaxTextW:=Frm.Canvas.TextWidth(Values[I]);
