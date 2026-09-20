@@ -39,7 +39,7 @@ type
     procedure BuildHeaders(ARowFields, AColumnFields, ADataFields: TList<TLarPivotField>;
       AHeaderTop, AHeaderHeight, ARowHeaderWidth: Integer);
     procedure BuildBody(ARowFields, ADataFields: TList<TLarPivotField>; ARows: TList<string>;
-      AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean);
+      AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean; ACollapsedGroups:TStrings);
     function HitTest(AX, AY: Integer): TLarPivotHitTest;
     function FieldAtResizeEdge(AX, AY, ATolerance: Integer): TLarPivotField;
     property Items: TObjectList<TLarPivotViewItem> read FItems;
@@ -152,7 +152,7 @@ begin
 end;
 
 procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
- ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean);
+ ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings);
 var Row,I,Lvl,X,Y,RightEdge:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
  function KeyPart(const AKey:string;ALevel:Integer):string;
  var P,N,J:Integer;
@@ -173,6 +173,19 @@ var Row,I,Lvl,X,Y,RightEdge:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualC
    Result:=Result+KeyPart(AKey,J);
   end;
  end;
+ function GroupID(const AKey:string;ALevel:Integer):string;
+ begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
+ function IsCollapsed(const AKey:string;ALevel:Integer):Boolean;
+ begin Result:=(ACollapsedGroups<>nil) and (ACollapsedGroups.IndexOf(GroupID(AKey,ALevel))>=0); end;
+ function HiddenByCollapsedParent(const AKey:string):Boolean;
+ var K:Integer;
+ begin
+  Result:=False;
+  for K:=0 to ARowFields.Count-2 do
+   if IsCollapsed(AKey,K) then Exit(True);
+ end;
+ function GroupStarts(ARow,ALevel:Integer):Boolean;
+ begin Result:=(ARow=0) or (PrefixKey(ARows[ARow],ALevel)<>PrefixKey(ARows[ARow-1],ALevel)); end;
  function GroupEnds(ARow,ALevel:Integer):Boolean;
  begin
   Result:=(ARow=ARows.Count-1) or
@@ -210,11 +223,36 @@ begin
 
  Y:=FHeaderTop+AHeaderLevels*FHeaderHeight;
  for Row:=0 to ARows.Count-1 do begin
+  if HiddenByCollapsedParent(ARows[Row]) then begin
+   { A collapsed group is represented by its first group row only. }
+   for Lvl:=0 to ARowFields.Count-2 do
+    if IsCollapsed(ARows[Row],Lvl) and GroupStarts(Row,Lvl) then begin
+     Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[Lvl];
+     Item.RowKey:=ARows[Row]; Item.Level:=Lvl; Item.Caption:=KeyPart(ARows[Row],Lvl);
+     X:=0; for I:=0 to Lvl-1 do Inc(X,ARowFields[I].Width);
+     Item.Bounds:=Rect(X,Y,X+ARowFields[Lvl].Width,Y+FRowHeight); FItems.Add(Item);
+     Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=Lvl; Item.Caption:='+';
+     Item.Bounds:=Rect(X+3,Y+(FRowHeight-13) div 2,X+16,Y+(FRowHeight-13) div 2+13); FItems.Add(Item);
+     for I:=0 to FLayout.Columns.Count-1 do begin
+      VC:=FLayout.Columns[I]; Item:=TLarPivotViewItem.Create; Item.Kind:=pvekTotalCell; Item.Field:=VC.DataField;
+      Item.RowKey:=PrefixKey(ARows[Row],Lvl); Item.ColumnKey:=VC.ColumnKey; Item.Level:=Lvl;
+      Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight); FItems.Add(Item);
+     end;
+     Inc(Y,FRowHeight);
+     Break;
+    end;
+   Continue;
+  end;
   X:=0;
   for I:=0 to ARowFields.Count-1 do begin
    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
    Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight);
-   FItems.Add(Item); Inc(X,ARowFields[I].Width);
+   FItems.Add(Item);
+   if (I<ARowFields.Count-1) and GroupStarts(Row,I) then begin
+    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Caption:='-';
+    Item.Bounds:=Rect(X+3,Y+(FRowHeight-13) div 2,X+16,Y+(FRowHeight-13) div 2+13); FItems.Add(Item);
+   end;
+   Inc(X,ARowFields[I].Width);
   end;
   for I:=0 to FLayout.Columns.Count-1 do begin
    VC:=FLayout.Columns[I]; Item:=TLarPivotViewItem.Create; Item.Kind:=pvekDataCell; Item.Field:=VC.DataField;
