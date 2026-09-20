@@ -57,7 +57,7 @@ constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
   end;
 begin
   inherited CreateNew(AOwner);
-  Caption:='LarGridPivot v1 - Hito 4 Areas y vistas';
+  Caption:='LarGridPivot v1 - Pivot interactivo';
   Width:=1180; Height:=650; Position:=poScreenCenter;
 
   FData:=TClientDataSet.Create(Self);
@@ -86,7 +86,7 @@ begin
   MakeButton(FBtnLoad,800,6,'Restaurar vista',LoadLayout);
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
-  FAreaPanel.Height:=115; FAreaPanel.BevelOuter:=bvNone;
+  FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
   MakeList(FAvailable,8,'DISPONIBLES');
   MakeList(FRows,168,'FILAS');
   MakeList(FColumns,328,'COLUMNAS');
