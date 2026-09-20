@@ -632,7 +632,7 @@ begin
 end;
 
 procedure TLarGridPivot.BuildFilterValueCache;
-var DS:TDataSet; B:TBookmark; HasBookmark:Boolean; I:Integer; F:TField;
+var DS:TDataSet; B:TBookmark; HasBookmark:Boolean; I,J:Integer; F:TField;
  Lists:TObjectList<TStringList>; FieldRefs:TList<TField>; L:TStringList;
  S,CacheKey,Cached:string;
 begin
@@ -680,7 +680,7 @@ begin
    L:=Lists[I];
    L.Sort;
    if L.Count>1 then begin
-    var J:=L.Count-1;
+    J:=L.Count-1;
     while J>0 do begin
      if SameText(L[J],L[J-1]) then L.Delete(J);
      Dec(J);
