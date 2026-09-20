@@ -7,13 +7,13 @@ uses
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
-  LarGridPivot.Engine, LarGridPivot.LayoutEngine;
+  LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
 
 type
   TLarGridPivot = class(TCustomControl)
   private
     FDataSource: TDataSource; FDataLink: TDataLink; FFields: TLarPivotFields;
-    FEngine: TLarPivotEngine; FLayoutEngine: TLarPivotLayoutEngine; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
+    FEngine: TLarPivotEngine; FLayoutEngine: TLarPivotLayoutEngine; FViewInfo: TLarPivotViewInfo; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
     FFieldAreaHeight: Integer;
@@ -82,8 +82,8 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150; FFields:=TLarPivotFields.Create(Self);
- FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
-destructor TLarGridPivot.Destroy; begin FDataLink.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+ FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
+destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -335,6 +335,8 @@ begin
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
   FLayoutEngine.Build(FEngine.Model,CFs,DFs,RowHeaderTotal);
+  FViewInfo.RowHeight:=FRowHeight;
+  FViewInfo.BuildHeaders(RFs,CFs,DFs,FFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
   Y:=FFieldAreaHeight;
   X:=0;
   if RFs.Count>0 then
