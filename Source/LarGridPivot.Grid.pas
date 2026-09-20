@@ -348,7 +348,7 @@ function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):st
 
 procedure TLarGridPivot.Paint;
 var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
- RowKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
+ S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
  var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color;
