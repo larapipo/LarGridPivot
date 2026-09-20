@@ -8,7 +8,7 @@ uses
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
   FireDAC.Phys, FireDAC.Phys.Intf, FireDAC.Phys.FB, FireDAC.Phys.FBDef,
-  FireDAC.Phys.FBWrapper, FireDAC.UI.Intf, FireDAC.VCLUI.Wait, FireDAC.DApt,
+  FireDAC.UI.Intf, FireDAC.VCLUI.Wait, FireDAC.DApt,
   LarGridPivot.Grid, LarGridPivot.Types, LarGridPivot.Fields;
 
 type
