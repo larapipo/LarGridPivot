@@ -34,6 +34,8 @@ type
     FCollapsedGroups:TStringList;
     FSavedViews:TStringList;
     FHierarchyMenu:TPopupMenu;
+    FFieldMenu:TPopupMenu;
+    FMenuField:TLarPivotField;
     FHierarchyHit:TLarPivotHitTest;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
@@ -41,6 +43,11 @@ type
     procedure HierarchyCollapseAllClick(Sender:TObject);
     procedure HierarchyToggleSubtotalClick(Sender:TObject);
     procedure ShowHierarchyMenu(X,Y:Integer; const AHit:TLarPivotHitTest);
+    procedure ShowFieldMenu(X,Y:Integer; AField:TLarPivotField);
+    procedure FieldSortAscClick(Sender:TObject);
+    procedure FieldSortDescClick(Sender:TObject);
+    procedure FieldSortNoneClick(Sender:TObject);
+    procedure FieldFilterClick(Sender:TObject);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
     procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
@@ -150,10 +157,11 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FHierarchyMenu:=TPopupMenu.Create(Self);
+ FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -924,6 +932,31 @@ begin
  if FileExists(AFileName) then FSavedViews.LoadFromFile(AFileName);
 end;
 
+procedure TLarGridPivot.FieldSortAscClick(Sender:TObject);
+begin if FMenuField<>nil then begin FMenuField.SortOrder:=psoAscending; Rebuild; end; end;
+procedure TLarGridPivot.FieldSortDescClick(Sender:TObject);
+begin if FMenuField<>nil then begin FMenuField.SortOrder:=psoDescending; Rebuild; end; end;
+procedure TLarGridPivot.FieldSortNoneClick(Sender:TObject);
+begin if FMenuField<>nil then begin FMenuField.SortOrder:=psoNone; Rebuild; end; end;
+procedure TLarGridPivot.FieldFilterClick(Sender:TObject);
+begin if FMenuField<>nil then ShowFieldFilter(FMenuField); end;
+
+procedure TLarGridPivot.ShowFieldMenu(X,Y:Integer;AField:TLarPivotField);
+ procedure AddItem(const C:string; H:TNotifyEvent; Checked:Boolean=False);
+ var M:TMenuItem;
+ begin M:=TMenuItem.Create(FFieldMenu); M.Caption:=C; M.OnClick:=H; M.Checked:=Checked; FFieldMenu.Items.Add(M); end;
+var P:TPoint;
+begin
+ if AField=nil then Exit;
+ FMenuField:=AField; FFieldMenu.Items.Clear;
+ AddItem('Orden ascendente',FieldSortAscClick,AField.SortOrder=psoAscending);
+ AddItem('Orden descendente',FieldSortDescClick,AField.SortOrder=psoDescending);
+ AddItem('Sin orden',FieldSortNoneClick,AField.SortOrder=psoNone);
+ AddItem('-',nil);
+ AddItem('Filtro...',FieldFilterClick);
+ P:=ClientToScreen(Point(X,Y)); FFieldMenu.Popup(P.X,P.Y);
+end;
+
 procedure TLarGridPivot.HierarchyExpandClick(Sender:TObject);
 begin
  if (FHierarchyHit.RowKey<>'') and (FCollapsedGroups.IndexOf(GroupID(FHierarchyHit.RowKey,FHierarchyHit.Level))>=0) then
@@ -991,6 +1024,9 @@ procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Inte
 var HT:TLarPivotHitTest;
 begin
  inherited;
+ if FShowFieldPanel and (Y<EffectiveFieldAreaHeight) and (Button=mbRight) then begin
+  ShowFieldMenu(X,Y,FieldAtPoint(X,Y)); Exit;
+ end;
  if Y>=EffectiveFieldAreaHeight then begin
   BuildViewInfo; HT:=FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos);
   if Button=mbRight then begin
