@@ -124,7 +124,7 @@ procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.As
 procedure TLarGridPivot.CreateParams(var Params:TCreateParams);
 begin
  inherited;
- Params.Style:=Params.Style or WS_HSCROLL;
+ Params.Style:=Params.Style or WS_HSCROLL or WS_VSCROLL;
 end;
 
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
@@ -190,7 +190,11 @@ begin
  SI.nMin:=0; SI.nMax:=FContentWidth-1; SI.nPage:=ClientWidth; SI.nPos:=FHScrollPos;
  SetScrollInfo(Handle,SB_HORZ,SI,True); FHScrollPos:=GetScrollPos(Handle,SB_HORZ);
 
-
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_RANGE or SIF_PAGE or SIF_POS;
+ SI.nMin:=0; SI.nMax:=FContentHeight-ResultTop-1;
+ if ClientHeight>ResultTop then SI.nPage:=ClientHeight-ResultTop else SI.nPage:=1;
+ SI.nPos:=FVScrollPos;
+ SetScrollInfo(Handle,SB_VERT,SI,True); FVScrollPos:=GetScrollPos(Handle,SB_VERT);
 end;
 
 procedure TLarGridPivot.WMHScroll(var Message:TWMHScroll);
@@ -224,10 +228,15 @@ begin
 end;
 
 procedure TLarGridPivot.WMMouseWheel(var Message:TWMMouseWheel);
+var SI:TScrollInfo; MaxPos:Integer;
 begin
- if Message.WheelDelta>0 then FVScrollPos:=FVScrollPos-FRowHeight*3
- else FVScrollPos:=FVScrollPos+FRowHeight*3;
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL;
+ GetScrollInfo(Handle,SB_VERT,SI);
+ if Message.WheelDelta>0 then Dec(FVScrollPos,FRowHeight*3)
+ else Inc(FVScrollPos,FRowHeight*3);
+ MaxPos:=SI.nMax-Integer(SI.nPage)+1; if MaxPos<0 then MaxPos:=0;
  if FVScrollPos<0 then FVScrollPos:=0;
+ if FVScrollPos>MaxPos then FVScrollPos:=MaxPos;
  SetScrollPos(Handle,SB_VERT,FVScrollPos,True); Invalidate;
  Message.Result:=1;
 end;
@@ -633,8 +642,8 @@ begin
   UpdateScrollBars;
   SaveDC(Canvas.Handle);
   IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,ClientHeight);
-  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,0,nil);
-  Y:=EffectiveFieldAreaHeight;
+  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,-FVScrollPos,nil);
+  Y:=EffectiveFieldAreaHeight+FVScrollPos;
 
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
@@ -689,7 +698,7 @@ begin
 
   if RFs.Count=0 then
    for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-    Y:=EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight;
+    Y:=EffectiveFieldAreaHeight+FVScrollPos+HeaderLevels*FHeaderHeight+Row*FRowHeight;
     DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
 
