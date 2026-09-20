@@ -26,6 +26,7 @@ type
     procedure SetArea(const Value: TLarPivotArea);
     procedure SetAreaIndex(const Value: Integer);
     procedure SetFieldName(const Value: string);
+    procedure SetShowSubTotal(const Value:Boolean);
   public
     constructor Create(Collection: TCollection); override;
     function GetDisplayName: string; override;
@@ -41,7 +42,7 @@ type
     property DisplayFormat: string read FDisplayFormat write FDisplayFormat;
     property Width: Integer read FWidth write FWidth default 100;
     property Visible: Boolean read FVisible write FVisible default True;
-    property ShowSubTotal: Boolean read FShowSubTotal write FShowSubTotal default True;
+    property ShowSubTotal: Boolean read FShowSubTotal write SetShowSubTotal default True;
   end;
 
   TLarPivotFields = class(TOwnedCollection)
@@ -116,6 +117,13 @@ begin
       FCaption := Value;
     Changed;
   end;
+end;
+
+procedure TLarPivotField.SetShowSubTotal(const Value:Boolean);
+begin
+ if FShowSubTotal=Value then Exit;
+ FShowSubTotal:=Value;
+ Changed;
 end;
 
 constructor TLarPivotFields.Create(AOwner: TPersistent);
