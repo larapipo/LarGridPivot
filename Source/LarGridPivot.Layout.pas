@@ -83,7 +83,7 @@ begin
     V:=Root.GetValue('showRowTotals'); AShowRowTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showColumnTotals'); AShowColumnTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showGrandTotal'); AShowGrandTotal:=(V=nil) or SameText(V.Value,'true');
-    if Version>=3 then
+    if N>=3 then
       ATheme:=TLarPivotTheme(JsonInt(Root,'theme',Ord(ptVclStyle),Ord(Low(TLarPivotTheme)),Ord(High(TLarPivotTheme))))
     else begin
       I:=JsonInt(Root,'theme',Ord(ptClassicBlue)-1,0,4);
