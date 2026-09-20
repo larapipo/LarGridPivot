@@ -88,12 +88,11 @@ begin
  FConnection.LoginPrompt:=False;
  FConnection.Params.Clear;
  FConnection.DriverName:='FB';
- FConnection.Params.Values['Protocol']:='TCPIP';
- FConnection.Params.Values['Server']:='127.0.0.1';
- FConnection.Params.Values['Port']:='3050';
+ FConnection.Params.Values['Protocol']:='Local';
  FConnection.Params.Values['User_Name']:='SYSDBA';
- FConnection.Params.Values['Password']:=''; { configure locally; never commit DB passwords }
- FConnection.Params.Values['CharacterSet']:='WIN1252';
+ FConnection.LoginPrompt:=True; { password is entered locally; do not publish credentials }
+ FConnection.Params.Values['CharacterSet']:='NONE';
+ FConnection.Params.Values['SQLDialect']:='3';
  FConnection.Params.Values['Database']:='C:\\Proyectos Delphi\\GestionComercial\\Tablas IB\\GESTIONV3.FDB';
 end;
 
