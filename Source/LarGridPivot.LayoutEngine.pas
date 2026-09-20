@@ -29,8 +29,8 @@ type
     KeyPrefix: string;
     constructor Create(const ACaption: string; ALevel: Integer);
     destructor Destroy; override;
-    function FindChild(const ACaption: string): TLarPivotHeaderNode;
-    function AddChild(const ACaption: string): TLarPivotHeaderNode;
+    function FindChild(const ACaption, AKeyPrefix: string): TLarPivotHeaderNode;
+    function AddChild(const ACaption, AKeyPrefix: string): TLarPivotHeaderNode;
     property Children: TObjectList<TLarPivotHeaderNode> read FChildren;
   end;
 
@@ -68,17 +68,22 @@ end;
 destructor TLarPivotHeaderNode.Destroy;
 begin FChildren.Free; inherited; end;
 
-function TLarPivotHeaderNode.FindChild(const ACaption:string):TLarPivotHeaderNode;
+function TLarPivotHeaderNode.FindChild(const ACaption,AKeyPrefix:string):TLarPivotHeaderNode;
 var N:TLarPivotHeaderNode;
 begin
  Result:=nil;
- for N in FChildren do if N.Caption=ACaption then Exit(N);
+ for N in FChildren do
+  if (N.Caption=ACaption) and (N.KeyPrefix=AKeyPrefix) then Exit(N);
 end;
 
-function TLarPivotHeaderNode.AddChild(const ACaption:string):TLarPivotHeaderNode;
+function TLarPivotHeaderNode.AddChild(const ACaption,AKeyPrefix:string):TLarPivotHeaderNode;
 begin
- Result:=FindChild(ACaption);
- if Result=nil then begin Result:=TLarPivotHeaderNode.Create(ACaption,Level+1); FChildren.Add(Result); end;
+ Result:=FindChild(ACaption,AKeyPrefix);
+ if Result=nil then begin
+  Result:=TLarPivotHeaderNode.Create(ACaption,Level+1);
+  Result.KeyPrefix:=AKeyPrefix;
+  FChildren.Add(Result);
+ end;
 end;
 
 constructor TLarPivotLayoutEngine.Create;
@@ -146,11 +151,11 @@ begin
     Root:=nil;
     for I:=0 to FRoots.Count-1 do begin
      Candidate:=FRoots[I];
-     if Candidate.Caption=Cap then begin Root:=Candidate; Break; end;
+     if (Candidate.Caption=Cap) and (Candidate.KeyPrefix=Prefix) then begin Root:=Candidate; Break; end;
     end;
-    if Root=nil then begin Root:=TLarPivotHeaderNode.Create(Cap,0); FRoots.Add(Root); end;
+    if Root=nil then begin Root:=TLarPivotHeaderNode.Create(Cap,0); Root.KeyPrefix:=Prefix; FRoots.Add(Root); end;
     Node:=Root;
-   end else Node:=Node.AddChild(Cap);
+   end else Node:=Node.AddChild(Cap,Prefix);
    if Node.KeyPrefix='' then Node.KeyPrefix:=Prefix;
    if Lvl=AColumnFields.Count-1 then Node.ColumnKey:=K;
   end;
