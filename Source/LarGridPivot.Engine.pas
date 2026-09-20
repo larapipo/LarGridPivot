@@ -15,6 +15,7 @@ type
     FModel: TLarPivotModel;
     function FieldsForArea(AArea: TLarPivotArea): TList<TLarPivotField>;
     function BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
+    function EncodeKeyPart(const S: string): string;
     function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
   public
@@ -61,6 +62,11 @@ begin
       begin T := Result[I]; Result[I] := Result[J]; Result[J] := T; end;
 end;
 
+function TLarPivotEngine.EncodeKeyPart(const S:string):string;
+begin
+ Result:=StringReplace(S,#29,#29#29,[rfReplaceAll]);
+end;
+
 function TLarPivotEngine.BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
 var L: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
 begin
@@ -70,8 +76,8 @@ begin
     for F in L do
     begin
       V := AProvider.GetValue(F.FieldName);
-      if Result <> '' then Result := Result + ' | ';
-      if VarIsNull(V) then Result := Result + '(null)' else Result := Result + VarToStr(V);
+      if Result <> '' then Result := Result + #29;
+      if VarIsNull(V) then Result := Result + EncodeKeyPart('(null)') else Result := Result + EncodeKeyPart(VarToStr(V));
     end;
   finally L.Free; end;
 end;
