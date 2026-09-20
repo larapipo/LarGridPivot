@@ -746,9 +746,18 @@ begin
     R:=Rect(X,Y,X+ChipW,Y+20);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
-    Canvas.Font.Color:=clWindowText; Canvas.TextOut(R.Left+6,R.Top+3,S);
+    Canvas.Font.Color:=ThemeTextColor;
+    { Subtle sort marker at the left of the field caption. }
+    if F.SortOrder<>psoNone then begin
+     Canvas.Pen.Color:=ThemeTextColor;
+     if F.SortOrder=psoAscending then begin
+      Canvas.MoveTo(R.Left+6,R.Top+12); Canvas.LineTo(R.Left+10,R.Top+8); Canvas.LineTo(R.Left+14,R.Top+12);
+     end else begin
+      Canvas.MoveTo(R.Left+6,R.Top+8); Canvas.LineTo(R.Left+10,R.Top+12); Canvas.LineTo(R.Left+14,R.Top+8);
+     end;
+     Canvas.TextOut(R.Left+18,R.Top+3,S);
+    end else Canvas.TextOut(R.Left+6,R.Top+3,S);
     Canvas.Font.Style:=[fsBold];
-    case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-31,R.Top+3,'^'); psoDescending:Canvas.TextOut(R.Right-31,R.Top+3,'v'); end;
     Fil:=FEngine.Filters.Find(F.FieldName);
     if ((Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0)) or (F=FHotFilterField) then begin
      if (Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0) then begin
