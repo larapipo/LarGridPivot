@@ -24,11 +24,14 @@ type
     FResizeStartX, FResizeStartWidth: Integer;
     FDragTargetArea: TLarPivotArea;
     FDragTargetIndex: Integer;
+    FFilterButtonField: TLarPivotField;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
     function AreaFromY(AY: Integer): TLarPivotArea;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
+    function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
+    procedure ShowFieldFilter(AField: TLarPivotField);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
@@ -89,7 +92,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150;
- FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFields:=TLarPivotFields.Create(Self);
+ FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
@@ -283,7 +286,7 @@ begin
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
    R:=Rect(X,Y+3,X+ChipW,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=R.Right+6;
@@ -305,6 +308,37 @@ begin
    Inc(Result); Inc(X,ChipW+6);
   end;
  finally L.Free; end;
+end;
+
+function TLarGridPivot.FilterButtonAtPoint(AX,AY:Integer):TLarPivotField;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+begin
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
+ case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ X:=125; L:=AreaFields(A);
+ try
+  Canvas.Font.Assign(Font);
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   R:=Rect(X+ChipW-22,Y+3,X+ChipW,Y+H-3);
+   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
+   X:=X+ChipW+6;
+  end;
+ finally L.Free; end;
+end;
+
+procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
+var Fil:TLarPivotFilter;
+begin
+ if AField=nil then Exit;
+ Fil:=FEngine.Filters.Ensure(AField.FieldName);
+ { Full checked-value popup comes next; this first interaction toggles an existing
+   field filter without changing the field area or DataSet.Filter. }
+ if Fil.Values.Count>0 then begin
+  Fil.Enabled:=not Fil.Enabled;
+  Rebuild;
+ end;
 end;
 
 procedure TLarGridPivot.DrawFieldAreas;
@@ -332,6 +366,7 @@ begin
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
     Canvas.Font.Color:=clWindowText;
     Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
+    Canvas.Font.Style:=[fsBold]; Canvas.TextOut(R.Right-17,R.Top+5,'v'); Canvas.Font.Style:=[];
     X:=R.Right+6;
    end;
   finally L.Free; end;
@@ -454,6 +489,8 @@ procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Inte
 begin
  inherited;
  if Button<>mbLeft then Exit;
+ FFilterButtonField:=FilterButtonAtPoint(X,Y);
+ if Assigned(FFilterButtonField) then begin ShowFieldFilter(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
  FResizingField:=ResizeFieldAtPoint(X,Y);
  if Assigned(FResizingField) then begin
   FResizeStartX:=X; FResizeStartWidth:=FResizingField.Width; MouseCapture:=True; Cursor:=crHSplit; Exit;
