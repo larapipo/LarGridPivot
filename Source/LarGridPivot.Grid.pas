@@ -692,11 +692,17 @@ begin
     Canvas.Font.Style:=[fsBold];
     case F.SortOrder of psoAscending:Canvas.TextOut(R.Right-31,R.Top+3,'^'); psoDescending:Canvas.TextOut(R.Right-31,R.Top+3,'v'); end;
     Fil:=FEngine.Filters.Find(F.FieldName);
-    if (Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0) then begin
-     Canvas.Brush.Color:=ThemeTotalColor; Canvas.FillRect(Rect(R.Right-18,R.Top+1,R.Right-1,R.Bottom-1));
-     Canvas.Font.Color:=ThemeTotalTextColor;
+    if ((Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0)) or (F=FHotFilterField) then begin
+     if (Fil<>nil) and Fil.Enabled and (Fil.Values.Count>0) then begin
+      Canvas.Brush.Color:=ThemeTotalColor; Canvas.FillRect(Rect(R.Right-18,R.Top+1,R.Right-1,R.Bottom-1));
+      Canvas.Font.Color:=ThemeTotalTextColor;
+     end else Canvas.Font.Color:=ThemeTextColor;
+     { Small dropdown chevron, shown on hover like DevExpress field buttons. }
+     Canvas.Pen.Color:=Canvas.Font.Color;
+     Canvas.MoveTo(R.Right-13,R.Top+8); Canvas.LineTo(R.Right-9,R.Top+12);
+     Canvas.LineTo(R.Right-5,R.Top+8);
     end;
-    Canvas.TextOut(R.Right-14,R.Top+3,'v'); Canvas.Font.Style:=[]; X:=R.Right+4;
+    Canvas.Font.Style:=[]; X:=R.Right+4;
    end;
   finally L.Free; end;
   if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
