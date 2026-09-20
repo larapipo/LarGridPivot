@@ -512,7 +512,7 @@ begin
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
   BuildViewInfo;
   Y:=FFieldAreaHeight;
-  DrawColumnFieldBands(CFs,RowHeaderTotal,Y);
+
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
   for VI in FViewInfo.Items do
