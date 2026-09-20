@@ -206,6 +206,8 @@ begin
   Result.Level:=Item.Level; Result.DataIndex:=Item.DataIndex;
   Exit;
  end;
+end;
+
 function TLarPivotViewInfo.FieldAtResizeEdge(AX,AY,ATolerance:Integer):TLarPivotField;
 var I,Dist:Integer; Item:TLarPivotViewItem;
 begin
