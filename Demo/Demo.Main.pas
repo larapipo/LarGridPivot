@@ -19,7 +19,7 @@ type
     FAreaPanel: TPanel;
     FAvailable, FRows, FColumns, FValues, FFilters: TListBox;
     FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
-    FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals: TButton;
+    FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnFields: TButton;
     FLayout: string;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL');
     procedure ConfigurePivot;
@@ -35,6 +35,7 @@ type
     procedure LoadLayout(Sender: TObject);
     procedure ToggleRowTotals(Sender:TObject);
     procedure ToggleColumnTotals(Sender:TObject);
+    procedure ToggleFields(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -97,6 +98,7 @@ begin
   MakeButton(FBtnLoad,118,6,'Restaurar vista',LoadLayout);
   MakeButton(FBtnRowTotals,228,6,'Tot. filas',ToggleRowTotals);
   MakeButton(FBtnColumnTotals,338,6,'Tot. columnas',ToggleColumnTotals);
+  MakeButton(FBtnFields,448,6,'Mostrar campos',ToggleFields);
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -109,6 +111,7 @@ begin
   FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
   FPivot.DataSource:=FSource; FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=10;
   ConfigurePivot;
+  FBtnFields.Caption:='Ocultar campos';
   RefreshAreaLists;
 end;
 
@@ -201,5 +204,12 @@ begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
 
 procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
 begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.ToggleFields(Sender:TObject);
+begin
+ FPivot.ShowFieldPanel:=not FPivot.ShowFieldPanel;
+ if FPivot.ShowFieldPanel then FBtnFields.Caption:='Ocultar campos'
+ else FBtnFields.Caption:='Mostrar campos';
+end;
 
 end.
