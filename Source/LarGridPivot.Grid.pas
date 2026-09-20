@@ -20,11 +20,6 @@ type
     FShowFieldPanel:Boolean;
     FFieldPanelFontSize:Integer;
     FTheme:TLarPivotTheme;
-    procedure SetTheme(const Value:TLarPivotTheme);
-    function ThemeHeaderColor:TColor;
-    function ThemeTotalColor:TColor;
-    function ThemeGridColor:TColor;
-    function ThemePanelColor:TColor;
     FDragField: TLarPivotField;
     FDragStart: TPoint;
     FDraggingField: Boolean;
@@ -40,7 +35,12 @@ type
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
     procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
-    procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
+    procedure SetTheme(const Value:TLarPivotTheme);
+    function ThemeHeaderColor:TColor;
+    function ThemeTotalColor:TColor;
+    function ThemeGridColor:TColor;
+    function ThemePanelColor:TColor;
+        procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
     procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
     procedure UpdateScrollBars;
