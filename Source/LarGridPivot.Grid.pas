@@ -30,6 +30,9 @@ type
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
+    procedure SetHeaderHeight(const Value: Integer); procedure SetRowHeight(const Value: Integer);
+    procedure SetRowHeaderWidth(const Value: Integer); procedure SetShowRowTotals(const Value: Boolean);
+    procedure SetShowColumnTotals(const Value: Boolean); procedure SetShowGrandTotal(const Value: Boolean);
     procedure DataChanged(Sender: TObject); procedure BuildFieldsFromDataSet;
     function DataFields: TList<TLarPivotField>;
     function DefaultAlignment(AField: TLarPivotField): TAlignment;
@@ -63,12 +66,12 @@ type
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
     property DataSource: TDataSource read FDataSource write SetDataSource;
     property Fields: TLarPivotFields read FFields write SetFields;
-    property HeaderHeight: Integer read FHeaderHeight write FHeaderHeight default 32;
-    property RowHeight: Integer read FRowHeight write FRowHeight default 28;
-    property RowHeaderWidth: Integer read FRowHeaderWidth write FRowHeaderWidth default 180;
-    property ShowRowTotals: Boolean read FShowRowTotals write FShowRowTotals default True;
-    property ShowColumnTotals: Boolean read FShowColumnTotals write FShowColumnTotals default True;
-    property ShowGrandTotal: Boolean read FShowGrandTotal write FShowGrandTotal default True;
+    property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight default 32;
+    property RowHeight: Integer read FRowHeight write SetRowHeight default 28;
+    property RowHeaderWidth: Integer read FRowHeaderWidth write SetRowHeaderWidth default 180;
+    property ShowRowTotals: Boolean read FShowRowTotals write SetShowRowTotals default True;
+    property ShowColumnTotals: Boolean read FShowColumnTotals write SetShowColumnTotals default True;
+    property ShowGrandTotal: Boolean read FShowGrandTotal write SetShowGrandTotal default True;
   end;
 
 implementation
@@ -92,6 +95,19 @@ procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSo
 procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.Assign(Value); Rebuild; end;
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
 procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
+
+procedure TLarGridPivot.SetHeaderHeight(const Value:Integer);
+begin if Value=FHeaderHeight then Exit; if Value<16 then FHeaderHeight:=16 else FHeaderHeight:=Value; Invalidate; end;
+procedure TLarGridPivot.SetRowHeight(const Value:Integer);
+begin if Value=FRowHeight then Exit; if Value<16 then FRowHeight:=16 else FRowHeight:=Value; Invalidate; end;
+procedure TLarGridPivot.SetRowHeaderWidth(const Value:Integer);
+begin if Value=FRowHeaderWidth then Exit; if Value<40 then FRowHeaderWidth:=40 else FRowHeaderWidth:=Value; Invalidate; end;
+procedure TLarGridPivot.SetShowRowTotals(const Value:Boolean);
+begin if Value=FShowRowTotals then Exit; FShowRowTotals:=Value; Invalidate; end;
+procedure TLarGridPivot.SetShowColumnTotals(const Value:Boolean);
+begin if Value=FShowColumnTotals then Exit; FShowColumnTotals:=Value; Invalidate; end;
+procedure TLarGridPivot.SetShowGrandTotal(const Value:Boolean);
+begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; Invalidate; end;
 
 procedure TLarGridPivot.BuildFieldsFromDataSet;
 var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField;
