@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls, Vcl.Themes,
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
   FireDAC.Phys, FireDAC.Phys.Intf, FireDAC.Phys.FB, FireDAC.Phys.FBDef,
@@ -23,12 +23,20 @@ type
     FAnio, FMes:TEdit;
     FBtnAbrir:TButton;
     FBtnCampos:TButton;
+    FBtnGuardarVista:TButton;
+    FBtnBorrarVista:TButton;
     FEstilo:TComboBox;
+    FVistas:TComboBox;
     FStatus:TLabel;
     procedure AbrirDatos(Sender:TObject);
     procedure ConfigurarConexionDemo;
     procedure CambiarEstilo(Sender:TObject);
     procedure AlternarCampos(Sender:TObject);
+    procedure CargarEstilosVcl;
+    procedure GuardarVista(Sender:TObject);
+    procedure CargarVista(Sender:TObject);
+    procedure BorrarVista(Sender:TObject);
+    procedure ActualizarVistas;
     procedure ConfigurarPivot;
   public
     constructor Create(AOwner:TComponent); override;
@@ -76,38 +84,102 @@ begin
 
   FEstilo:=TComboBox.Create(Self); FEstilo.Parent:=FTop;
   FEstilo.Left:=260; FEstilo.Top:=8; FEstilo.Width:=150; FEstilo.Style:=csDropDownList;
-  FEstilo.Items.Add('Estilo de Delphi');
-  FEstilo.Items.Add('Classic Blue');
-  FEstilo.Items.Add('Light');
-  FEstilo.Items.Add('Silver');
-  FEstilo.Items.Add('Office');
-  FEstilo.Items.Add('Dark');
-  FEstilo.ItemIndex:=0; FEstilo.OnChange:=CambiarEstilo;
+  CargarEstilosVcl;
+  FEstilo.OnChange:=CambiarEstilo;
 
   FBtnCampos:=TButton.Create(Self); FBtnCampos.Parent:=FTop;
-  FBtnCampos.Left:=420; FBtnCampos.Top:=7; FBtnCampos.Width:=125; FBtnCampos.Height:=27;
+  FBtnCampos.Left:=420; FBtnCampos.Top:=7; FBtnCampos.Width:=115; FBtnCampos.Height:=27;
   FBtnCampos.Caption:='Ocultar campos'; FBtnCampos.OnClick:=AlternarCampos;
 
+  FVistas:=TComboBox.Create(Self); FVistas.Parent:=FTop;
+  FVistas.Left:=545; FVistas.Top:=8; FVistas.Width:=150; FVistas.Style:=csDropDownList;
+  FVistas.OnChange:=CargarVista;
+
+  FBtnGuardarVista:=TButton.Create(Self); FBtnGuardarVista.Parent:=FTop;
+  FBtnGuardarVista.Left:=700; FBtnGuardarVista.Top:=7; FBtnGuardarVista.Width:=95;
+  FBtnGuardarVista.Height:=27; FBtnGuardarVista.Caption:='Guardar vista';
+  FBtnGuardarVista.OnClick:=GuardarVista;
+
+  FBtnBorrarVista:=TButton.Create(Self); FBtnBorrarVista.Parent:=FTop;
+  FBtnBorrarVista.Left:=800; FBtnBorrarVista.Top:=7; FBtnBorrarVista.Width:=85;
+  FBtnBorrarVista.Height:=27; FBtnBorrarVista.Caption:='Borrar vista';
+  FBtnBorrarVista.OnClick:=BorrarVista;
+
   FStatus:=TLabel.Create(Self); FStatus.Parent:=FTop;
-  FStatus.Left:=560; FStatus.Top:=13;
+  FStatus.Left:=895; FStatus.Top:=13;
   FStatus.Caption:='Gestión local: GESTIONV3.FDB';
 
   FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
   FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=9;
   FPivot.Theme:=ptVclStyle;
   FPivot.DataSource:=FSource;
+  if FileExists(ChangeFileExt(Application.ExeName,'.views')) then
+    FPivot.LoadViewsFromFile(ChangeFileExt(Application.ExeName,'.views'));
+  ActualizarVistas;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.CargarEstilosVcl;
+var S:string;
+begin
+ FEstilo.Items.BeginUpdate;
+ try
+  FEstilo.Items.Clear;
+  for S in TStyleManager.StyleNames do FEstilo.Items.Add(S);
+  FEstilo.ItemIndex:=FEstilo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
+  if (FEstilo.ItemIndex<0) and (FEstilo.Items.Count>0) then FEstilo.ItemIndex:=0;
+ finally FEstilo.Items.EndUpdate; end;
 end;
 
 procedure TFrmLarGridPivotGestionDemo.CambiarEstilo(Sender:TObject);
 begin
- case FEstilo.ItemIndex of
-  1:FPivot.Theme:=ptClassicBlue;
-  2:FPivot.Theme:=ptLight;
-  3:FPivot.Theme:=ptSilver;
-  4:FPivot.Theme:=ptOffice;
-  5:FPivot.Theme:=ptDark;
- else FPivot.Theme:=ptVclStyle;
+ if FEstilo.ItemIndex<0 then Exit;
+ try
+  TStyleManager.TrySetStyle(FEstilo.Items[FEstilo.ItemIndex]);
+  FPivot.Theme:=ptVclStyle;
+  FPivot.Invalidate;
+ except
+  on E:Exception do Application.ShowException(E);
  end;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.ActualizarVistas;
+var N:TStringList; S,Current:string;
+begin
+ Current:=FVistas.Text; N:=TStringList.Create;
+ try
+  FPivot.GetViewNames(N);
+  FVistas.Items.Assign(N);
+  FVistas.ItemIndex:=FVistas.Items.IndexOf(Current);
+ finally N.Free; end;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.GuardarVista(Sender:TObject);
+var N:string;
+begin
+ N:=FVistas.Text;
+ if not InputQuery('Guardar vista','Nombre de la vista:',N) then Exit;
+ N:=Trim(N); if N='' then Exit;
+ FPivot.SaveView(N);
+ FPivot.SaveViewsToFile(ChangeFileExt(Application.ExeName,'.views'));
+ ActualizarVistas;
+ FVistas.ItemIndex:=FVistas.Items.IndexOf(N);
+end;
+
+procedure TFrmLarGridPivotGestionDemo.CargarVista(Sender:TObject);
+begin
+ if FVistas.ItemIndex<0 then Exit;
+ if FPivot.LoadView(FVistas.Items[FVistas.ItemIndex]) then
+  FStatus.Caption:='Vista cargada: '+FVistas.Items[FVistas.ItemIndex];
+end;
+
+procedure TFrmLarGridPivotGestionDemo.BorrarVista(Sender:TObject);
+var N:string;
+begin
+ if FVistas.ItemIndex<0 then Exit;
+ N:=FVistas.Items[FVistas.ItemIndex];
+ FPivot.DeleteView(N);
+ FPivot.SaveViewsToFile(ChangeFileExt(Application.ExeName,'.views'));
+ ActualizarVistas;
 end;
 
 procedure TFrmLarGridPivotGestionDemo.AlternarCampos(Sender:TObject);
