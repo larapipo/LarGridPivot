@@ -1008,9 +1008,14 @@ begin
 end;
 
 procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
-var A:TLarPivotArea; N:Integer;
+var A:TLarPivotArea; N:Integer; Hot:TLarPivotField;
 begin
  inherited;
+ Hot:=nil;
+ if FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
+  Hot:=FieldAtPoint(X,Y);
+  if Hot<>FHotFilterField then begin FHotFilterField:=Hot; Invalidate; end;
+ end else if FHotFilterField<>nil then begin FHotFilterField:=nil; Invalidate; end;
  if Assigned(FResizingField) then begin
   FResizingField.Width:=FResizeStartWidth+(X-FResizeStartX);
   if FResizingField.Width<40 then FResizingField.Width:=40;
