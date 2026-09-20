@@ -314,7 +314,7 @@ begin
   for I:=0 to L.Count-1 do begin
    if L[I]=FDragField then Continue;
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
    if AX < X+(ChipW div 2) then Exit(Result);
    Inc(Result); Inc(X,ChipW+6);
   end;
@@ -329,7 +329,7 @@ begin
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
    R:=Rect(X+ChipW-24,Y+3,X+ChipW,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=X+ChipW+6;
@@ -345,7 +345,7 @@ begin
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
    R:=Rect(X+ChipW-46,Y+3,X+ChipW-24,Y+H-3);
    if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
    X:=X+ChipW+6;
@@ -581,6 +581,7 @@ begin
 end;
 
 procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
+var A:TLarPivotArea; N:Integer;
 begin
  inherited;
  if Assigned(FResizingField) then begin
@@ -594,6 +595,7 @@ begin
  end;
  if (Abs(X-FDragStart.X)>=4) or (Abs(Y-FDragStart.Y)>=4) then FDraggingField:=True;
  if FDraggingField then begin
+  A:=FDragTargetArea; N:=FDragTargetIndex;
   if (Y>=0) and (Y<FFieldAreaHeight) then begin
    FDragTargetArea:=AreaFromPoint(X,Y);
    FDragTargetIndex:=DropIndexAtPoint(FDragTargetArea,X);
@@ -601,8 +603,7 @@ begin
   end else begin
    FDragTargetArea:=paNone; FDragTargetIndex:=-1; Cursor:=crDefault;
   end;
-  { Double buffering removes erase/fill flicker; repaint only while the insertion target can change. }
-  Invalidate;
+  if (A<>FDragTargetArea) or (N<>FDragTargetIndex) then Invalidate;
  end;
 end;
 
