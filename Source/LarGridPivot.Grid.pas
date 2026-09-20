@@ -626,10 +626,17 @@ var
  Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
  CL:TCheckListBox; BtnOK,BtnCancel:TButton; I:Integer; AllSelected:Boolean;
  procedure ToggleAll(Sender:TObject);
- var K:Integer; NewState:Boolean;
+ var K:Integer; NewState,EveryChecked:Boolean;
  begin
-  NewState:=CL.Checked[0];
-  for K:=1 to CL.Items.Count-1 do CL.Checked[K]:=NewState;
+  if CL.ItemIndex=0 then begin
+   NewState:=CL.Checked[0];
+   for K:=1 to CL.Items.Count-1 do CL.Checked[K]:=NewState;
+  end else begin
+   EveryChecked:=True;
+   for K:=1 to CL.Items.Count-1 do
+    if not CL.Checked[K] then begin EveryChecked:=False; Break; end;
+   CL.Checked[0]:=EveryChecked;
+  end;
  end;
 begin
  if AField=nil then Exit;
