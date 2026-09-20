@@ -20,6 +20,7 @@ type
     procedure SortKeys(AKeys: TList<string>; AFields: TList<TLarPivotField>);
     function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
+    procedure AddValueRaw(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
   public
     constructor Create(AFields: TLarPivotFields);
@@ -139,6 +140,13 @@ procedure TLarPivotEngine.AddValue(const ARowKey, AColKey: string; AField: TLarP
 var Cell: TLarPivotResultCell;
 begin
   Cell := FModel.EnsureCell(ARowKey, AColKey, AField.FieldName);
+  Cell.Accumulator.Add(AValue);
+end;
+
+procedure TLarPivotEngine.AddValueRaw(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
+var Cell: TLarPivotResultCell;
+begin
+  Cell := FModel.EnsureAggregateCell(ARowKey, AColKey, AField.FieldName);
   Cell.Accumulator.Add(AValue);
 end;
 
