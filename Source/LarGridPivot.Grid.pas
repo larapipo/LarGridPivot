@@ -7,13 +7,13 @@ uses
   System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
-  LarGridPivot.Engine;
+  LarGridPivot.Engine, LarGridPivot.LayoutEngine;
 
 type
   TLarGridPivot = class(TCustomControl)
   private
     FDataSource: TDataSource; FDataLink: TDataLink; FFields: TLarPivotFields;
-    FEngine: TLarPivotEngine; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
+    FEngine: TLarPivotEngine; FLayoutEngine: TLarPivotLayoutEngine; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
     FFieldAreaHeight: Integer;
@@ -82,8 +82,8 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150; FFields:=TLarPivotFields.Create(Self);
- FEngine:=TLarPivotEngine.Create(FFields); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
-destructor TLarGridPivot.Destroy; begin FDataLink.Free; FEngine.Free; FFields.Free; inherited; end;
+ FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
+destructor TLarGridPivot.Destroy; begin FDataLink.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -307,7 +307,7 @@ function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):st
 procedure TLarGridPivot.Paint;
 var R:TRect; Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal,ColSpanW,LeafX:Integer;
  RowKey,ColKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
- DFs,RFs,CFs:TList<TLarPivotField>;
+ DFs,RFs,CFs:TList<TLarPivotField>; Root:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
  var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color;
   Canvas.FillRect(RR); Canvas.Pen.Color:=$00E0E0E0; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
@@ -327,6 +327,7 @@ begin
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
+  FLayoutEngine.Build(FEngine.Model,CFs,DFs,RowHeaderTotal);
   Y:=FFieldAreaHeight;
   X:=0;
   if RFs.Count>0 then
@@ -336,20 +337,24 @@ begin
    end
   else begin DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True); X:=RowHeaderTotal; end;
 
-  for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin
-   ColKey:=FEngine.Model.ColumnKeys[Col]; ColSpanW:=0; for D:=0 to DFs.Count-1 do Inc(ColSpanW,DFs[D].Width);
-   for Lvl:=0 to CFs.Count-1 do
-    DrawCell(Rect(X,Y+Lvl*FHeaderHeight,X+ColSpanW,Y+(Lvl+1)*FHeaderHeight),KeyPart(ColKey,Lvl),taCenter,True);
-   if DFs.Count>1 then begin
-    LeafX:=X;
-    for D:=0 to DFs.Count-1 do begin
-     DrawCell(Rect(LeafX,Y+CFs.Count*FHeaderHeight,LeafX+DFs[D].Width,Y+(CFs.Count+1)*FHeaderHeight),DFs[D].Caption,taCenter,True);
-     Inc(LeafX,DFs[D].Width);
-    end;
+  if CFs.Count>0 then begin
+   procedure DrawHeaderNode(ANode:TLarPivotHeaderNode);
+   var C:TLarPivotHeaderNode;
+   begin
+    DrawCell(Rect(ANode.Left,Y+ANode.Level*FHeaderHeight,
+      ANode.Left+ANode.Width,Y+(ANode.Level+1)*FHeaderHeight),ANode.Caption,taCenter,True);
+    for C in ANode.Children do DrawHeaderNode(C);
    end;
-   if (CFs.Count=0) and (DFs.Count=1) then DrawCell(Rect(X,Y,X+DFs[0].Width,Y+FHeaderHeight),DFs[0].Caption,taCenter,True);
-   Inc(X,ColSpanW);
+   for Root in FLayoutEngine.Roots do DrawHeaderNode(Root);
   end;
+  if DFs.Count>1 then
+   for VC in FLayoutEngine.Columns do
+    DrawCell(Rect(VC.Left,Y+CFs.Count*FHeaderHeight,VC.Left+VC.Width,
+      Y+(CFs.Count+1)*FHeaderHeight),VC.DataField.Caption,taCenter,True)
+  else if (CFs.Count=0) and (DFs.Count=1) then
+   DrawCell(Rect(RowHeaderTotal,Y,RowHeaderTotal+DFs[0].Width,Y+FHeaderHeight),DFs[0].Caption,taCenter,True);
+  X:=RowHeaderTotal;
+  for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
   if FShowRowTotals then
    for D:=0 to DFs.Count-1 do begin
     S:='TOTAL'; if DFs.Count>1 then S:=S+' '+DFs[D].Caption;
