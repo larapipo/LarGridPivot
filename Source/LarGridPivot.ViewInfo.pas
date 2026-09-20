@@ -3,7 +3,7 @@ unit LarGridPivot.ViewInfo;
 interface
 
 uses
-  System.Types, System.Generics.Collections,
+  System.SysUtils, System.Types, System.Generics.Collections,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.LayoutEngine;
 
 type
