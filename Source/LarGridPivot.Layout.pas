@@ -49,6 +49,7 @@ begin
       O.AddPair('headerAlignment', TJSONNumber.Create(AlignToInt(F.HeaderAlignment)));
       O.AddPair('displayFormat', F.DisplayFormat); O.AddPair('width', TJSONNumber.Create(F.Width));
       O.AddPair('visible', TJSONBool.Create(F.Visible));
+      O.AddPair('showSubTotal', TJSONBool.Create(F.ShowSubTotal));
     end;
     Arr := TJSONArray.Create; Root.AddPair('filters', Arr);
     for I := 0 to AFilters.Count - 1 do begin
@@ -94,6 +95,7 @@ begin
       F.DisplayFormat:=JsonText(O,'displayFormat',F.DisplayFormat);
       F.Width:=JsonInt(O,'width',F.Width,40,MaxInt);
       V:=O.GetValue('visible'); F.Visible:=(V=nil) or SameText(V.Value,'true');
+      V:=O.GetValue('showSubTotal'); F.ShowSubTotal:=(V=nil) or SameText(V.Value,'true');
     end;
     AFilters.Clear; Arr:=Root.GetValue('filters') as TJSONArray;
     if Arr<>nil then for I:=0 to Arr.Count-1 do begin
