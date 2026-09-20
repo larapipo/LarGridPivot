@@ -153,7 +153,7 @@ end;
 
 procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
  ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings);
-var Row,I,Lvl,X,Y,RightEdge:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
+var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
  function KeyPart(const AKey:string;ALevel:Integer):string;
  var P,N,J:Integer;
  begin
@@ -177,12 +177,12 @@ var Row,I,Lvl,X,Y,RightEdge:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualC
  begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
  function IsCollapsed(const AKey:string;ALevel:Integer):Boolean;
  begin Result:=(ACollapsedGroups<>nil) and (ACollapsedGroups.IndexOf(GroupID(AKey,ALevel))>=0); end;
- function HiddenByCollapsedParent(const AKey:string):Boolean;
+ function CollapsedLevel(const AKey:string):Integer;
  var K:Integer;
  begin
-  Result:=False;
+  Result:=-1;
   for K:=0 to ARowFields.Count-2 do
-   if IsCollapsed(AKey,K) then Exit(True);
+   if IsCollapsed(AKey,K) then Exit(K);
  end;
  function GroupStarts(ARow,ALevel:Integer):Boolean;
  begin Result:=(ARow=0) or (PrefixKey(ARows[ARow],ALevel)<>PrefixKey(ARows[ARow-1],ALevel)); end;
@@ -223,11 +223,12 @@ begin
 
  Y:=FHeaderTop+AHeaderLevels*FHeaderHeight;
  for Row:=0 to ARows.Count-1 do begin
-  if HiddenByCollapsedParent(ARows[Row]) then begin
+  CLvl:=CollapsedLevel(ARows[Row]);
+  if CLvl>=0 then begin
    { Render the first row of the outermost collapsed group, preserving all
      ancestor columns so collapsing a child never makes its parent disappear. }
-   for Lvl:=0 to ARowFields.Count-2 do
-    if IsCollapsed(ARows[Row],Lvl) and GroupStarts(Row,Lvl) then begin
+   Lvl:=CLvl;
+   if GroupStarts(Row,Lvl) then begin
      X:=0;
      for I:=0 to Lvl do begin
       Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
@@ -245,7 +246,6 @@ begin
       Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight); FItems.Add(Item);
      end;
      Inc(Y,FRowHeight);
-     Break;
     end;
    Continue;
   end;
