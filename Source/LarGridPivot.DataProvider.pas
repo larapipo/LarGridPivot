@@ -18,6 +18,28 @@ type
     function GetRecordCount: Integer;
   end;
 
+  { In-memory snapshot used after the first dataset read.  Pivot operations such
+    as filtering must not navigate FireDAC/ClientDataSet again. }
+  TLarMemoryPivotProvider = class(TInterfacedObject, ILarPivotDataProvider)
+  private
+    FFieldNames:TArray<string>;
+    FFieldTypes:TArray<TFieldType>;
+    FFieldIndex:TDictionary<string,Integer>;
+    FRows:TArray<TArray<Variant>>;
+    FPos:Integer;
+  public
+    constructor Create(ADataSet:TDataSet);
+    destructor Destroy; override;
+    function GetFieldCount:Integer;
+    function GetFieldName(AIndex:Integer):string;
+    function GetFieldDataType(AIndex:Integer):TFieldType;
+    function GetValue(const AFieldName:string):Variant;
+    function First:Boolean;
+    function Next:Boolean;
+    function EOF:Boolean;
+    function GetRecordCount:Integer;
+  end;
+
   TLarDataSetPivotProvider = class(TInterfacedObject, ILarPivotDataProvider)
   private
     FDataSet: TDataSet;
@@ -41,6 +63,69 @@ type
   end;
 
 implementation
+
+constructor TLarMemoryPivotProvider.Create(ADataSet:TDataSet);
+var I,N:Integer; B:TBookmark; HasBookmark:Boolean;
+begin
+ inherited Create;
+ if ADataSet=nil then raise EArgumentNilException.Create('ADataSet');
+ FFieldIndex:=TDictionary<string,Integer>.Create;
+ SetLength(FFieldNames,ADataSet.FieldCount);
+ SetLength(FFieldTypes,ADataSet.FieldCount);
+ for I:=0 to ADataSet.FieldCount-1 do begin
+  FFieldNames[I]:=ADataSet.Fields[I].FieldName;
+  FFieldTypes[I]:=ADataSet.Fields[I].DataType;
+  FFieldIndex.AddOrSetValue(UpperCase(FFieldNames[I]),I);
+ end;
+ N:=0; FPos:=-1;
+ if not ADataSet.Active then Exit;
+ HasBookmark:=not ADataSet.IsEmpty;
+ if HasBookmark then B:=ADataSet.GetBookmark;
+ ADataSet.DisableControls;
+ try
+  ADataSet.First;
+  while not ADataSet.Eof do begin
+   SetLength(FRows,N+1);
+   SetLength(FRows[N],ADataSet.FieldCount);
+   for I:=0 to ADataSet.FieldCount-1 do
+    FRows[N][I]:=ADataSet.Fields[I].Value;
+   Inc(N);
+   ADataSet.Next;
+  end;
+ finally
+  if HasBookmark then begin
+   if ADataSet.BookmarkValid(B) then ADataSet.GotoBookmark(B);
+   ADataSet.FreeBookmark(B);
+  end;
+  ADataSet.EnableControls;
+ end;
+end;
+
+destructor TLarMemoryPivotProvider.Destroy;
+begin FFieldIndex.Free; inherited; end;
+
+function TLarMemoryPivotProvider.GetFieldCount:Integer;
+begin Result:=Length(FFieldNames); end;
+function TLarMemoryPivotProvider.GetFieldName(AIndex:Integer):string;
+begin Result:=FFieldNames[AIndex]; end;
+function TLarMemoryPivotProvider.GetFieldDataType(AIndex:Integer):TFieldType;
+begin Result:=FFieldTypes[AIndex]; end;
+function TLarMemoryPivotProvider.GetValue(const AFieldName:string):Variant;
+var I:Integer;
+begin
+ if (FPos<0) or (FPos>=Length(FRows)) then Exit(Null);
+ if not FFieldIndex.TryGetValue(UpperCase(AFieldName),I) then
+  raise EDatabaseError.CreateFmt('Campo no encontrado: %s',[AFieldName]);
+ Result:=FRows[FPos][I];
+end;
+function TLarMemoryPivotProvider.First:Boolean;
+begin FPos:=0; Result:=Length(FRows)>0; end;
+function TLarMemoryPivotProvider.Next:Boolean;
+begin Inc(FPos); Result:=FPos<Length(FRows); end;
+function TLarMemoryPivotProvider.EOF:Boolean;
+begin Result:=(FPos<0) or (FPos>=Length(FRows)); end;
+function TLarMemoryPivotProvider.GetRecordCount:Integer;
+begin Result:=Length(FRows); end;
 
 constructor TLarDataSetPivotProvider.Create(ADataSet:TDataSet);
 var I:Integer;
