@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.DateUtils,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls,
   Data.DB, FireDAC.Comp.Client,
   LarGridPivot.Grid, LarGridPivot.Types, LarGridPivot.Fields;
 
@@ -27,9 +27,6 @@ type
   end;
 
 implementation
-
-uses
-  Vcl.ComCtrls;
 
 const
   { The demo deliberately uses the existing Firebird procedure documented in
