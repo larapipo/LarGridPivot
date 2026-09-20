@@ -178,6 +178,10 @@ begin
 
  if AShowColumnTotals then begin
   Y:=FHeaderTop+AHeaderLevels*FHeaderHeight+ARows.Count*FRowHeight;
+  Item:=TLarPivotViewItem.Create;
+  Item.Kind:=pvekTotalCell; Item.RowKey:=LAR_PIVOT_TOTAL_KEY;
+  Item.Caption:='TOTAL'; Item.Bounds:=Rect(0,Y,FRowHeaderWidth,Y+FRowHeight);
+  FItems.Add(Item);
   for I:=0 to FLayout.Columns.Count-1 do begin
    VC:=FLayout.Columns[I];
    Item:=TLarPivotViewItem.Create;
