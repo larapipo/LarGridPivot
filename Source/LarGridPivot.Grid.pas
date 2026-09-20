@@ -56,6 +56,7 @@ type
     procedure SaveLayoutToStream(AStream: TStream);
     procedure LoadLayoutFromStream(AStream: TStream);
     property Engine: TLarPivotEngine read FEngine;
+    function HitTestAt(X, Y: Integer): TLarPivotHitTest;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
@@ -374,6 +375,11 @@ begin
     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
   end;
  finally CFs.Free; RFs.Free; DFs.Free; end;
+end;
+
+function TLarGridPivot.HitTestAt(X,Y:Integer):TLarPivotHitTest;
+begin
+ Result:=FViewInfo.HitTest(X,Y);
 end;
 
 procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
