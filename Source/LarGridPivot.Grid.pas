@@ -20,6 +20,9 @@ type
     FDragField: TLarPivotField;
     FDragStart: TPoint;
     FDraggingField: Boolean;
+    FResizingField: TLarPivotField;
+    FResizeStartX, FResizeStartWidth: Integer;
+    function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
     function AreaFromY(AY: Integer): TLarPivotArea;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
@@ -151,6 +154,30 @@ begin FS:=TFileStream.Create(AFileName,fmCreate); try SaveLayoutToStream(FS); fi
 procedure TLarGridPivot.LoadLayoutFromFile(const AFileName:string);
 var FS:TFileStream;
 begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
+
+function TLarGridPivot.ResizeFieldAtPoint(AX,AY:Integer):TLarPivotField;
+var RFs,DFs:TList<TLarPivotField>; I,X,Y0,HeaderLevels:Integer;
+begin
+ Result:=nil; Y0:=FFieldAreaHeight;
+ DFs:=DataFields; RFs:=AxisFields(paRow);
+ try
+  HeaderLevels:=AreaFields(paColumn).Count;
+  if DFs.Count>1 then Inc(HeaderLevels);
+  if HeaderLevels=0 then HeaderLevels:=1;
+  if (AY<Y0) or (AY>Y0+HeaderLevels*FHeaderHeight) then Exit;
+  X:=0;
+  for I:=0 to RFs.Count-1 do begin
+   Inc(X,RFs[I].Width);
+   if Abs(AX-X)<=4 then Exit(RFs[I]);
+  end;
+  for I:=0 to DFs.Count-1 do begin
+   Inc(X,DFs[I].Width);
+   if Abs(AX-X)<=4 then Exit(DFs[I]);
+  end;
+ finally
+  RFs.Free; DFs.Free;
+ end;
+end;
 
 function TLarGridPivot.AreaCaption(AArea:TLarPivotArea):string;
 begin
@@ -311,13 +338,14 @@ begin
   else begin DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True); X:=RowHeaderTotal; end;
 
   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin
-   ColKey:=FEngine.Model.ColumnKeys[Col]; ColSpanW:=CellW*DFs.Count;
+   ColKey:=FEngine.Model.ColumnKeys[Col]; ColSpanW:=0; for D:=0 to DFs.Count-1 do Inc(ColSpanW,DFs[D].Width);
    for Lvl:=0 to CFs.Count-1 do
     DrawCell(Rect(X,Y+Lvl*FHeaderHeight,X+ColSpanW,Y+(Lvl+1)*FHeaderHeight),KeyPart(ColKey,Lvl),taCenter,True);
    if DFs.Count>1 then
     for D:=0 to DFs.Count-1 do
-     DrawCell(Rect(X+D*CellW,Y+CFs.Count*FHeaderHeight,X+(D+1)*CellW,Y+(CFs.Count+1)*FHeaderHeight),DFs[D].Caption,taCenter,True);
-   if (CFs.Count=0) and (DFs.Count=1) then DrawCell(Rect(X,Y,X+CellW,Y+FHeaderHeight),DFs[0].Caption,taCenter,True);
+     DrawCell(Rect(X,Y+CFs.Count*FHeaderHeight,X+DFs[D].Width,Y+(CFs.Count+1)*FHeaderHeight),DFs[D].Caption,taCenter,True); Inc(X,DFs[D].Width);
+   if DFs.Count>1 then Dec(X,ColSpanW);
+   if (CFs.Count=0) and (DFs.Count=1) then DrawCell(Rect(X,Y,X+DFs[0].Width,Y+FHeaderHeight),DFs[0].Caption,taCenter,True);
    Inc(X,ColSpanW);
   end;
   if FShowRowTotals then
@@ -334,10 +362,10 @@ begin
    for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin
     ColKey:=FEngine.Model.ColumnKeys[Col];
     for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(RowKey,ColKey,DF);
-     DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF)); Inc(X,CellW); end;
+     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF)); Inc(X,DF.Width); end;
    end;
    if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(RowKey,LAR_PIVOT_TOTAL_KEY,DF);
-    DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,CellW); end;
+    DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
   end;
 
   if FShowColumnTotals then begin
@@ -345,11 +373,11 @@ begin
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'TOTAL',taLeftJustify,True,True); X:=RowHeaderTotal;
    for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col];
     for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(LAR_PIVOT_TOTAL_KEY,ColKey,DF);
-     DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,CellW); end;
+     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
    end;
    if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D];
     if FShowGrandTotal then S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF) else S:='';
-    DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,CellW); end;
+    DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
   end;
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
@@ -358,6 +386,10 @@ procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Inte
 begin
  inherited;
  if Button<>mbLeft then Exit;
+ FResizingField:=ResizeFieldAtPoint(X,Y);
+ if Assigned(FResizingField) then begin
+  FResizeStartX:=X; FResizeStartWidth:=FResizingField.Width; MouseCapture:=True; Cursor:=crHSplit; Exit;
+ end;
  FDragField:=FieldAtPoint(X,Y);
  if Assigned(FDragField) then begin
   FDragStart:=Point(X,Y); FDraggingField:=False; MouseCapture:=True; Invalidate;
@@ -367,7 +399,15 @@ end;
 procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
 begin
  inherited;
- if not Assigned(FDragField) then Exit;
+ if Assigned(FResizingField) then begin
+  FResizingField.Width:=FResizeStartWidth+(X-FResizeStartX);
+  if FResizingField.Width<40 then FResizingField.Width:=40;
+  Cursor:=crHSplit; Invalidate; Exit;
+ end;
+ if not Assigned(FDragField) then begin
+  if Assigned(ResizeFieldAtPoint(X,Y)) then Cursor:=crHSplit else Cursor:=crDefault;
+  Exit;
+ end;
  if (Abs(X-FDragStart.X)>=4) or (Abs(Y-FDragStart.Y)>=4) then FDraggingField:=True;
  if FDraggingField then begin
   if Y<FFieldAreaHeight then Cursor:=crHandPoint else Cursor:=crDefault;
@@ -380,6 +420,9 @@ var A:TLarPivotArea; N:Integer; F:TLarPivotField;
 begin
  inherited;
  if Button<>mbLeft then Exit;
+ if Assigned(FResizingField) then begin
+  FResizingField:=nil; MouseCapture:=False; Cursor:=crDefault; Invalidate; Exit;
+ end;
  F:=FDragField;
  try
   if Assigned(F) and FDraggingField and (Y>=0) and (Y<FFieldAreaHeight) then begin
