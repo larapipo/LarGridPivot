@@ -41,6 +41,7 @@ type
     FAutoSaveKey:string;
     FViewDirty:Boolean;
     FScrollDirty:Boolean;
+    FFilterValueCache:TStringList;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -166,13 +167,14 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
+ FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 function TLarGridPivot.AutoLayoutFileName:string;
@@ -221,7 +223,7 @@ begin
 end;
 
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
-procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
+procedure TLarGridPivot.DataChanged(Sender:TObject); begin FFilterValueCache.Clear; if (FUpdating=0) and not FRebuilding then Rebuild; end;
 
 function TLarGridPivot.AvailableBandHeight:Integer;
 var L:TList<TLarPivotField>; I,X,W,Rows,Usable:Integer; S:string;
@@ -629,20 +631,30 @@ begin
 end;
 
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
-var DS:TDataSet; B:TBookmark; V:Variant; S:string; HasBookmark:Boolean;
+var DS:TDataSet; B:TBookmark; F:TField; S,CacheKey,Cached:string; HasBookmark:Boolean;
 begin
  AValues.Clear;
  if (AField=nil) or (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
- DS:=FDataSource.DataSet; if not DS.Active or (DS.FindField(AField.FieldName)=nil) then Exit;
+ DS:=FDataSource.DataSet; if not DS.Active then Exit;
+ F:=DS.FindField(AField.FieldName); if F=nil then Exit;
+
+ { Distinct filter values are stable until the dataset changes.  Scanning
+   40k+ records every time the dropdown opens makes the UI appear frozen. }
+ CacheKey:=UpperCase(AField.FieldName);
+ Cached:=FFilterValueCache.Values[CacheKey];
+ if Cached<>'' then begin
+  AValues.Text:=StringReplace(Cached,#30,sLineBreak,[rfReplaceAll]);
+  Exit;
+ end;
+
  HasBookmark:=not DS.IsEmpty;
  if HasBookmark then B:=DS.GetBookmark;
  DS.DisableControls;
  try
   DS.First;
   while not DS.Eof do begin
-   V:=DS.FieldByName(AField.FieldName).Value;
-   if VarIsNull(V) or VarIsEmpty(V) then S:='(null)' else S:=VarToStr(V);
-   if AValues.IndexOf(S)<0 then AValues.Add(S);
+   if F.IsNull then S:='(null)' else S:=F.AsString;
+   AValues.Add(S); { caller supplies Sorted=True/Duplicates=dupIgnore }
    DS.Next;
   end;
  finally
@@ -652,6 +664,8 @@ begin
   end;
   DS.EnableControls;
  end;
+ Cached:=StringReplace(AValues.Text,sLineBreak,#30,[rfReplaceAll]);
+ FFilterValueCache.Values[CacheKey]:=Cached;
 end;
 
 procedure TLarGridPivot.ToggleFieldSort(AField:TLarPivotField;AKeepExisting:Boolean);
