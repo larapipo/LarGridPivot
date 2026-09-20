@@ -339,11 +339,7 @@ begin
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
-  FLayoutEngine.Build(FEngine.Model,CFs,DFs,RowHeaderTotal);
-  FViewInfo.RowHeight:=FRowHeight;
-  FViewInfo.BuildHeaders(RFs,CFs,DFs,FFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
-  FViewInfo.BuildBody(RFs,DFs,FEngine.Model.RowKeys,HeaderLevels,
-    FShowRowTotals,FShowColumnTotals,FShowGrandTotal);
+  BuildViewInfo;
   Y:=FFieldAreaHeight;
   X:=0;
   if RFs.Count>0 then
