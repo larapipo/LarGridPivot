@@ -3,7 +3,7 @@ unit LarGridPivot.Engine;
 interface
 
 uses
-  System.SysUtils, System.Variants, System.Generics.Collections,
+  System.SysUtils, System.Variants, System.Generics.Collections, System.Generics.Defaults,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.DataProvider, LarGridPivot.Model;
 
@@ -108,14 +108,11 @@ begin
 end;
 
 procedure TLarPivotEngine.SortKeys(AKeys:TList<string>;AFields:TList<TLarPivotField>);
-var I,J:Integer; S:string;
 begin
- if (AFields=nil) or (AFields.Count=0) then Exit;
- for I:=0 to AKeys.Count-2 do
-  for J:=I+1 to AKeys.Count-1 do
-   if CompareKeys(AKeys[I],AKeys[J],AFields)>0 then begin
-    S:=AKeys[I]; AKeys[I]:=AKeys[J]; AKeys[J]:=S;
-   end;
+ if (AFields=nil) or (AFields.Count=0) or (AKeys.Count<2) then Exit;
+ AKeys.Sort(TComparer<string>.Construct(
+  function(const L,R:string):Integer
+  begin Result:=CompareKeys(L,R,AFields); end));
 end;
 
 function TLarPivotEngine.RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
