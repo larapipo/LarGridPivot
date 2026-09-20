@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Winapi.Messages, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -32,6 +32,13 @@ type
     FContentWidth, FContentHeight:Integer;
     FCollapsedGroups:TStringList;
     FSavedViews:TStringList;
+    FHierarchyMenu:TPopupMenu;
+    FHierarchyHit:TLarPivotHitTest;
+    procedure HierarchyExpandClick(Sender:TObject);
+    procedure HierarchyCollapseClick(Sender:TObject);
+    procedure HierarchyExpandAllClick(Sender:TObject);
+    procedure HierarchyCollapseAllClick(Sender:TObject);
+    procedure ShowHierarchyMenu(X,Y:Integer; const AHit:TLarPivotHitTest);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
     procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
@@ -45,6 +52,8 @@ type
     function ThemeTotalTextColor:TColor;
     function ThemeCellColor:TColor;
     function ThemeChipColor:TColor;
+    function StyleColor(AElement:TStyleColor; AFallback:TColor):TColor;
+    function StyleFontColor(AElement:TStyleFont; AFallback:TColor):TColor;
         procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
     procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
@@ -139,10 +148,11 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptClassicBlue; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
+ FHierarchyMenu:=TPopupMenu.Create(Self);
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -181,70 +191,39 @@ begin
  R:=AreaRect(paRow); Result:=R.Bottom;
 end;
 
+function TLarGridPivot.StyleColor(AElement:TStyleColor;AFallback:TColor):TColor;
+begin
+ Result:=AFallback;
+ if StyleServices.Enabled then Result:=StyleServices.GetSystemColor(GetStyleColor(AElement));
+end;
+
+function TLarGridPivot.StyleFontColor(AElement:TStyleFont;AFallback:TColor):TColor;
+begin
+ Result:=AFallback;
+ if StyleServices.Enabled then Result:=StyleServices.GetSystemColor(GetStyleFontColor(AElement));
+end;
+
 procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
 begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
 
 function TLarGridPivot.ThemeHeaderColor:TColor;
-begin
- case FTheme of
-  ptClassicBlue:Result:=$00E6C9A5;
-  ptSilver:Result:=$00ECECEC;
-  ptOffice:Result:=$00F2E2C8;
-  ptDark:Result:=$00404040;
- else Result:=$00F4F4F4; end;
-end;
-
+begin Result:=StyleColor(scPanel,clBtnFace); end;
 function TLarGridPivot.ThemeTotalColor:TColor;
-begin
- case FTheme of
-  ptClassicBlue:Result:=$00DAB58A;
-  ptSilver:Result:=$00DEDEDE;
-  ptOffice:Result:=$00E8D1AA;
-  ptDark:Result:=$00505050;
- else Result:=$00EAEAEA; end;
-end;
-
+begin Result:=StyleColor(scButtonHot,clBtnFace); end;
 function TLarGridPivot.ThemeGridColor:TColor;
-begin
- case FTheme of ptDark:Result:=$00686868; ptClassicBlue:Result:=$00B98955;
- else Result:=$00D0D0D0; end;
-end;
-
+begin Result:=StyleColor(scBorder,clBtnShadow); end;
 function TLarGridPivot.ThemePanelColor:TColor;
-begin
- case FTheme of
-  ptClassicBlue:Result:=$00C78543;
-  ptDark:Result:=$00353535;
-  ptOffice:Result:=$00E5C48A;
-  ptSilver:Result:=$00DCDCDC;
- else Result:=$00F5F5F5; end;
-end;
-
+begin Result:=StyleColor(scWindow,clWindow); end;
 function TLarGridPivot.ThemeTextColor:TColor;
-begin
- case FTheme of ptDark:Result:=$00F0F0F0; else Result:=$00202020; end;
-end;
-
+begin Result:=StyleFontColor(sfWindowText,clWindowText); end;
 function TLarGridPivot.ThemeHeaderTextColor:TColor;
-begin
- case FTheme of ptDark:Result:=clWhite; ptClassicBlue:Result:=$00302010; else Result:=$00202020; end;
-end;
-
+begin Result:=StyleFontColor(sfButtonText,clBtnText); end;
 function TLarGridPivot.ThemeTotalTextColor:TColor;
-begin
- case FTheme of ptDark:Result:=clWhite; else Result:=$00181818; end;
-end;
-
+begin Result:=StyleFontColor(sfButtonText,clBtnText); end;
 function TLarGridPivot.ThemeCellColor:TColor;
-begin
- case FTheme of ptDark:Result:=$002B2B2B; ptSilver:Result:=$00FAFAFA; else Result:=clWhite; end;
-end;
-
+begin Result:=StyleColor(scWindow,clWindow); end;
 function TLarGridPivot.ThemeChipColor:TColor;
-begin
- case FTheme of ptDark:Result:=$00525252; ptClassicBlue:Result:=$00F4F8FC; ptOffice:Result:=$00FFF8EA;
-  ptSilver:Result:=$00F7F7F7; else Result:=clWhite; end;
-end;
+begin Result:=StyleColor(scButtonNormal,clBtnFace); end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
 begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
