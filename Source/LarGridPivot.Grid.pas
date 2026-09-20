@@ -1145,9 +1145,12 @@ begin
   if Hot<>FHotFilterField then begin FHotFilterField:=Hot; Invalidate; end;
  end else if FHotFilterField<>nil then begin FHotFilterField:=nil; Invalidate; end;
  if Assigned(FResizingField) then begin
+  { Do not rebuild the complete ViewInfo on every mouse pixel.  Large pivots
+    can contain hundreds of thousands of visual cells.  The new width is kept
+    in the field and geometry is rebuilt once, on MouseUp. }
   FResizingField.Width:=FResizeStartWidth+(X-FResizeStartX);
   if FResizingField.Width<40 then FResizingField.Width:=40;
-  FViewDirty:=True; FScrollDirty:=True; Cursor:=crHSplit; Invalidate; Exit;
+  Cursor:=crHSplit; Exit;
  end;
  if not Assigned(FDragField) then begin
   if Assigned(ResizeFieldAtPoint(X,Y)) then Cursor:=crHSplit else Cursor:=crDefault;
@@ -1173,7 +1176,8 @@ begin
  inherited;
  if Button<>mbLeft then Exit;
  if Assigned(FResizingField) then begin
-  FResizingField:=nil; MouseCapture:=False; Cursor:=crDefault; Invalidate; Exit;
+  FResizingField:=nil; MouseCapture:=False; Cursor:=crDefault;
+  FViewDirty:=True; FScrollDirty:=True; Invalidate; Exit;
  end;
  F:=FDragField;
  try
