@@ -14,7 +14,7 @@ type
     FFilters: TLarPivotFilters;
     FModel: TLarPivotModel;
     function FieldsForArea(AArea: TLarPivotArea): TList<TLarPivotField>;
-    function BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
+    function BuildKey(const AProvider:ILarPivotDataProvider; AFields:TList<TLarPivotField>):string;
     function EncodeKeyPart(const S: string): string;
     function CompareKeys(const A, B: string; AFields: TList<TLarPivotField>): Integer;
     procedure SortKeys(AKeys: TList<string>; AFields: TList<TLarPivotField>);
@@ -71,19 +71,16 @@ begin
  Result:=StringReplace(S,#29,#29#29,[rfReplaceAll]);
 end;
 
-function TLarPivotEngine.BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
-var L: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
+function TLarPivotEngine.BuildKey(const AProvider:ILarPivotDataProvider;AFields:TList<TLarPivotField>):string;
+var F:TLarPivotField; V:Variant;
 begin
-  Result := '';
-  L := FieldsForArea(AArea);
-  try
-    for F in L do
-    begin
-      V := AProvider.GetValue(F.FieldName);
-      if Result <> '' then Result := Result + #29;
-      if VarIsNull(V) then Result := Result + EncodeKeyPart('(null)') else Result := Result + EncodeKeyPart(VarToStr(V));
-    end;
-  finally L.Free; end;
+ Result:='';
+ for F in AFields do begin
+  V:=AProvider.GetValue(F.FieldName);
+  if Result<>'' then Result:=Result+#29;
+  if VarIsNull(V) then Result:=Result+EncodeKeyPart('(null)')
+  else Result:=Result+EncodeKeyPart(VarToStr(V));
+ end;
 end;
 
 function TLarPivotEngine.CompareKeys(const A,B:string;AFields:TList<TLarPivotField>):Integer;
@@ -177,8 +174,8 @@ begin
     begin
       if RecordAccepted(AProvider) then
       begin
-        RowKey := BuildKey(AProvider, paRow);
-        ColKey := BuildKey(AProvider, paColumn);
+        RowKey:=BuildKey(AProvider,RowFields);
+        ColKey:=BuildKey(AProvider,ColumnFields);
         for F in DataFields do
         begin
           V := AProvider.GetValue(F.FieldName);
