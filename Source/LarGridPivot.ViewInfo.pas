@@ -104,6 +104,7 @@ begin
  Clear;
  FHeaderTop:=AHeaderTop; FHeaderHeight:=AHeaderHeight; FRowHeaderWidth:=ARowHeaderWidth;
  Levels:=AColumnFields.Count;
+ if AColumnFields.Count>0 then Inc(Levels); { field-name band above column members }
  if ADataFields.Count>1 then Inc(Levels);
  if Levels=0 then Levels:=1;
  FHeaderLevels:=Levels;
@@ -117,7 +118,19 @@ begin
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
 
- for Root in FLayout.Roots do AddHeaderNode(Root,AColumnFields);
+ if AColumnFields.Count>0 then
+  for I:=0 to AColumnFields.Count-1 do begin
+   Item:=TLarPivotViewItem.Create;
+   Item.Kind:=pvekFieldHeader; Item.Field:=AColumnFields[I]; Item.Level:=I;
+   Item.Caption:=AColumnFields[I].Caption; if Item.Caption='' then Item.Caption:=AColumnFields[I].FieldName;
+   Item.Bounds:=Rect(FRowHeaderWidth,FHeaderTop+I*FHeaderHeight,
+     FRowHeaderWidth+FLayout.TotalWidth,FHeaderTop+(I+1)*FHeaderHeight);
+   FItems.Add(Item);
+  end;
+ for Root in FLayout.Roots do begin
+  Root.Top:=Root.Top+FHeaderHeight;
+  AddHeaderNode(Root,AColumnFields);
+ end;
 
  if ADataFields.Count>1 then
   for I:=0 to FLayout.Columns.Count-1 do begin
@@ -126,8 +139,8 @@ begin
    Item.Kind:=pvekFieldHeader; Item.Field:=VC.DataField; Item.ColumnKey:=VC.ColumnKey;
    Item.Caption:=VC.DataField.Caption; if Item.Caption='' then Item.Caption:=VC.DataField.FieldName;
    Item.DataIndex:=I; Item.Level:=AColumnFields.Count;
-   Item.Bounds:=Rect(VC.Left,FHeaderTop+AColumnFields.Count*FHeaderHeight,
-     VC.Left+VC.Width,FHeaderTop+(AColumnFields.Count+1)*FHeaderHeight);
+   Item.Bounds:=Rect(VC.Left,FHeaderTop+(AColumnFields.Count+1)*FHeaderHeight,
+     VC.Left+VC.Width,FHeaderTop+(AColumnFields.Count+2)*FHeaderHeight);
    FItems.Add(Item);
   end
  else if (AColumnFields.Count=0) and (ADataFields.Count=1) then begin
