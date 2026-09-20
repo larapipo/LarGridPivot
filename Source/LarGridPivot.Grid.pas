@@ -621,20 +621,27 @@ begin
  Rebuild;
 end;
 
+procedure TLarGridPivot.FilterChecklistClickCheck(Sender:TObject);
+var
+ CL:TCheckListBox; K:Integer; NewState,EveryChecked:Boolean;
+begin
+ if not (Sender is TCheckListBox) then Exit;
+ CL:=TCheckListBox(Sender);
+ if CL.ItemIndex=0 then begin
+  NewState:=CL.Checked[0];
+  for K:=1 to CL.Items.Count-1 do CL.Checked[K]:=NewState;
+ end else begin
+  EveryChecked:=True;
+  for K:=1 to CL.Items.Count-1 do
+   if not CL.Checked[K] then begin EveryChecked:=False; Break; end;
+  CL.Checked[0]:=EveryChecked;
+ end;
+end;
+
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
 var
  Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
  CL:TCheckListBox; BtnOK,BtnCancel:TButton; I:Integer; AllSelected:Boolean;
- procedure ToggleAll(Sender:TObject);
- var K:Integer; NewState,EveryChecked:Boolean;
- begin
-  if CL.ItemIndex=0 then begin
-   NewState:=CL.Checked[0];
-   for K:=1 to CL.Items.Count-1 do CL.Checked[K]:=NewState;
-  end else begin
-   EveryChecked:=True;
-   for K:=1 to CL.Items.Count-1 do
-    if not CL.Checked[K] then begin EveryChecked:=False; Break; end;
    CL.Checked[0]:=EveryChecked;
   end;
  end;
@@ -667,7 +674,7 @@ begin
     if not CL.Checked[I] then begin AllSelected:=False; Break; end;
   end;
   CL.Checked[0]:=AllSelected;
-  CL.OnClickCheck:=ToggleAll;
+  CL.OnClickCheck:=FilterChecklistClickCheck;
 
   P:=TPanel.Create(Frm); P.Parent:=Frm; P.Align:=alBottom; P.Height:=42;
   P.BevelOuter:=bvNone; P.Color:=ThemePanelColor;
