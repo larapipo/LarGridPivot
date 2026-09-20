@@ -3,7 +3,7 @@ unit LarGridPivot.DataProvider;
 interface
 
 uses
-  System.SysUtils, System.Variants, Data.DB;
+  System.SysUtils, System.Variants, System.Generics.Collections, Data.DB;
 
 type
   ILarPivotDataProvider = interface
@@ -23,7 +23,8 @@ type
     FDataSet: TDataSet;
     FBookmark: TBookmark;
     FHasBookmark: Boolean;
-    FControlsDisabled: Boolean;
+    FControlsDisabled:Boolean;
+    FFieldCache:TDictionary<string,TField>;
     procedure RestoreState;
   public
     constructor Create(ADataSet: TDataSet);
@@ -41,12 +42,15 @@ type
 
 implementation
 
-constructor TLarDataSetPivotProvider.Create(ADataSet: TDataSet);
+constructor TLarDataSetPivotProvider.Create(ADataSet:TDataSet);
+var I:Integer;
 begin
   inherited Create;
   if ADataSet = nil then
     raise EArgumentNilException.Create('ADataSet');
   FDataSet := ADataSet;
+  FFieldCache:=TDictionary<string,TField>.Create;
+  for I:=0 to FDataSet.FieldCount-1 do FFieldCache.AddOrSetValue(UpperCase(FDataSet.Fields[I].FieldName),FDataSet.Fields[I]);
   if FDataSet.Active then
   begin
     FDataSet.DisableControls;
@@ -62,6 +66,7 @@ end;
 destructor TLarDataSetPivotProvider.Destroy;
 begin
   RestoreState;
+  FFieldCache.Free;
   inherited;
 end;
 
@@ -97,10 +102,9 @@ end;
 function TLarDataSetPivotProvider.GetValue(const AFieldName: string): Variant;
 var F: TField;
 begin
-  F := FDataSet.FindField(AFieldName);
-  if F = nil then
-    raise EDatabaseError.CreateFmt('Campo no encontrado: %s', [AFieldName]);
-  Result := F.Value;
+  if not FFieldCache.TryGetValue(UpperCase(AFieldName),F) then
+    raise EDatabaseError.CreateFmt('Campo no encontrado: %s',[AFieldName]);
+  Result:=F.Value;
 end;
 
 function TLarDataSetPivotProvider.First: Boolean;
