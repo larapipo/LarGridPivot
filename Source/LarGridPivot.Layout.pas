@@ -83,7 +83,13 @@ begin
     V:=Root.GetValue('showRowTotals'); AShowRowTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showColumnTotals'); AShowColumnTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showGrandTotal'); AShowGrandTotal:=(V=nil) or SameText(V.Value,'true');
-    ATheme:=TLarPivotTheme(JsonInt(Root,'theme',Ord(ptClassicBlue),Ord(Low(TLarPivotTheme)),Ord(High(TLarPivotTheme))));
+    if Version>=3 then
+      ATheme:=TLarPivotTheme(JsonInt(Root,'theme',Ord(ptVclStyle),Ord(Low(TLarPivotTheme)),Ord(High(TLarPivotTheme))))
+    else begin
+      I:=JsonInt(Root,'theme',Ord(ptClassicBlue)-1,0,4);
+      Inc(I); { v1/v2 had no ptVclStyle at ordinal zero }
+      ATheme:=TLarPivotTheme(I);
+    end;
     if ACollapsedGroups<>nil then begin
      ACollapsedGroups.Clear; Vals:=Root.GetValue('collapsedGroups') as TJSONArray;
      if Vals<>nil then for I:=0 to Vals.Count-1 do ACollapsedGroups.Add(Vals.Items[I].Value);
