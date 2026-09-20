@@ -89,8 +89,8 @@ begin
  Item:=TLarPivotViewItem.Create;
  Item.Kind:=pvekColumnValue; Item.Caption:=ANode.Caption;
  if (ANode.Level>=0) and (ANode.Level<AColumnFields.Count) then Item.Field:=AColumnFields[ANode.Level];
- Item.Bounds:=Rect(ANode.Left,FHeaderTop+ANode.Level*FHeaderHeight,
-   ANode.Left+ANode.Width,FHeaderTop+(ANode.Level+1)*FHeaderHeight);
+ Item.Bounds:=Rect(ANode.Left,FHeaderTop+(ANode.Level+1)*FHeaderHeight,
+   ANode.Left+ANode.Width,FHeaderTop+(ANode.Level+2)*FHeaderHeight);
  Item.ColumnKey:=ANode.KeyPrefix;
  Item.Level:=ANode.Level;
  FItems.Add(Item);
@@ -127,10 +127,7 @@ begin
      FRowHeaderWidth+FLayout.TotalWidth,FHeaderTop+(I+1)*FHeaderHeight);
    FItems.Add(Item);
   end;
- for Root in FLayout.Roots do begin
-  Root.Top:=Root.Top+FHeaderHeight;
-  AddHeaderNode(Root,AColumnFields);
- end;
+ for Root in FLayout.Roots do AddHeaderNode(Root,AColumnFields);
 
  if ADataFields.Count>1 then
   for I:=0 to FLayout.Columns.Count-1 do begin
