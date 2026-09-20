@@ -93,15 +93,10 @@ begin
 
   FTop:=TPanel.Create(Self); FTop.Parent:=Self; FTop.Align:=alTop; FTop.Height:=40;
   FTop.BevelOuter:=bvNone;
-  MakeButton(FBtnToRows,8,6,'A Filas',ToRows);
-  MakeButton(FBtnToColumns,118,6,'A Columnas',ToColumns);
-  MakeButton(FBtnToValues,228,6,'A Datos',ToValues);
-  MakeButton(FBtnToFilters,338,6,'A Filtros',ToFilters);
-  MakeButton(FBtnRemove,448,6,'Quitar',RemoveField);
-  MakeButton(FBtnSave,690,6,'Guardar vista',SaveLayout);
-  MakeButton(FBtnLoad,800,6,'Restaurar vista',LoadLayout);
-  MakeButton(FBtnRowTotals,910,6,'Tot. filas',ToggleRowTotals);
-  MakeButton(FBtnColumnTotals,1020,6,'Tot. columnas',ToggleColumnTotals);
+  MakeButton(FBtnSave,8,6,'Guardar vista',SaveLayout);
+  MakeButton(FBtnLoad,118,6,'Restaurar vista',LoadLayout);
+  MakeButton(FBtnRowTotals,228,6,'Tot. filas',ToggleRowTotals);
+  MakeButton(FBtnColumnTotals,338,6,'Tot. columnas',ToggleColumnTotals);
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -137,7 +132,7 @@ begin
   try
     F:=FPivot.FieldByName('VENDEDOR'); F.Area:=paRow; F.AreaIndex:=0;
     F:=FPivot.FieldByName('MES'); F.Area:=paColumn; F.AreaIndex:=0;
-    F:=FPivot.FieldByName('SUCURSAL'); F.Area:=paFilter; F.AreaIndex:=0;
+    F:=FPivot.FieldByName('SUCURSAL'); F.Area:=paNone; F.AreaIndex:=-1;
     F:=FPivot.FieldByName('VENTA'); F.Caption:='Venta'; F.Area:=paData; F.AreaIndex:=0;
     F.SummaryType:=psSum; F.DisplayFormat:='#,##0.00'; F.Alignment:=pvaRight;
     F:=FPivot.FieldByName('CANTIDAD'); F.Caption:='Cantidad'; F.Area:=paData; F.AreaIndex:=1;
