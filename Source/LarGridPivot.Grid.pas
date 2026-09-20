@@ -318,6 +318,13 @@ var R:TRect; Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal,ColSpanW,LeafX:Intege
  end;
  function TextFor(const AR,AC:string;F:TLarPivotField):string;
  begin Cell:=FEngine.Model.FindCell(AR,AC,F.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(F.SummaryType) else V:=Null; Result:=FormatCellValue(V,F); end;
+ procedure DrawHeaderNode(ANode:TLarPivotHeaderNode);
+ var C:TLarPivotHeaderNode;
+ begin
+  DrawCell(Rect(ANode.Left,Y+ANode.Level*FHeaderHeight,
+    ANode.Left+ANode.Width,Y+(ANode.Level+1)*FHeaderHeight),ANode.Caption,taCenter,True);
+  for C in ANode.Children do DrawHeaderNode(C);
+ end;
 begin
  Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DrawFieldAreas;
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
@@ -337,16 +344,8 @@ begin
    end
   else begin DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True); X:=RowHeaderTotal; end;
 
-  if CFs.Count>0 then begin
-   procedure DrawHeaderNode(ANode:TLarPivotHeaderNode);
-   var C:TLarPivotHeaderNode;
-   begin
-    DrawCell(Rect(ANode.Left,Y+ANode.Level*FHeaderHeight,
-      ANode.Left+ANode.Width,Y+(ANode.Level+1)*FHeaderHeight),ANode.Caption,taCenter,True);
-    for C in ANode.Children do DrawHeaderNode(C);
-   end;
+  if CFs.Count>0 then
    for Root in FLayoutEngine.Roots do DrawHeaderNode(Root);
-  end;
   if DFs.Count>1 then
    for VC in FLayoutEngine.Columns do
     DrawCell(Rect(VC.Left,Y+CFs.Count*FHeaderHeight,VC.Left+VC.Width,
