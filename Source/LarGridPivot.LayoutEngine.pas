@@ -72,8 +72,9 @@ function TLarPivotHeaderNode.FindChild(const ACaption,AKeyPrefix:string):TLarPiv
 var N:TLarPivotHeaderNode;
 begin
  Result:=nil;
- for N in FChildren do
-  if (N.Caption=ACaption) and (N.KeyPrefix=AKeyPrefix) then Exit(N);
+ if FChildren.Count=0 then Exit;
+ N:=FChildren[FChildren.Count-1];
+ if (N.Caption=ACaption) and (N.KeyPrefix=AKeyPrefix) then Result:=N;
 end;
 
 function TLarPivotHeaderNode.AddChild(const ACaption,AKeyPrefix:string):TLarPivotHeaderNode;
@@ -131,7 +132,7 @@ end;
 
 procedure TLarPivotLayoutEngine.Build(AModel:TLarPivotModel;
  AColumnFields,ADataFields:TList<TLarPivotField>;AStartX:Integer);
-var Col,Lvl,D,X,I:Integer; K,Cap,Prefix:string; Root,Node,Candidate:TLarPivotHeaderNode;
+var Col,Lvl,D,X:Integer; K,Cap,Prefix:string; Root,Node,Candidate:TLarPivotHeaderNode;
 begin
  Clear; if (AModel=nil) or (ADataFields=nil) or (ADataFields.Count=0) then Exit; X:=AStartX;
  if (AColumnFields=nil) or (AColumnFields.Count=0) then begin
@@ -149,11 +150,15 @@ begin
    if Prefix='' then Prefix:=Cap else Prefix:=Prefix+#29+Cap;
    if Lvl=0 then begin
     Root:=nil;
-    for I:=0 to FRoots.Count-1 do begin
-     Candidate:=FRoots[I];
-     if (Candidate.Caption=Cap) and (Candidate.KeyPrefix=Prefix) then begin Root:=Candidate; Break; end;
+    if FRoots.Count>0 then begin
+     Candidate:=FRoots[FRoots.Count-1];
+     if (Candidate.Caption=Cap) and (Candidate.KeyPrefix=Prefix) then Root:=Candidate;
     end;
-    if Root=nil then begin Root:=TLarPivotHeaderNode.Create(Cap,0); Root.KeyPrefix:=Prefix; FRoots.Add(Root); end;
+    if Root=nil then begin
+     Root:=TLarPivotHeaderNode.Create(Cap,0);
+     Root.KeyPrefix:=Prefix;
+     FRoots.Add(Root);
+    end;
     Node:=Root;
    end else Node:=Node.AddChild(Cap,Prefix);
    if Node.KeyPrefix='' then Node.KeyPrefix:=Prefix;
