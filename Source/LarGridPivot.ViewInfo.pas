@@ -224,15 +224,21 @@ begin
  Y:=FHeaderTop+AHeaderLevels*FHeaderHeight;
  for Row:=0 to ARows.Count-1 do begin
   if HiddenByCollapsedParent(ARows[Row]) then begin
-   { A collapsed group is represented by its first group row only. }
+   { Render the first row of the outermost collapsed group, preserving all
+     ancestor columns so collapsing a child never makes its parent disappear. }
    for Lvl:=0 to ARowFields.Count-2 do
     if IsCollapsed(ARows[Row],Lvl) and GroupStarts(Row,Lvl) then begin
-     Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[Lvl];
-     Item.RowKey:=ARows[Row]; Item.Level:=Lvl; Item.Caption:=KeyPart(ARows[Row],Lvl);
-     X:=0; for I:=0 to Lvl-1 do Inc(X,ARowFields[I].Width);
-     Item.Bounds:=Rect(X,Y,X+ARowFields[Lvl].Width,Y+FRowHeight); FItems.Add(Item);
+     X:=0;
+     for I:=0 to Lvl do begin
+      Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
+      Item.RowKey:=ARows[Row]; Item.Level:=I;
+      if GroupStarts(Row,I) then Item.Caption:=KeyPart(ARows[Row],I) else Item.Caption:='';
+      Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight); FItems.Add(Item);
+      Inc(X,ARowFields[I].Width);
+     end;
      Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=Lvl; Item.Caption:='+';
-     Item.Bounds:=Rect(X+3,Y+(FRowHeight-13) div 2,X+16,Y+(FRowHeight-13) div 2+13); FItems.Add(Item);
+     X:=0; for I:=0 to Lvl-1 do Inc(X,ARowFields[I].Width);
+     Item.Bounds:=Rect(X+3,Y+(FRowHeight-11) div 2,X+14,Y+(FRowHeight-11) div 2+11); FItems.Add(Item);
      for I:=0 to FLayout.Columns.Count-1 do begin
       VC:=FLayout.Columns[I]; Item:=TLarPivotViewItem.Create; Item.Kind:=pvekTotalCell; Item.Field:=VC.DataField;
       Item.RowKey:=PrefixKey(ARows[Row],Lvl); Item.ColumnKey:=VC.ColumnKey; Item.Level:=Lvl;
@@ -250,7 +256,7 @@ begin
    FItems.Add(Item);
    if (I<ARowFields.Count-1) and GroupStarts(Row,I) then begin
     Item:=TLarPivotViewItem.Create; Item.Kind:=pvekExpandButton; Item.RowKey:=ARows[Row]; Item.Level:=I; Item.Caption:='-';
-    Item.Bounds:=Rect(X+3,Y+(FRowHeight-13) div 2,X+16,Y+(FRowHeight-13) div 2+13); FItems.Add(Item);
+    Item.Bounds:=Rect(X+3,Y+(FRowHeight-11) div 2,X+14,Y+(FRowHeight-11) div 2+11); FItems.Add(Item);
    end;
    Inc(X,ARowFields[I].Width);
   end;
