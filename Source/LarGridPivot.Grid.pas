@@ -31,6 +31,7 @@ type
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
+    function SortButtonAtPoint(AX, AY: Integer): TLarPivotField;
     procedure ShowFieldFilter(AField: TLarPivotField);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     procedure ToggleFieldSort(AField: TLarPivotField);
@@ -330,6 +331,24 @@ begin
  finally L.Free; end;
 end;
 
+function TLarGridPivot.SortButtonAtPoint(AX,AY:Integer):TLarPivotField;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+begin
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
+ case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ X:=125; L:=AreaFields(A);
+ try
+  Canvas.Font.Assign(Font);
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   ChipW:=Canvas.TextWidth(S)+38; if ChipW<94 then ChipW:=94;
+   R:=Rect(X+ChipW-38,Y+3,X+ChipW-22,Y+H-3);
+   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
+   X:=X+ChipW+6;
+  end;
+ finally L.Free; end;
+end;
+
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
 var DS:TDataSet; B:TBookmark; V:Variant; S:string; HasBookmark:Boolean;
 begin
@@ -541,6 +560,8 @@ begin
  if Button<>mbLeft then Exit;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
  if Assigned(FFilterButtonField) then begin ShowFieldFilter(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
+ FFilterButtonField:=SortButtonAtPoint(X,Y);
+ if Assigned(FFilterButtonField) then begin ToggleFieldSort(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
  FResizingField:=ResizeFieldAtPoint(X,Y);
  if Assigned(FResizingField) then begin
   FResizeStartX:=X; FResizeStartWidth:=FResizingField.Width; MouseCapture:=True; Cursor:=crHSplit; Exit;
