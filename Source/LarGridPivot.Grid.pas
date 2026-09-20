@@ -97,11 +97,14 @@ procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation)
 procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
 
 procedure TLarGridPivot.SetHeaderHeight(const Value:Integer);
-begin if Value=FHeaderHeight then Exit; if Value<16 then FHeaderHeight:=16 else FHeaderHeight:=Value; Invalidate; end;
+var N:Integer;
+begin N:=Value; if N<16 then N:=16; if N=FHeaderHeight then Exit; FHeaderHeight:=N; Invalidate; end;
 procedure TLarGridPivot.SetRowHeight(const Value:Integer);
-begin if Value=FRowHeight then Exit; if Value<16 then FRowHeight:=16 else FRowHeight:=Value; Invalidate; end;
+var N:Integer;
+begin N:=Value; if N<16 then N:=16; if N=FRowHeight then Exit; FRowHeight:=N; Invalidate; end;
 procedure TLarGridPivot.SetRowHeaderWidth(const Value:Integer);
-begin if Value=FRowHeaderWidth then Exit; if Value<40 then FRowHeaderWidth:=40 else FRowHeaderWidth:=Value; Invalidate; end;
+var N:Integer;
+begin N:=Value; if N<40 then N:=40; if N=FRowHeaderWidth then Exit; FRowHeaderWidth:=N; Invalidate; end;
 procedure TLarGridPivot.SetShowRowTotals(const Value:Boolean);
 begin if Value=FShowRowTotals then Exit; FShowRowTotals:=Value; Invalidate; end;
 procedure TLarGridPivot.SetShowColumnTotals(const Value:Boolean);
