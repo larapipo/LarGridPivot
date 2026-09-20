@@ -487,7 +487,7 @@ begin
     Canvas.TextOut(R.Right-14,R.Top+3,'v'); Canvas.Font.Style:=[]; X:=R.Right+4;
    end;
   finally L.Free; end;
-  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.MoveTo(X-7,Y+5); Canvas.LineTo(X-2,Y); Canvas.LineTo(X+3,Y+5); Canvas.MoveTo(X-7,Y+15); Canvas.LineTo(X-2,Y+20); Canvas.LineTo(X+3,Y+15); Canvas.Pen.Width:=1; end;
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
  end;
 end;
 
