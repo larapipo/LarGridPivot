@@ -36,6 +36,7 @@ type
     FHScrollPos, FVScrollPos:Integer;
     FContentWidth, FContentHeight:Integer;
     FCollapsedGroups:TStringList;
+    FSavedViews:TStringList;
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
     procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
@@ -93,6 +94,12 @@ type
     procedure LoadLayoutFromFile(const AFileName: string);
     procedure SaveLayoutToStream(AStream: TStream);
     procedure LoadLayoutFromStream(AStream: TStream);
+    procedure SaveView(const AName:string);
+    function LoadView(const AName:string):Boolean;
+    procedure DeleteView(const AName:string);
+    procedure GetViewNames(AList:TStrings);
+    procedure SaveViewsToFile(const AFileName:string);
+    procedure LoadViewsFromFile(const AFileName:string);
     property Engine: TLarPivotEngine read FEngine;
     function HitTestAt(X, Y: Integer): TLarPivotHitTest;
   published
@@ -125,10 +132,11 @@ constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptClassicBlue; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
@@ -795,6 +803,42 @@ function TLarGridPivot.HitTestAt(X,Y:Integer):TLarPivotHitTest;
 begin
  BuildViewInfo;
  Result:=FViewInfo.HitTest(X,Y);
+end;
+
+procedure TLarGridPivot.SaveView(const AName:string);
+var N:string;
+begin
+ N:=Trim(AName); if N='' then raise EArgumentException.Create('Debe indicar un nombre de vista');
+ FSavedViews.Values[N]:=SaveLayoutToString;
+end;
+
+function TLarGridPivot.LoadView(const AName:string):Boolean;
+var I:Integer;
+begin
+ I:=FSavedViews.IndexOfName(AName); Result:=I>=0;
+ if Result then LoadLayoutFromString(FSavedViews.ValueFromIndex[I]);
+end;
+
+procedure TLarGridPivot.DeleteView(const AName:string);
+var I:Integer;
+begin I:=FSavedViews.IndexOfName(AName); if I>=0 then FSavedViews.Delete(I); end;
+
+procedure TLarGridPivot.GetViewNames(AList:TStrings);
+var I:Integer;
+begin
+ if AList=nil then Exit; AList.BeginUpdate;
+ try
+  AList.Clear; for I:=0 to FSavedViews.Count-1 do AList.Add(FSavedViews.Names[I]);
+ finally AList.EndUpdate; end;
+end;
+
+procedure TLarGridPivot.SaveViewsToFile(const AFileName:string);
+begin FSavedViews.SaveToFile(AFileName); end;
+
+procedure TLarGridPivot.LoadViewsFromFile(const AFileName:string);
+begin
+ FSavedViews.Clear;
+ if FileExists(AFileName) then FSavedViews.LoadFromFile(AFileName);
 end;
 
 procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
