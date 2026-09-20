@@ -88,6 +88,7 @@ type
     procedure ShowFieldFilter(AField: TLarPivotField);
     procedure FilterChecklistClickCheck(Sender:TObject);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
+    procedure BuildFilterValueCache;
     procedure ToggleFieldSort(AField:TLarPivotField; AKeepExisting:Boolean=False);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
@@ -404,7 +405,7 @@ procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuildi
 procedure TLarGridPivot.Rebuild;
 var P:ILarPivotDataProvider;
 begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
- if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
+ if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; BuildFilterValueCache; FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
@@ -628,6 +629,49 @@ begin
  if not FieldChipRect(F,R) then Exit;
  B:=Rect(R.Right-32,R.Top,R.Right-16,R.Bottom);
  if PtInRect(B,Point(AX,AY)) then Result:=F;
+end;
+
+procedure TLarGridPivot.BuildFilterValueCache;
+var DS:TDataSet; B:TBookmark; HasBookmark:Boolean; I:Integer; F:TField;
+ Lists:TObjectList<TStringList>; L:TStringList; S,CacheKey,Cached:string;
+begin
+ FFilterValueCache.Clear;
+ if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
+ DS:=FDataSource.DataSet; if not DS.Active then Exit;
+ Lists:=TObjectList<TStringList>.Create(True);
+ try
+  for I:=0 to FFields.Count-1 do begin
+   L:=TStringList.Create; L.Sorted:=True; L.Duplicates:=dupIgnore;
+   Lists.Add(L);
+  end;
+  HasBookmark:=not DS.IsEmpty;
+  if HasBookmark then B:=DS.GetBookmark;
+  DS.DisableControls;
+  try
+   DS.First;
+   while not DS.Eof do begin
+    for I:=0 to FFields.Count-1 do begin
+     F:=DS.FindField(FFields[I].FieldName);
+     if F<>nil then begin
+      if F.IsNull then S:='(null)' else S:=F.AsString;
+      Lists[I].Add(S);
+     end;
+    end;
+    DS.Next;
+   end;
+  finally
+   if HasBookmark then begin
+    if DS.BookmarkValid(B) then DS.GotoBookmark(B);
+    DS.FreeBookmark(B);
+   end;
+   DS.EnableControls;
+  end;
+  for I:=0 to FFields.Count-1 do begin
+   CacheKey:=UpperCase(FFields[I].FieldName);
+   Cached:=StringReplace(Lists[I].Text,sLineBreak,#30,[rfReplaceAll]);
+   FFilterValueCache.Values[CacheKey]:=Cached;
+  end;
+ finally Lists.Free; end;
 end;
 
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
