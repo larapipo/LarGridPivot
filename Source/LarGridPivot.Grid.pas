@@ -37,6 +37,8 @@ type
     FFieldMenu:TPopupMenu;
     FMenuField:TLarPivotField;
     FHierarchyHit:TLarPivotHitTest;
+    FAutoSaveLayout:Boolean;
+    FAutoSaveKey:string;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -98,8 +100,12 @@ type
     function KeyPart(const AKey: string; ALevel: Integer): string;
     procedure NormalizeAreaIndexes(AArea: TLarPivotArea);
     procedure BuildViewInfo;
+    function AutoLayoutFileName:string;
+    procedure RestoreAutoLayout;
+    procedure SaveAutoLayout;
   protected
     procedure CreateParams(var Params:TCreateParams); override;
+    procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Paint; override; procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -139,6 +145,8 @@ type
     property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
     property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
     property Theme:TLarPivotTheme read FTheme write SetTheme default ptVclStyle;
+    property AutoSaveLayout:Boolean read FAutoSaveLayout write FAutoSaveLayout default True;
+    property AutoSaveKey:string read FAutoSaveKey write FAutoSaveKey;
   end;
 
 implementation
@@ -156,14 +164,52 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
+ FAutoSaveLayout:=True; FAutoSaveKey:='';
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
+function TLarGridPivot.AutoLayoutFileName:string;
+var N:string;
+begin
+ N:=FAutoSaveKey;
+ if N='' then begin
+  N:=Name;
+  if (Owner<>nil) and (Owner.Name<>'') then N:=Owner.Name+'_'+N;
+ end;
+ if N='' then N:='LarGridPivot';
+ Result:=IncludeTrailingPathDelimiter(GetEnvironmentVariable('APPDATA'))+
+   'LarGridPivot\\'+N+'.json';
+end;
+
+procedure TLarGridPivot.SaveAutoLayout;
+var FN:string;
+begin
+ if not FAutoSaveLayout or (csDesigning in ComponentState) or (FFields.Count=0) then Exit;
+ FN:=AutoLayoutFileName;
+ ForceDirectories(ExtractFilePath(FN));
+ SaveLayoutToFile(FN);
+end;
+
+procedure TLarGridPivot.RestoreAutoLayout;
+var FN:string;
+begin
+ if not FAutoSaveLayout or (csDesigning in ComponentState) then Exit;
+ FN:=AutoLayoutFileName;
+ if FileExists(FN) then
+  try LoadLayoutFromFile(FN); except end;
+end;
+
+procedure TLarGridPivot.Loaded;
+begin
+ inherited;
+ RestoreAutoLayout;
+end;
+
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
 procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.Assign(Value); Rebuild; end;
 procedure TLarGridPivot.CreateParams(var Params:TCreateParams);
