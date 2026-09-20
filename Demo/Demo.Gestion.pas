@@ -90,7 +90,8 @@ begin
  FConnection.DriverName:='FB';
  FConnection.Params.Values['Protocol']:='Local';
  FConnection.Params.Values['User_Name']:='SYSDBA';
- FConnection.LoginPrompt:=True; { password is entered locally; do not publish credentials }
+ FConnection.Params.Values['Password']:='regulador';
+ FConnection.LoginPrompt:=False;
  FConnection.Params.Values['CharacterSet']:='NONE';
  FConnection.Params.Values['SQLDialect']:='3';
  FConnection.Params.Values['Database']:='C:\\Proyectos Delphi\\GestionComercial\\Tablas IB\\GESTIONV3.FDB';
