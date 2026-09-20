@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Winapi.Messages, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -40,6 +40,11 @@ type
     function ThemeTotalColor:TColor;
     function ThemeGridColor:TColor;
     function ThemePanelColor:TColor;
+    function ThemeTextColor:TColor;
+    function ThemeHeaderTextColor:TColor;
+    function ThemeTotalTextColor:TColor;
+    function ThemeCellColor:TColor;
+    function ThemeChipColor:TColor;
         procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
     procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
@@ -212,6 +217,32 @@ begin
   ptOffice:Result:=$00E5C48A;
   ptSilver:Result:=$00DCDCDC;
  else Result:=$00F5F5F5; end;
+end;
+
+function TLarGridPivot.ThemeTextColor:TColor;
+begin
+ case FTheme of ptDark:Result:=$00F0F0F0; else Result:=$00202020; end;
+end;
+
+function TLarGridPivot.ThemeHeaderTextColor:TColor;
+begin
+ case FTheme of ptDark:Result:=clWhite; ptClassicBlue:Result:=$00302010; else Result:=$00202020; end;
+end;
+
+function TLarGridPivot.ThemeTotalTextColor:TColor;
+begin
+ case FTheme of ptDark:Result:=clWhite; else Result:=$00181818; end;
+end;
+
+function TLarGridPivot.ThemeCellColor:TColor;
+begin
+ case FTheme of ptDark:Result:=$002B2B2B; ptSilver:Result:=$00FAFAFA; else Result:=clWhite; end;
+end;
+
+function TLarGridPivot.ThemeChipColor:TColor;
+begin
+ case FTheme of ptDark:Result:=$00525252; ptClassicBlue:Result:=$00F4F8FC; ptOffice:Result:=$00FFF8EA;
+  ptSilver:Result:=$00F7F7F7; else Result:=clWhite; end;
 end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
