@@ -16,6 +16,8 @@ type
     function Next: Boolean;
     function EOF: Boolean;
     function GetRecordCount: Integer;
+    function GetValueByIndex(AIndex:Integer):Variant;
+    function FieldIndexOf(const AFieldName:string):Integer;
   end;
 
   { In-memory snapshot used after the first dataset read.  Pivot operations such
@@ -107,6 +109,17 @@ end;
 
 destructor TLarMemoryPivotProvider.Destroy;
 begin FFieldIndex.Free; inherited; end;
+
+function TLarMemoryPivotProvider.FieldIndexOf(const AFieldName:string):Integer;
+begin
+ if not FFieldIndex.TryGetValue(UpperCase(AFieldName),Result) then Result:=-1;
+end;
+function TLarMemoryPivotProvider.GetValueByIndex(AIndex:Integer):Variant;
+begin
+ if (FPos<0) or (FPos>=Length(FRows)) or (AIndex<0) or
+    (AIndex>=Length(FFieldNames)) then Exit(Null);
+ Result:=FRows[FPos][AIndex];
+end;
 
 function TLarMemoryPivotProvider.GetFieldCount:Integer;
 begin Result:=Length(FFieldNames); end;
