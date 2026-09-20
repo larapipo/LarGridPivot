@@ -322,4 +322,52 @@ begin
  end;
 end;
 
+procedure TLarGridPivot.DrawFieldAreas;
+const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
+var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
+begin
+ if not FShowFieldPanel then Exit;
+ Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+ for I:=0 to High(Areas) do begin
+  A:=Areas[I]; AR:=AreaRect(A);
+  Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(AR);
+  Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(AR);
+  Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
+  if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
+  Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3;
+  if A<>paNone then X:=AR.Left+72;
+  L:=AreaFields(A);
+  try
+   Count:=L.Count;
+   for J:=0 to Count-1 do begin
+    F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
+    ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
+    if (A=paNone) and (X+ChipW>AR.Right-6) and (X>AR.Left+6) then begin
+     X:=AR.Left+6; Inc(Y,24);
+    end;
+    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin
+     Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
+     Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.Pen.Width:=1;
+    end;
+    R:=Rect(X,Y,X+ChipW,Y+20);
+    if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
+    Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
+    Canvas.Font.Color:=clWindowText;
+    Canvas.TextOut(R.Left+6,R.Top+3,S);
+    Canvas.Font.Style:=[fsBold];
+    case F.SortOrder of
+     psoAscending:Canvas.TextOut(R.Right-31,R.Top+3,'^');
+     psoDescending:Canvas.TextOut(R.Right-31,R.Top+3,'v');
+    end;
+    Canvas.TextOut(R.Right-14,R.Top+3,'v'); Canvas.Font.Style:=[];
+    X:=R.Right+4;
+   end;
+  finally L.Free; end;
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=Count) then begin
+   Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
+   Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.Pen.Width:=1;
+  end;
+ end;
+end;
+
 
