@@ -286,8 +286,8 @@ function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
 
 procedure TLarGridPivot.Paint;
-var Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
- RowKey,ColKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
+var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
+ RowKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; Root:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
  var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color;
@@ -348,11 +348,12 @@ begin
    if RFs.Count>0 then for Lvl:=0 to RFs.Count-1 do begin
     DrawCell(Rect(X,Y,X+RFs[Lvl].Width,Y+FRowHeight),KeyPart(RowKey,Lvl),taLeftJustify); Inc(X,RFs[Lvl].Width);
    end else begin DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify); X:=RowHeaderTotal; end;
-   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin
-    ColKey:=FEngine.Model.ColumnKeys[Col];
-    for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(RowKey,ColKey,DF);
-     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF)); Inc(X,DF.Width); end;
+   for VC in FLayoutEngine.Columns do begin
+    DF:=VC.DataField; S:=TextFor(RowKey,VC.ColumnKey,DF);
+    DrawCell(Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight),S,DefaultAlignment(DF));
    end;
+   X:=RowHeaderTotal;
+   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
    if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(RowKey,LAR_PIVOT_TOTAL_KEY,DF);
     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
   end;
@@ -360,10 +361,12 @@ begin
   if FShowColumnTotals then begin
    Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight; X:=0;
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'TOTAL',taLeftJustify,True,True); X:=RowHeaderTotal;
-   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col];
-    for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(LAR_PIVOT_TOTAL_KEY,ColKey,DF);
-     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
+   for VC in FLayoutEngine.Columns do begin
+    DF:=VC.DataField; S:=TextFor(LAR_PIVOT_TOTAL_KEY,VC.ColumnKey,DF);
+    DrawCell(Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True);
    end;
+   X:=RowHeaderTotal;
+   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
    if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D];
     if FShowGrandTotal then S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF) else S:='';
     DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
