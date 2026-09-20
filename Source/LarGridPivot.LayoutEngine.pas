@@ -26,6 +26,7 @@ type
     Left: Integer;
     Width: Integer;
     ColumnKey: string;
+    KeyPrefix: string;
     constructor Create(const ACaption: string; ALevel: Integer);
     destructor Destroy; override;
     function FindChild(const ACaption: string): TLarPivotHeaderNode;
@@ -125,7 +126,7 @@ end;
 
 procedure TLarPivotLayoutEngine.Build(AModel:TLarPivotModel;
  AColumnFields,ADataFields:TList<TLarPivotField>;AStartX:Integer);
-var Col,Lvl,D,X,I:Integer; K,Cap:string; Root,Node,Candidate:TLarPivotHeaderNode;
+var Col,Lvl,D,X,I:Integer; K,Cap,Prefix:string; Root,Node,Candidate:TLarPivotHeaderNode;
 begin
  Clear; if (AModel=nil) or (ADataFields=nil) or (ADataFields.Count=0) then Exit; X:=AStartX;
  if (AColumnFields=nil) or (AColumnFields.Count=0) then begin
@@ -137,9 +138,10 @@ begin
   Exit;
  end;
  for Col:=0 to AModel.ColumnKeys.Count-1 do begin
-  K:=AModel.ColumnKeys[Col]; Node:=nil;
+  K:=AModel.ColumnKeys[Col]; Node:=nil; Prefix:='';
   for Lvl:=0 to AColumnFields.Count-1 do begin
    Cap:=KeyPart(K,Lvl);
+   if Prefix='' then Prefix:=Cap else Prefix:=Prefix+#29+Cap;
    if Lvl=0 then begin
     Root:=nil;
     for I:=0 to FRoots.Count-1 do begin
@@ -149,7 +151,8 @@ begin
     if Root=nil then begin Root:=TLarPivotHeaderNode.Create(Cap,0); FRoots.Add(Root); end;
     Node:=Root;
    end else Node:=Node.AddChild(Cap);
-   Node.ColumnKey:=K;
+   if Node.KeyPrefix='' then Node.KeyPrefix:=Prefix;
+   if Lvl=AColumnFields.Count-1 then Node.ColumnKey:=K;
   end;
   for D:=0 to ADataFields.Count-1 do begin
    FColumns.Add(TLarPivotVisualColumn.Create(K,ADataFields[D],X,ADataFields[D].Width));
