@@ -72,7 +72,7 @@ begin
 
   FStatus:=TLabel.Create(Self); FStatus.Parent:=FTop;
   FStatus.Left:=390; FStatus.Top:=13;
-  FStatus.Caption:='Configure Connection.Params y abra los datos';
+  FStatus.Caption:='Gestión local: GESTIONV3.FDB';
 
   FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
   FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=9;
@@ -92,9 +92,9 @@ begin
  FConnection.Params.Values['Server']:='127.0.0.1';
  FConnection.Params.Values['Port']:='3050';
  FConnection.Params.Values['User_Name']:='SYSDBA';
- FConnection.Params.Values['Password']:='masterkey';
+ FConnection.Params.Values['Password']:='regulador';
  FConnection.Params.Values['CharacterSet']:='WIN1252';
- FConnection.Params.Values['Database']:='';
+ FConnection.Params.Values['Database']:='C:\\Proyectos Delphi\\GestionComercial\\Tablas IB\\GESTIONV3.FDB';
 end;
 
 procedure TFrmLarGridPivotGestionDemo.UseConnection(AConnection:TFDConnection);
@@ -109,10 +109,7 @@ procedure TFrmLarGridPivotGestionDemo.AbrirDatos(Sender:TObject);
 begin
   try
     FQuery.Close;
-    if (FQuery.Connection=FConnection) and (Trim(FConnection.Params.Database)='') then begin
-      ShowMessage('Demo Gestión: configure FConnection.Params.Database con la ruta/alias de su base Firebird, o use UseConnection() para reutilizar la TFDConnection abierta del ERP.');
-      Exit;
-    end;
+
     FQuery.ParamByName('DESDE').AsDateTime:=StartOfTheDay(FDesde.Date);
     FQuery.ParamByName('HASTA').AsDateTime:=EndOfTheDay(FHasta.Date);
     FQuery.ParamByName('VENDEDOR').AsString:='***';
