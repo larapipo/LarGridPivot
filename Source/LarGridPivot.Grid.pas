@@ -378,7 +378,7 @@ begin
     pvekFieldHeader,pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekRowValue:
-     DrawCell(VI.Bounds,KeyPart(VI.RowKey,VI.Level),taLeftJustify);
+     DrawCell(VI.Bounds,KeyPart(VI.RowKey,VI.Level),DefaultAlignment(VI.Field));
     pvekDataCell:
      begin
       DF:=VI.Field;
