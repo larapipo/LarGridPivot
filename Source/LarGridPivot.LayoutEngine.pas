@@ -107,7 +107,7 @@ begin
 end;
 
 procedure TLarPivotLayoutEngine.AssignNodeGeometry(ANode:TLarPivotHeaderNode);
-var I,MinL,MaxR:Integer; C:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
+var MinL,MaxR:Integer; C:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
 begin
  if ANode.Children.Count>0 then begin
   for C in ANode.Children do AssignNodeGeometry(C);
@@ -125,7 +125,7 @@ end;
 
 procedure TLarPivotLayoutEngine.Build(AModel:TLarPivotModel;
  AColumnFields,ADataFields:TList<TLarPivotField>;AStartX:Integer);
-var Col,Lvl,D,X:Integer; K,Cap:string; Root,Node:TLarPivotHeaderNode;
+var Col,Lvl,D,X,I:Integer; K,Cap:string; Root,Node,Candidate:TLarPivotHeaderNode;
 begin
  Clear; if (AModel=nil) or (ADataFields=nil) then Exit; X:=AStartX;
  for Col:=0 to AModel.ColumnKeys.Count-1 do begin
@@ -134,8 +134,11 @@ begin
    Cap:=KeyPart(K,Lvl);
    if Lvl=0 then begin
     Root:=nil;
-    for Root in FRoots do if Root.Caption=Cap then Break;
-    if (Root=nil) or (Root.Caption<>Cap) then begin Root:=TLarPivotHeaderNode.Create(Cap,0); FRoots.Add(Root); end;
+    for I:=0 to FRoots.Count-1 do begin
+     Candidate:=FRoots[I];
+     if Candidate.Caption=Cap then begin Root:=Candidate; Break; end;
+    end;
+    if Root=nil then begin Root:=TLarPivotHeaderNode.Create(Cap,0); FRoots.Add(Root); end;
     Node:=Root;
    end else Node:=Node.AddChild(Cap);
    Node.ColumnKey:=K;
