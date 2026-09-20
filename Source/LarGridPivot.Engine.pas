@@ -83,17 +83,18 @@ begin
 end;
 
 function TLarPivotEngine.RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
-var L: TList<TLarPivotField>; F: TLarPivotField; Filter: TLarPivotFilter;
+var I:Integer; F:TLarPivotField; Filter:TLarPivotFilter;
 begin
-  Result := True;
-  L := FieldsForArea(paFilter);
-  try
-    for F in L do
-    begin
-      Filter := FFilters.Find(F.FieldName);
-      if (Filter <> nil) and not Filter.Accepts(AProvider.GetValue(F.FieldName)) then Exit(False);
-    end;
-  finally L.Free; end;
+  Result:=True;
+  { A filter belongs to the field, not to the filter area.  A row/column/data
+    field remains filterable exactly like a TcxPivotGrid field. }
+  for I:=0 to FFields.Count-1 do begin
+    F:=FFields[I];
+    if not F.Visible then Continue;
+    Filter:=FFilters.Find(F.FieldName);
+    if (Filter<>nil) and Filter.Enabled and
+       not Filter.Accepts(AProvider.GetValue(F.FieldName)) then Exit(False);
+  end;
 end;
 
 procedure TLarPivotEngine.AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
