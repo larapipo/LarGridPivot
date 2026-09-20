@@ -293,7 +293,7 @@ end;
 function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=125; L:=AreaFields(A);
+ Result:=nil; A:=AreaFromPoint(AX,AY); R:=AreaRect(A); H:=R.Bottom-R.Top; Y:=R.Top; X:=R.Left+125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
@@ -309,7 +309,7 @@ end;
 function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer):Integer;
 var L:TList<TLarPivotField>; I,X,ChipW:Integer; S:string;
 begin
- Result:=0; X:=125; L:=AreaFields(AArea);
+ Result:=0; X:=AreaRect(AArea).Left+125; L:=AreaFields(AArea);
  try
   Canvas.Font.Assign(Font);
   for I:=0 to L.Count-1 do begin
@@ -423,7 +423,7 @@ begin
   Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(AR);
   Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(AR);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
-  Canvas.TextOut(8,AR.Top+8,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
+  Canvas.TextOut(AR.Left+8,AR.Top+8,AreaCaption(A)); X:=AR.Left+125; Canvas.Font.Style:=[];
   L:=AreaFields(A);
   try
    Count:=L.Count;
