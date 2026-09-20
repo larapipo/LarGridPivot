@@ -31,7 +31,7 @@ type
     FRowHeight: Integer;
     FRowHeaderWidth: Integer;
     FHeaderLevels: Integer;
-    procedure AddHeaderNode(ANode: TLarPivotHeaderNode);
+    procedure AddHeaderNode(ANode: TLarPivotHeaderNode; AField: TLarPivotField);
   public
     constructor Create(ALayout: TLarPivotLayoutEngine);
     destructor Destroy; override;
@@ -83,17 +83,17 @@ begin
  FItems.Clear;
 end;
 
-procedure TLarPivotViewInfo.AddHeaderNode(ANode:TLarPivotHeaderNode);
+procedure TLarPivotViewInfo.AddHeaderNode(ANode:TLarPivotHeaderNode; AField:TLarPivotField);
 var C:TLarPivotHeaderNode; Item:TLarPivotViewItem;
 begin
  Item:=TLarPivotViewItem.Create;
- Item.Kind:=pvekColumnValue; Item.Caption:=ANode.Caption;
+ Item.Kind:=pvekColumnValue; Item.Caption:=ANode.Caption; Item.Field:=AField;
  Item.Bounds:=Rect(ANode.Left,FHeaderTop+ANode.Level*FHeaderHeight,
    ANode.Left+ANode.Width,FHeaderTop+(ANode.Level+1)*FHeaderHeight);
  Item.ColumnKey:=ANode.KeyPrefix;
  Item.Level:=ANode.Level;
  FItems.Add(Item);
- for C in ANode.Children do AddHeaderNode(C);
+ for C in ANode.Children do AddHeaderNode(C,AField);
 end;
 
 procedure TLarPivotViewInfo.BuildHeaders(ARowFields,AColumnFields,ADataFields:TList<TLarPivotField>;
@@ -116,7 +116,10 @@ begin
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
 
- for Root in FLayout.Roots do AddHeaderNode(Root);
+ for Root in FLayout.Roots do begin
+  if Root.Level<AColumnFields.Count then AddHeaderNode(Root,AColumnFields[Root.Level])
+  else AddHeaderNode(Root,nil);
+ end;
 
  if ADataFields.Count>1 then
   for I:=0 to FLayout.Columns.Count-1 do begin
