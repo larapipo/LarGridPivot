@@ -64,6 +64,7 @@ type
     function SortButtonAtPoint(AX, AY: Integer): TLarPivotField;
     function FieldChipRect(AField:TLarPivotField; out R:TRect):Boolean;
     procedure ShowFieldFilter(AField: TLarPivotField);
+    procedure FilterChecklistClickCheck(Sender:TObject);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     procedure ToggleFieldSort(AField: TLarPivotField);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
