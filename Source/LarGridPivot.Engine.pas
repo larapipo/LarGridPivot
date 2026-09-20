@@ -16,6 +16,8 @@ type
     function FieldsForArea(AArea: TLarPivotArea): TList<TLarPivotField>;
     function BuildKey(const AProvider: ILarPivotDataProvider; AArea: TLarPivotArea): string;
     function EncodeKeyPart(const S: string): string;
+    function CompareKeys(const A, B: string; AFields: TList<TLarPivotField>): Integer;
+    procedure SortKeys(AKeys: TList<string>; AFields: TList<TLarPivotField>);
     function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
   public
@@ -82,6 +84,41 @@ begin
   finally L.Free; end;
 end;
 
+function TLarPivotEngine.CompareKeys(const A,B:string;AFields:TList<TLarPivotField>):Integer;
+var I,PA,PB:Integer; SA,SB:string;
+ function NextPart(const K:string;var P:Integer):string;
+ var L:Integer;
+ begin
+  Result:=''; L:=Length(K);
+  while P<=L do begin
+   if K[P]=#29 then begin
+    if (P<L) and (K[P+1]=#29) then begin Result:=Result+#29; Inc(P,2); Continue; end;
+    Inc(P); Exit;
+   end;
+   Result:=Result+K[P]; Inc(P);
+  end;
+ end;
+begin
+ Result:=0; PA:=1; PB:=1;
+ for I:=0 to AFields.Count-1 do begin
+  SA:=NextPart(A,PA); SB:=NextPart(B,PB);
+  Result:=CompareText(SA,SB);
+  if AFields[I].SortOrder=psoDescending then Result:=-Result;
+  if Result<>0 then Exit;
+ end;
+end;
+
+procedure TLarPivotEngine.SortKeys(AKeys:TList<string>;AFields:TList<TLarPivotField>);
+var I,J:Integer; S:string;
+begin
+ if (AFields=nil) or (AFields.Count=0) then Exit;
+ for I:=0 to AKeys.Count-2 do
+  for J:=I+1 to AKeys.Count-1 do
+   if CompareKeys(AKeys[I],AKeys[J],AFields)>0 then begin
+    S:=AKeys[I]; AKeys[I]:=AKeys[J]; AKeys[J]:=S;
+   end;
+end;
+
 function TLarPivotEngine.RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
 var I:Integer; F:TLarPivotField; Filter:TLarPivotFilter;
 begin
@@ -105,11 +142,11 @@ begin
 end;
 
 procedure TLarPivotEngine.Build(const AProvider: ILarPivotDataProvider);
-var RowKey, ColKey: string; DataFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
+var RowKey, ColKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
 begin
   if AProvider = nil then raise EArgumentNilException.Create('AProvider');
   FModel.Clear;
-  DataFields := FieldsForArea(paData);
+  DataFields := FieldsForArea(paData); RowFields:=FieldsForArea(paRow); ColumnFields:=FieldsForArea(paColumn);
   try
     if DataFields.Count = 0 then Exit;
     if not AProvider.First then Exit;
@@ -132,7 +169,8 @@ begin
     end;
     FModel.RowKeys.Remove(LAR_PIVOT_TOTAL_KEY);
     FModel.ColumnKeys.Remove(LAR_PIVOT_TOTAL_KEY);
-  finally DataFields.Free; end;
+    SortKeys(FModel.RowKeys,RowFields); SortKeys(FModel.ColumnKeys,ColumnFields);
+  finally ColumnFields.Free; RowFields.Free; DataFields.Free; end;
 end;
 
 end.
