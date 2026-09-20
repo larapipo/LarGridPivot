@@ -180,8 +180,8 @@ begin
             row subtotals such as SUCURSAL -> VENDEDOR. }
           for Lvl:=0 to RowFields.Count-2 do begin
             PrefixKey:=RowPrefix(RowKey,Lvl);
-            AddValue(PrefixKey,ColKey,F,V);
-            AddValue(PrefixKey,LAR_PIVOT_TOTAL_KEY,F,V);
+            AddValueRaw(PrefixKey,ColKey,F,V);
+            AddValueRaw(PrefixKey,LAR_PIVOT_TOTAL_KEY,F,V);
           end;
           AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
           AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
