@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Types, System.Generics.Collections,
-  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.LayoutEngine;
+  LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.LayoutEngine, LarGridPivot.Model;
 
 type
   TLarPivotViewItem = class
