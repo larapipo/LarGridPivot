@@ -29,6 +29,7 @@ type
     FHeaderHeight: Integer;
     FRowHeight: Integer;
     FRowHeaderWidth: Integer;
+    FHeaderLevels: Integer;
     procedure AddHeaderNode(ANode: TLarPivotHeaderNode);
   public
     constructor Create(ALayout: TLarPivotLayoutEngine);
@@ -103,6 +104,7 @@ begin
  Levels:=AColumnFields.Count;
  if ADataFields.Count>1 then Inc(Levels);
  if Levels=0 then Levels:=1;
+ FHeaderLevels:=Levels;
 
  X:=0;
  for I:=0 to ARowFields.Count-1 do begin
@@ -213,7 +215,7 @@ begin
 end;
 
 function TLarPivotViewInfo.FieldAtResizeEdge(AX,AY,ATolerance:Integer):TLarPivotField;
-var I,Dist:Integer; Item:TLarPivotViewItem;
+var I,Dist:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
 begin
  Result:=nil;
  for I:=FItems.Count-1 downto 0 do begin
@@ -222,6 +224,11 @@ begin
   if (AY<Item.Bounds.Top) or (AY>=Item.Bounds.Bottom) then Continue;
   Dist:=Abs(AX-Item.Bounds.Right);
   if Dist<=ATolerance then Exit(Item.Field);
+ end;
+ if (AY<FHeaderTop) or (AY>=FHeaderTop+FHeaderLevels*FHeaderHeight) then Exit;
+ for I:=FLayout.Columns.Count-1 downto 0 do begin
+  VC:=FLayout.Columns[I];
+  if Abs(AX-(VC.Left+VC.Width))<=ATolerance then Exit(VC.DataField);
  end;
 end;
 
