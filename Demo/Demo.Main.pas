@@ -20,8 +20,7 @@ type
     FAvailable, FRows, FColumns, FValues, FFilters: TListBox;
     FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
     FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnFields: TButton;
-    FThemeCombo:TComboBox;
-    FLayout: string;
+    FLayout:string;
     FStyleCombo:TComboBox;
     FBtnGestion:TButton;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
@@ -39,7 +38,6 @@ type
     procedure ToggleRowTotals(Sender:TObject);
     procedure ToggleColumnTotals(Sender:TObject);
     procedure ToggleFields(Sender:TObject);
-    procedure ChangeTheme(Sender:TObject);
     procedure ChangeVclStyle(Sender:TObject);
     procedure OpenGestionDemo(Sender:TObject);
   public
@@ -122,22 +120,12 @@ begin
   MakeButton(FBtnRowTotals,228,6,'Tot. filas',ToggleRowTotals);
   MakeButton(FBtnColumnTotals,338,6,'Tot. columnas',ToggleColumnTotals);
   MakeButton(FBtnFields,448,6,'Mostrar campos',ToggleFields);
-  FThemeCombo:=TComboBox.Create(Self); FThemeCombo.Parent:=FTop;
-  FThemeCombo.Left:=563; FThemeCombo.Top:=8; FThemeCombo.Width:=145;
-  FThemeCombo.Style:=csDropDownList;
-  FThemeCombo.Items.Add('Estilo VCL activo');
-  FThemeCombo.Items.Add('Classic Blue');
-  FThemeCombo.Items.Add('Light');
-  FThemeCombo.Items.Add('Silver');
-  FThemeCombo.Items.Add('Office');
-  FThemeCombo.Items.Add('Dark');
-  FThemeCombo.ItemIndex:=0; FThemeCombo.OnChange:=ChangeTheme;
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
-  FStyleCombo.Left:=715; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
+  FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
-  MakeButton(FBtnGestion,900,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
+  MakeButton(FBtnGestion,745,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -263,16 +251,8 @@ begin
     (TStyleManager.ActiveStyle.Name<>FStyleCombo.Items[FStyleCombo.ItemIndex]) then begin
   TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]);
   FPivot.Theme:=ptVclStyle;
-  FThemeCombo.ItemIndex:=Ord(ptVclStyle);
   FPivot.Invalidate;
  end;
-end;
-
-procedure TFrmLarGridPivotDemo.ChangeTheme(Sender:TObject);
-begin
- if (FThemeCombo.ItemIndex>=Ord(Low(TLarPivotTheme))) and
-    (FThemeCombo.ItemIndex<=Ord(High(TLarPivotTheme))) then
-   FPivot.Theme:=TLarPivotTheme(FThemeCombo.ItemIndex);
 end;
 
 procedure TFrmLarGridPivotDemo.ToggleFields(Sender:TObject);
