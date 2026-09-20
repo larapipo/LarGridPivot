@@ -50,6 +50,7 @@ type
       AStartX: Integer);
     property Roots: TObjectList<TLarPivotHeaderNode> read FRoots;
     property Columns: TObjectList<TLarPivotVisualColumn> read FColumns;
+    function TotalWidth:Integer;
   end;
 
 implementation
@@ -97,6 +98,14 @@ end;
 
 destructor TLarPivotLayoutEngine.Destroy;
 begin FColumns.Free; FRoots.Free; inherited; end;
+
+function TLarPivotLayoutEngine.TotalWidth:Integer;
+var VC:TLarPivotVisualColumn; R:Integer;
+begin
+ Result:=0;
+ for VC in FColumns do begin R:=VC.Left+VC.Width; if R>Result then Result:=R; end;
+ if FColumns.Count>0 then Result:=Result-FColumns[0].Left;
+end;
 
 procedure TLarPivotLayoutEngine.Clear;
 begin FRoots.Clear; FColumns.Clear; end;
