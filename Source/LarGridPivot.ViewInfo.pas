@@ -35,6 +35,8 @@ type
     procedure Clear;
     procedure BuildHeaders(ARowFields, AColumnFields, ADataFields: TList<TLarPivotField>;
       AHeaderTop, AHeaderHeight, ARowHeaderWidth: Integer);
+    procedure BuildBody(ARowFields, ADataFields: TList<TLarPivotField>; ARows: TList<string>;
+      AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean);
     function HitTest(AX, AY: Integer): TLarPivotHitTest;
     function FieldAtResizeEdge(AX, AY, ATolerance: Integer): TLarPivotField;
     property Items: TObjectList<TLarPivotViewItem> read FItems;
@@ -127,6 +129,67 @@ begin
   Item.Bounds:=Rect(FRowHeaderWidth,FHeaderTop,FRowHeaderWidth+ADataFields[0].Width,
     FHeaderTop+FHeaderHeight);
   FItems.Add(Item);
+ end;
+end;
+
+procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
+ ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean);
+var Row,I,X,Y,RightEdge:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
+begin
+ RightEdge:=FRowHeaderWidth;
+ for VC in FLayout.Columns do
+  if VC.Left+VC.Width>RightEdge then RightEdge:=VC.Left+VC.Width;
+
+ for Row:=0 to ARows.Count-1 do begin
+  Y:=FHeaderTop+AHeaderLevels*FHeaderHeight+Row*FRowHeight;
+  X:=0;
+  for I:=0 to ARowFields.Count-1 do begin
+   Item:=TLarPivotViewItem.Create;
+   Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
+   Item.RowKey:=ARows[Row]; Item.Level:=I;
+   Item.Bounds:=Rect(X,Y,X+ARowFields[I].Width,Y+FRowHeight);
+   FItems.Add(Item); Inc(X,ARowFields[I].Width);
+  end;
+  for I:=0 to FLayout.Columns.Count-1 do begin
+   VC:=FLayout.Columns[I];
+   Item:=TLarPivotViewItem.Create;
+   Item.Kind:=pvekDataCell; Item.Field:=VC.DataField;
+   Item.RowKey:=ARows[Row]; Item.ColumnKey:=VC.ColumnKey; Item.DataIndex:=I;
+   Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight);
+   FItems.Add(Item);
+  end;
+  if AShowRowTotals then begin
+   X:=RightEdge;
+   for I:=0 to ADataFields.Count-1 do begin
+    Item:=TLarPivotViewItem.Create;
+    Item.Kind:=pvekTotalCell; Item.Field:=ADataFields[I]; Item.RowKey:=ARows[Row];
+    Item.ColumnKey:=LAR_PIVOT_TOTAL_KEY; Item.DataIndex:=I;
+    Item.Bounds:=Rect(X,Y,X+ADataFields[I].Width,Y+FRowHeight);
+    FItems.Add(Item); Inc(X,ADataFields[I].Width);
+   end;
+  end;
+ end;
+
+ if AShowColumnTotals then begin
+  Y:=FHeaderTop+AHeaderLevels*FHeaderHeight+ARows.Count*FRowHeight;
+  for I:=0 to FLayout.Columns.Count-1 do begin
+   VC:=FLayout.Columns[I];
+   Item:=TLarPivotViewItem.Create;
+   Item.Kind:=pvekTotalCell; Item.Field:=VC.DataField;
+   Item.RowKey:=LAR_PIVOT_TOTAL_KEY; Item.ColumnKey:=VC.ColumnKey; Item.DataIndex:=I;
+   Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight);
+   FItems.Add(Item);
+  end;
+  if AShowRowTotals and AShowGrandTotal then begin
+   X:=RightEdge;
+   for I:=0 to ADataFields.Count-1 do begin
+    Item:=TLarPivotViewItem.Create;
+    Item.Kind:=pvekGrandTotalCell; Item.Field:=ADataFields[I];
+    Item.RowKey:=LAR_PIVOT_TOTAL_KEY; Item.ColumnKey:=LAR_PIVOT_TOTAL_KEY; Item.DataIndex:=I;
+    Item.Bounds:=Rect(X,Y,X+ADataFields[I].Width,Y+FRowHeight);
+    FItems.Add(Item); Inc(X,ADataFields[I].Width);
+   end;
+  end;
  end;
 end;
 
