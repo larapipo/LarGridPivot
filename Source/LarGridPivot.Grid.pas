@@ -632,7 +632,11 @@ begin
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
   BuildViewInfo;
-  Y:=EffectiveFieldAreaHeight;
+  UpdateScrollBars;
+  SaveDC(Canvas.Handle);
+  IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,ClientHeight);
+  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,-FVScrollPos,nil);
+  Y:=EffectiveFieldAreaHeight+FVScrollPos;
 
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
@@ -687,10 +691,11 @@ begin
 
   if RFs.Count=0 then
    for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-    Y:=EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight;
+    Y:=EffectiveFieldAreaHeight+FVScrollPos+HeaderLevels*FHeaderHeight+Row*FRowHeight;
     DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
 
+  RestoreDC(Canvas.Handle,-1);
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
 
