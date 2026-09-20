@@ -126,7 +126,7 @@ begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDat
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
-var L:TList<TLarPivotField>; I,J:Integer; F,T:TLarPivotField;
+var L:TList<TLarPivotField>; I,J:Integer; T:TLarPivotField;
 begin
  if AArea=paNone then begin
   for I:=0 to FFields.Count-1 do if FFields[I].Area=paNone then FFields[I].AreaIndex:=-1;
