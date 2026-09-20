@@ -85,7 +85,7 @@ type
     procedure ShowFieldFilter(AField: TLarPivotField);
     procedure FilterChecklistClickCheck(Sender:TObject);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
-    procedure ToggleFieldSort(AField: TLarPivotField);
+    procedure ToggleFieldSort(AField:TLarPivotField; AKeepExisting:Boolean=False);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
@@ -633,12 +633,16 @@ begin
  end;
 end;
 
-procedure TLarGridPivot.ToggleFieldSort(AField:TLarPivotField);
+procedure TLarGridPivot.ToggleFieldSort(AField:TLarPivotField;AKeepExisting:Boolean);
+var I:Integer;
 begin
  if AField=nil then Exit;
+ if not AKeepExisting then
+  for I:=0 to FFields.Count-1 do
+   if FFields[I]<>AField then FFields[I].SortOrder:=psoNone;
  case AField.SortOrder of
-  psoNone: AField.SortOrder:=psoAscending;
-  psoAscending: AField.SortOrder:=psoDescending;
+  psoNone:AField.SortOrder:=psoAscending;
+  psoAscending:AField.SortOrder:=psoDescending;
  else AField.SortOrder:=psoNone;
  end;
  Rebuild;
@@ -1095,8 +1099,6 @@ begin
  if Button<>mbLeft then Exit;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
  if Assigned(FFilterButtonField) then begin ShowFieldFilter(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
- FFilterButtonField:=SortButtonAtPoint(X,Y);
- if Assigned(FFilterButtonField) then begin ToggleFieldSort(FFilterButtonField); FFilterButtonField:=nil; Exit; end;
  FResizingField:=ResizeFieldAtPoint(X,Y);
  if Assigned(FResizingField) then begin
   FResizeStartX:=X; FResizeStartWidth:=FResizingField.Width; MouseCapture:=True; Cursor:=crHSplit; Exit;
@@ -1140,7 +1142,7 @@ begin
 end;
 
 procedure TLarGridPivot.MouseUp(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
-var A:TLarPivotArea; N:Integer; F:TLarPivotField;
+var A:TLarPivotArea; N:Integer; F:TLarPivotField; R:TRect;
 begin
  inherited;
  if Button<>mbLeft then Exit;
@@ -1152,7 +1154,10 @@ begin
   if Assigned(F) and FDraggingField and FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
    A:=AreaFromPoint(X,Y); N:=DropIndexAtPoint(A,X);
    MoveField(F.FieldName,A,N);
-  end;
+  end
+  else if Assigned(F) and not FDraggingField and FieldChipRect(F,R) and
+          PtInRect(R,Point(X,Y)) then
+   ToggleFieldSort(F,ssCtrl in Shift);
  finally
   FDragField:=nil; FDraggingField:=False; FDragTargetArea:=paNone; FDragTargetIndex:=-1;
   MouseCapture:=False; Cursor:=crDefault; Invalidate;
