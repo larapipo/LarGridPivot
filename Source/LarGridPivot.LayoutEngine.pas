@@ -127,7 +127,15 @@ procedure TLarPivotLayoutEngine.Build(AModel:TLarPivotModel;
  AColumnFields,ADataFields:TList<TLarPivotField>;AStartX:Integer);
 var Col,Lvl,D,X,I:Integer; K,Cap:string; Root,Node,Candidate:TLarPivotHeaderNode;
 begin
- Clear; if (AModel=nil) or (ADataFields=nil) then Exit; X:=AStartX;
+ Clear; if (AModel=nil) or (ADataFields=nil) or (ADataFields.Count=0) then Exit; X:=AStartX;
+ if (AColumnFields=nil) or (AColumnFields.Count=0) then begin
+  K:='';
+  for D:=0 to ADataFields.Count-1 do begin
+   FColumns.Add(TLarPivotVisualColumn.Create(K,ADataFields[D],X,ADataFields[D].Width));
+   Inc(X,ADataFields[D].Width);
+  end;
+  Exit;
+ end;
  for Col:=0 to AModel.ColumnKeys.Count-1 do begin
   K:=AModel.ColumnKeys[Col]; Node:=nil;
   for Lvl:=0 to AColumnFields.Count-1 do begin
