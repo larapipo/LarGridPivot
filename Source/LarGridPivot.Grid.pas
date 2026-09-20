@@ -764,9 +764,16 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  R:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
- var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=ThemeTotalColor else if Bold then Canvas.Brush.Color:=ThemeHeaderColor else Canvas.Brush.Color:=Color;
+ var RR:TRect; begin RR:=ARect;
+  if Total then begin Canvas.Brush.Color:=ThemeTotalColor; Canvas.Font.Color:=ThemeTotalTextColor; end
+  else if Bold then begin Canvas.Brush.Color:=ThemeHeaderColor; Canvas.Font.Color:=ThemeHeaderTextColor; end
+  else begin Canvas.Brush.Color:=ThemeCellColor; Canvas.Font.Color:=ThemeTextColor; end;
   Canvas.FillRect(RR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
-  Canvas.Font.Assign(Font); if Bold then Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
+  if Total then Canvas.Font.Color:=ThemeTotalTextColor
+  else if Bold then Canvas.Font.Color:=ThemeHeaderTextColor
+  else Canvas.Font.Color:=ThemeTextColor;
+  Canvas.Font.Name:=Font.Name; Canvas.Font.Size:=Font.Size;
+  Canvas.Font.Style:=Font.Style; if Bold then Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
   Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
   case Al of taRightJustify:Flags:=Flags or DT_RIGHT;taCenter:Flags:=Flags or DT_CENTER;else Flags:=Flags or DT_LEFT;end;
   DrawText(Canvas.Handle,PChar(Txt),Length(Txt),RR,Flags);
@@ -781,7 +788,7 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  function TextFor(const AR,AC:string;F:TLarPivotField):string;
  begin Cell:=FEngine.Model.FindCell(AR,AC,F.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(F.SummaryType) else V:=Null; Result:=FormatCellValue(V,F); end;
 begin
- Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DrawFieldAreas;
+ Canvas.Brush.Color:=ThemeCellColor; Canvas.FillRect(ClientRect); DrawFieldAreas;
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
