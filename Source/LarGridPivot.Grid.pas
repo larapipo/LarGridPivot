@@ -17,7 +17,14 @@ type
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
     FFieldAreaHeight: Integer;
+    FDragField: TLarPivotField;
+    FDragStart: TPoint;
+    FDraggingField: Boolean;
     procedure DrawFieldAreas;
+    function AreaFromY(AY: Integer): TLarPivotArea;
+    function FieldAtPoint(AX, AY: Integer): TLarPivotField;
+    function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
+    function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
     procedure DataChanged(Sender: TObject); procedure BuildFieldsFromDataSet;
@@ -28,6 +35,9 @@ type
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Paint; override; procedure Resize; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
   public
     constructor Create(AOwner: TComponent); override; destructor Destroy; override;
     procedure BeginUpdate; procedure EndUpdate; procedure RefreshFields; procedure Rebuild;
@@ -100,9 +110,9 @@ begin
 end;
 
 procedure TLarGridPivot.MoveField(const AFieldName:string; AArea:TLarPivotArea; AIndex:Integer);
-var F:TLarPivotField; I,MaxIndex:Integer;
+var F:TLarPivotField; I,MaxIndex:Integer; OldArea:TLarPivotArea;
 begin
- F:=FieldByName(AFieldName); BeginUpdate;
+ F:=FieldByName(AFieldName); OldArea:=F.Area; BeginUpdate;
  try
   F.Area:=AArea;
   if AArea=paNone then F.AreaIndex:=-1 else begin
@@ -111,6 +121,7 @@ begin
    for I:=0 to FFields.Count-1 do if (FFields[I]<>F) and (FFields[I].Area=AArea) and (FFields[I].AreaIndex>=AIndex) then FFields[I].AreaIndex:=FFields[I].AreaIndex+1;
    F.AreaIndex:=AIndex;
   end;
+  if OldArea<>AArea then NormalizeAreaIndexes(OldArea);
   NormalizeAreaIndexes(AArea);
  finally EndUpdate; end;
 end;
@@ -151,30 +162,90 @@ begin
  end;
 end;
 
+function TLarGridPivot.AreaFields(AArea:TLarPivotArea):TList<TLarPivotField>;
+var I,J:Integer; T:TLarPivotField;
+begin
+ Result:=TList<TLarPivotField>.Create;
+ for I:=0 to FFields.Count-1 do
+  if FFields[I].Visible and (FFields[I].Area=AArea) then Result.Add(FFields[I]);
+ for I:=0 to Result.Count-2 do
+  for J:=I+1 to Result.Count-1 do
+   if Result[I].AreaIndex>Result[J].AreaIndex then begin
+    T:=Result[I]; Result[I]:=Result[J]; Result[J]:=T;
+   end;
+end;
+
+function TLarGridPivot.AreaFromY(AY:Integer):TLarPivotArea;
+var H,N:Integer;
+begin
+ Result:=paNone;
+ if (AY<0) or (AY>=FFieldAreaHeight) then Exit;
+ H:=FFieldAreaHeight div 5; if H<=0 then Exit;
+ N:=AY div H;
+ case N of
+  0:Result:=paNone; 1:Result:=paFilter; 2:Result:=paColumn;
+  3:Result:=paData; 4:Result:=paRow;
+ end;
+end;
+
+function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
+begin
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
+ case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ X:=125; L:=AreaFields(A);
+ try
+  Canvas.Font.Assign(Font);
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+   R:=Rect(X,Y+3,X+ChipW,Y+H-3);
+   if PtInRect(R,Point(AX,AY)) then Exit(L[I]);
+   X:=R.Right+6;
+  end;
+ finally L.Free; end;
+end;
+
+function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer):Integer;
+var L:TList<TLarPivotField>; I,X,ChipW:Integer; S:string;
+begin
+ Result:=0; X:=125; L:=AreaFields(AArea);
+ try
+  Canvas.Font.Assign(Font);
+  for I:=0 to L.Count-1 do begin
+   if L[I]=FDragField then Continue;
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+   if AX < X+(ChipW div 2) then Exit(Result);
+   Inc(Result); Inc(X,ChipW+6);
+  end;
+ finally L.Free; end;
+end;
+
 procedure TLarGridPivot.DrawFieldAreas;
 const Areas:array[0..4] of TLarPivotArea=(paNone,paFilter,paColumn,paData,paRow);
-var I,J,X,Y,W,H,ChipW:Integer; A:TLarPivotArea; R:TRect; F:TLarPivotField; S:string;
+var I,J,X,Y,H,ChipW:Integer; A:TLarPivotArea; R:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
 begin
- H:=FFieldAreaHeight div 5; Y:=0;
- Canvas.Font.Assign(Font);
+ H:=FFieldAreaHeight div 5; Y:=0; Canvas.Font.Assign(Font);
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; R:=Rect(0,Y,ClientWidth,Y+H);
   Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(R);
   Canvas.Pen.Color:=$00D8D8D8; Canvas.Rectangle(R);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
-  Canvas.TextOut(8,Y+6,AreaCaption(A));
-  X:=125; Canvas.Font.Style:=[];
-  for J:=0 to FFields.Count-1 do begin
-   F:=FFields[J]; if (F.Area<>A) or not F.Visible then Continue;
-   S:=F.Caption; if S='' then S:=F.FieldName;
-   ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
-   R:=Rect(X,Y+3,X+ChipW,Y+H-3);
-   Canvas.Brush.Color:=clWhite; Canvas.Pen.Color:=$00B8B8B8;
-   Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
-   Canvas.Font.Color:=clWindowText;
-   Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
-   X:=R.Right+6;
-  end;
+  Canvas.TextOut(8,Y+6,AreaCaption(A)); X:=125; Canvas.Font.Style:=[];
+  L:=AreaFields(A);
+  try
+   for J:=0 to L.Count-1 do begin
+    F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
+    ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+    R:=Rect(X,Y+3,X+ChipW,Y+H-3);
+    if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
+    Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
+    Canvas.Font.Color:=clWindowText;
+    Canvas.TextOut(R.Left+10,R.Top+((R.Bottom-R.Top-Canvas.TextHeight(S)) div 2),S);
+    X:=R.Right+6;
+   end;
+  finally L.Free; end;
   Inc(Y,H);
  end;
 end;
@@ -204,5 +275,42 @@ begin Canvas.Brush.Color:=Color; Canvas.FillRect(ClientRect); DrawFieldAreas; DF
   for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do begin ColKey:=FEngine.Model.ColumnKeys[Col];for D:=0 to DFs.Count-1 do begin DF:=DFs[D];S:=TextFor(LAR_PIVOT_TOTAL_KEY,ColKey,DF);DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True);Inc(X,CellW);end;end;
   if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; if FShowGrandTotal then S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF) else S:='';DrawCell(Rect(X,Y,X+CellW,Y+FRowHeight),S,DefaultAlignment(DF),True,True);Inc(X,CellW);end; end;
  finally DFs.Free; end; end;
+procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
+begin
+ inherited;
+ if Button<>mbLeft then Exit;
+ FDragField:=FieldAtPoint(X,Y);
+ if Assigned(FDragField) then begin
+  FDragStart:=Point(X,Y); FDraggingField:=False; MouseCapture:=True; Invalidate;
+ end;
+end;
+
+procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
+begin
+ inherited;
+ if not Assigned(FDragField) then Exit;
+ if (Abs(X-FDragStart.X)>=4) or (Abs(Y-FDragStart.Y)>=4) then FDraggingField:=True;
+ if FDraggingField then begin
+  if Y<FFieldAreaHeight then Cursor:=crHandPoint else Cursor:=crDefault;
+  Invalidate;
+ end;
+end;
+
+procedure TLarGridPivot.MouseUp(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
+var A:TLarPivotArea; N:Integer; F:TLarPivotField;
+begin
+ inherited;
+ if Button<>mbLeft then Exit;
+ F:=FDragField;
+ try
+  if Assigned(F) and FDraggingField and (Y>=0) and (Y<FFieldAreaHeight) then begin
+   A:=AreaFromY(Y); N:=DropIndexAtPoint(A,X);
+   MoveField(F.FieldName,A,N);
+  end;
+ finally
+  FDragField:=nil; FDraggingField:=False; MouseCapture:=False; Cursor:=crDefault; Invalidate;
+ end;
+end;
+
 procedure TLarGridPivot.Resize; begin inherited;Invalidate;end;
 end.
