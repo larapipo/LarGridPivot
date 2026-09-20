@@ -32,6 +32,7 @@ type
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
     procedure ShowFieldFilter(AField: TLarPivotField);
+    procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
     procedure SetDataSource(const Value: TDataSource); procedure SetFields(const Value: TLarPivotFields);
@@ -328,17 +329,48 @@ begin
  finally L.Free; end;
 end;
 
+procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
+var DS:TDataSet; B:TBookmark; V:Variant; S:string;
+begin
+ AValues.Clear;
+ if (AField=nil) or (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
+ DS:=FDataSource.DataSet; if not DS.Active or (DS.FindField(AField.FieldName)=nil) then Exit;
+ B:=DS.GetBookmark;
+ DS.DisableControls;
+ try
+  DS.First;
+  while not DS.Eof do begin
+   V:=DS.FieldByName(AField.FieldName).Value;
+   if VarIsNull(V) or VarIsEmpty(V) then S:='(null)' else S:=VarToStr(V);
+   if AValues.IndexOf(S)<0 then AValues.Add(S);
+   DS.Next;
+  end;
+ finally
+  if DS.BookmarkValid(B) then DS.GotoBookmark(B);
+  DS.FreeBookmark(B); DS.EnableControls;
+ end;
+end;
+
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
-var Fil:TLarPivotFilter;
+var Fil:TLarPivotFilter; Values:TStringList; I:Integer; S,Prompt:string;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
- { Full checked-value popup comes next; this first interaction toggles an existing
-   field filter without changing the field area or DataSet.Filter. }
- if Fil.Values.Count>0 then begin
-  Fil.Enabled:=not Fil.Enabled;
+ Values:=TStringList.Create;
+ try
+  Values.Sorted:=True; Values.Duplicates:=dupIgnore;
+  PopulateFilterValues(AField,Values);
+  Prompt:='Valores disponibles para '+AField.Caption+':'+sLineBreak+
+    Values.Text+sLineBreak+'Ingrese un valor exacto. Deje vacio para quitar el filtro:';
+  S:='';
+  if Fil.Values.Count=1 then S:=Fil.Values[0];
+  if not InputQuery('Filtro - '+AField.Caption,Prompt,S) then Exit;
+  Fil.Clear;
+  S:=Trim(S);
+  if S<>'' then Fil.Values.Add(S);
+  Fil.Enabled:=S<>'';
   Rebuild;
- end;
+ finally Values.Free; end;
 end;
 
 procedure TLarGridPivot.DrawFieldAreas;
