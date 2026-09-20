@@ -845,7 +845,7 @@ function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):st
 
 procedure TLarGridPivot.Paint;
 var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
- R:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
+ R,VisibleContent:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
  var RR:TRect; begin RR:=ARect;
@@ -886,10 +886,22 @@ begin
   IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,ClientHeight);
   SetViewportOrgEx(Canvas.Handle,-FHScrollPos,-FVScrollPos,nil);
   Y:=EffectiveFieldAreaHeight+FVScrollPos;
+  { ViewInfo can contain hundreds of thousands of cells, but only a tiny
+    viewport is visible. Never format values or issue GDI calls for off-screen
+    cells. Bounds are in content coordinates because of the viewport origin. }
+  VisibleContent:=Rect(FHScrollPos,
+    EffectiveFieldAreaHeight+FVScrollPos,
+    FHScrollPos+ClientWidth,
+    FVScrollPos+ClientHeight);
 
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
-  for VI in FViewInfo.Items do
+  for VI in FViewInfo.Items do begin
+   if (VI.Bounds.Right<VisibleContent.Left) or
+      (VI.Bounds.Left>VisibleContent.Right) or
+      (VI.Bounds.Bottom<VisibleContent.Top) or
+      (VI.Bounds.Top>VisibleContent.Bottom) then
+     Continue;
    case VI.Kind of
     pvekFieldHeader,pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
@@ -954,6 +966,7 @@ begin
       DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
      end;
    end;
+  end;
   X:=RowHeaderTotal;
   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
   if FShowRowTotals then
