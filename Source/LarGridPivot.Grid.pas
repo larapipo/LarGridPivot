@@ -907,13 +907,9 @@ begin
      end;
     pvekRowValue:
      begin
-      S:=KeyPart(VI.RowKey,VI.Level);
-      { Each added row field refines the preceding hierarchy. Parent captions
-        are shown once for their contiguous group; the leaf is always shown. }
-      if (VI.Level<RFs.Count-1) then begin
-       Row:=FEngine.Model.RowKeys.IndexOf(VI.RowKey);
-       if (Row>0) and RowPartEqual(VI.RowKey,FEngine.Model.RowKeys[Row-1],VI.Level) then S:='';
-      end;
+      { Caption grouping is precomputed when ViewInfo is built.  Never scan
+        RowKeys from Paint: that made scrolling large pivots quadratic. }
+      S:=VI.Caption;
       { Paint the complete cell first; indent only the text so hierarchy
         buttons never leave an unpainted strip at the left. }
       DrawCell(VI.Bounds,'',DefaultAlignment(VI.Field),VI.Level<RFs.Count-1);
