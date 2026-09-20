@@ -387,12 +387,16 @@ begin
      end;
     pvekTotalCell:
      begin
-      DF:=VI.Field;
-      if (VI.RowKey=LAR_PIVOT_TOTAL_KEY) and (VI.ColumnKey<>LAR_PIVOT_TOTAL_KEY) then
-       S:=TextFor(LAR_PIVOT_TOTAL_KEY,VI.ColumnKey,DF)
-      else
-       S:=TextFor(VI.RowKey,LAR_PIVOT_TOTAL_KEY,DF);
-      DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
+      if VI.Field=nil then
+       DrawCell(VI.Bounds,VI.Caption,taLeftJustify,True,True)
+      else begin
+       DF:=VI.Field;
+       if (VI.RowKey=LAR_PIVOT_TOTAL_KEY) and (VI.ColumnKey<>LAR_PIVOT_TOTAL_KEY) then
+        S:=TextFor(LAR_PIVOT_TOTAL_KEY,VI.ColumnKey,DF)
+       else
+        S:=TextFor(VI.RowKey,LAR_PIVOT_TOTAL_KEY,DF);
+       DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
+      end;
      end;
     pvekGrandTotalCell:
      begin
@@ -414,11 +418,6 @@ begin
     Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight;
     DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
-
-  if FShowColumnTotals then begin
-   Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight;
-   DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'TOTAL',taLeftJustify,True,True);
-  end;
 
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
