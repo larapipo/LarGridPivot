@@ -27,6 +27,13 @@ type
     FDragTargetArea: TLarPivotArea;
     FDragTargetIndex: Integer;
     FFilterButtonField: TLarPivotField;
+    FHScrollPos, FVScrollPos:Integer;
+    FContentWidth, FContentHeight:Integer;
+    procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
+    procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
+    procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
+    procedure UpdateScrollBars;
+    function ResultTop:Integer;
     function EffectiveFieldAreaHeight:Integer;
     function AvailableBandHeight:Integer;
     procedure SetShowFieldPanel(const Value:Boolean);
@@ -58,6 +65,7 @@ type
     procedure NormalizeAreaIndexes(AArea: TLarPivotArea);
     procedure BuildViewInfo;
   protected
+    procedure CreateParams(var Params:TCreateParams); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure Paint; override; procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
@@ -103,9 +111,9 @@ procedure TLarPivotDataLink.ActiveChanged; begin inherited; if Assigned(FOwner) 
 procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner) then FOwner.DataChanged(Self); end;
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
-begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
+begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
- FShowFieldPanel:=True; FFieldPanelFontSize:=8;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
@@ -113,6 +121,12 @@ procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSource=Value then Exit; FDataSource:=Value; FDataLink.DataSource:=Value; if Assigned(Value) then Value.FreeNotification(Self); RefreshFields; end;
 procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.Assign(Value); Rebuild; end;
+procedure TLarGridPivot.CreateParams(var Params:TCreateParams);
+begin
+ inherited;
+ Params.Style:=Params.Style or WS_HSCROLL or WS_VSCROLL;
+end;
+
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
 procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
 
@@ -148,6 +162,77 @@ procedure TLarGridPivot.SetFieldPanelFontSize(const Value:Integer);
 var N:Integer;
 begin N:=Value; if N<6 then N:=6; if N>14 then N:=14;
  if N=FFieldPanelFontSize then Exit; FFieldPanelFontSize:=N; Invalidate; end;
+
+function TLarGridPivot.ResultTop:Integer;
+begin Result:=EffectiveFieldAreaHeight; end;
+
+procedure TLarGridPivot.UpdateScrollBars;
+var SI:TScrollInfo; RFs,DFs:TList<TLarPivotField>; I,W,H,HeaderLevels:Integer;
+begin
+ RFs:=AxisFields(paRow); DFs:=DataFields;
+ try
+  W:=0; for I:=0 to RFs.Count-1 do Inc(W,RFs[I].Width);
+  if W=0 then W:=FRowHeaderWidth;
+  for I:=0 to FLayoutEngine.Columns.Count-1 do
+   if FLayoutEngine.Columns[I].Left+FLayoutEngine.Columns[I].Width>W then
+    W:=FLayoutEngine.Columns[I].Left+FLayoutEngine.Columns[I].Width;
+  if FShowRowTotals then for I:=0 to DFs.Count-1 do Inc(W,DFs[I].Width);
+  HeaderLevels:=AxisFields(paColumn).Count;
+  if HeaderLevels>0 then Inc(HeaderLevels);
+  if DFs.Count>1 then Inc(HeaderLevels);
+  if HeaderLevels=0 then HeaderLevels:=1;
+  H:=ResultTop+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight;
+  if FShowColumnTotals then Inc(H,FRowHeight);
+  FContentWidth:=W; FContentHeight:=H;
+ finally RFs.Free; DFs.Free; end;
+
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_RANGE or SIF_PAGE or SIF_POS;
+ SI.nMin:=0; SI.nMax:=FContentWidth-1; SI.nPage:=ClientWidth; SI.nPos:=FHScrollPos;
+ SetScrollInfo(Handle,SB_HORZ,SI,True); FHScrollPos:=GetScrollPos(Handle,SB_HORZ);
+
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_RANGE or SIF_PAGE or SIF_POS;
+ SI.nMin:=0; SI.nMax:=FContentHeight-ResultTop-1; SI.nPage:=ClientHeight-ResultTop; SI.nPos:=FVScrollPos;
+ SetScrollInfo(Handle,SB_VERT,SI,True); FVScrollPos:=GetScrollPos(Handle,SB_VERT);
+end;
+
+procedure TLarGridPivot.WMHScroll(var Message:TWMHScroll);
+var SI:TScrollInfo; P:Integer;
+begin
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_HORZ,SI); P:=SI.nPos;
+ case Message.ScrollCode of
+  SB_LINELEFT:Dec(P,32); SB_LINERIGHT:Inc(P,32);
+  SB_PAGELEFT:Dec(P,Integer(SI.nPage)); SB_PAGERIGHT:Inc(P,Integer(SI.nPage));
+  SB_THUMBTRACK,SB_THUMBPOSITION:P:=SI.nTrackPos; SB_LEFT:P:=SI.nMin; SB_RIGHT:P:=SI.nMax;
+ end;
+ if P<SI.nMin then P:=SI.nMin;
+ if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
+ if P<0 then P:=0;
+ if P<>FHScrollPos then begin FHScrollPos:=P; SetScrollPos(Handle,SB_HORZ,P,True); Invalidate; end;
+end;
+
+procedure TLarGridPivot.WMVScroll(var Message:TWMVScroll);
+var SI:TScrollInfo; P:Integer;
+begin
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_VERT,SI); P:=SI.nPos;
+ case Message.ScrollCode of
+  SB_LINEUP:Dec(P,FRowHeight); SB_LINEDOWN:Inc(P,FRowHeight);
+  SB_PAGEUP:Dec(P,Integer(SI.nPage)); SB_PAGEDOWN:Inc(P,Integer(SI.nPage));
+  SB_THUMBTRACK,SB_THUMBPOSITION:P:=SI.nTrackPos; SB_TOP:P:=SI.nMin; SB_BOTTOM:P:=SI.nMax;
+ end;
+ if P<SI.nMin then P:=SI.nMin;
+ if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
+ if P<0 then P:=0;
+ if P<>FVScrollPos then begin FVScrollPos:=P; SetScrollPos(Handle,SB_VERT,P,True); Invalidate; end;
+end;
+
+procedure TLarGridPivot.WMMouseWheel(var Message:TWMMouseWheel);
+begin
+ if Message.WheelDelta>0 then FVScrollPos:=FVScrollPos-FRowHeight*3
+ else FVScrollPos:=FVScrollPos+FRowHeight*3;
+ if FVScrollPos<0 then FVScrollPos:=0;
+ SetScrollPos(Handle,SB_VERT,FVScrollPos,True); Invalidate;
+ Message.Result:=1;
+end;
 
 procedure TLarGridPivot.SetHeaderHeight(const Value:Integer);
 var N:Integer;
