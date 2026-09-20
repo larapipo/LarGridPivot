@@ -65,7 +65,7 @@ type
 implementation
 
 constructor TLarMemoryPivotProvider.Create(ADataSet:TDataSet);
-var I,N:Integer; B:TBookmark; HasBookmark:Boolean;
+var I,N,Capacity:Integer; B:TBookmark; HasBookmark:Boolean;
 begin
  inherited Create;
  if ADataSet=nil then raise EArgumentNilException.Create('ADataSet');
@@ -77,7 +77,7 @@ begin
   FFieldTypes[I]:=ADataSet.Fields[I].DataType;
   FFieldIndex.AddOrSetValue(UpperCase(FFieldNames[I]),I);
  end;
- N:=0; FPos:=-1;
+ N:=0; Capacity:=0; FPos:=-1;
  if not ADataSet.Active then Exit;
  HasBookmark:=not ADataSet.IsEmpty;
  if HasBookmark then B:=ADataSet.GetBookmark;
@@ -85,13 +85,17 @@ begin
  try
   ADataSet.First;
   while not ADataSet.Eof do begin
-   SetLength(FRows,N+1);
+   if N>=Capacity then begin
+    if Capacity=0 then Capacity:=1024 else Capacity:=Capacity*2;
+    SetLength(FRows,Capacity);
+   end;
    SetLength(FRows[N],ADataSet.FieldCount);
    for I:=0 to ADataSet.FieldCount-1 do
     FRows[N][I]:=ADataSet.Fields[I].Value;
    Inc(N);
    ADataSet.Next;
   end;
+  SetLength(FRows,N);
  finally
   if HasBookmark then begin
    if ADataSet.BookmarkValid(B) then ADataSet.GotoBookmark(B);
