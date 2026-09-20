@@ -3,8 +3,8 @@ unit Demo.Main;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics,
+  Winapi.Windows, System.SysUtils, System.Classes, System.IOUtils,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes,
   Data.DB, Datasnap.DBClient,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Grid;
@@ -22,6 +22,7 @@ type
     FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnFields: TButton;
     FThemeCombo:TComboBox;
     FLayout: string;
+    FStyleCombo:TComboBox;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
     procedure RefreshAreaLists;
@@ -38,6 +39,7 @@ type
     procedure ToggleColumnTotals(Sender:TObject);
     procedure ToggleFields(Sender:TObject);
     procedure ChangeTheme(Sender:TObject);
+    procedure ChangeVclStyle(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -125,6 +127,11 @@ begin
   FThemeCombo.Items.Add('Office');
   FThemeCombo.Items.Add('Dark');
   FThemeCombo.ItemIndex:=0; FThemeCombo.OnChange:=ChangeTheme;
+  FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
+  FStyleCombo.Left:=715; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
+  FStyleCombo.Items.Assign(TStyleManager.StyleNames);
+  FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
+  FStyleCombo.OnChange:=ChangeVclStyle;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -236,6 +243,17 @@ begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
 
 procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
 begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
+begin
+ if (FStyleCombo.ItemIndex>=0) and
+    (TStyleManager.ActiveStyle.Name<>FStyleCombo.Items[FStyleCombo.ItemIndex]) then begin
+  TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]);
+  FPivot.Theme:=ptVclStyle;
+  FThemeCombo.ItemIndex:=Ord(ptVclStyle);
+  FPivot.Invalidate;
+ end;
+end;
 
 procedure TFrmLarGridPivotDemo.ChangeTheme(Sender:TObject);
 begin
