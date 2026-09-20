@@ -178,17 +178,13 @@ begin
           V := AProvider.GetValue(F.FieldName);
           AddValue(RowKey, ColKey, F, V);
           AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
-          { Prefix aggregates are expensive on large datasets.  Since subtotals
-            are opt-in, build them only for row levels that actually request a
-            subtotal.  Collapsed groups without a subtotal use their detail
-            aggregate path in the view and do not justify multiplying every
-            input record by every hierarchy level. }
-          for Lvl:=0 to RowFields.Count-2 do
-           if RowFields[Lvl].ShowSubTotal then begin
+          { Prefix aggregates also back collapsed hierarchy rows, so keep them
+            available independently of whether visible subtotal rows are enabled. }
+          for Lvl:=0 to RowFields.Count-2 do begin
             PrefixKey:=RowPrefix(RowKey,Lvl);
             AddValueRaw(PrefixKey,ColKey,F,V);
             AddValueRaw(PrefixKey,LAR_PIVOT_TOTAL_KEY,F,V);
-           end;
+          end;
           AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
           AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
         end;
