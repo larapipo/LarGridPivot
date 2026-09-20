@@ -314,7 +314,7 @@ function TLarGridPivot.AreaRect(AArea:TLarPivotArea):TRect;
 var AvH,WorkTop,HalfW,LineH:Integer;
 begin
  if not FShowFieldPanel then Exit(Rect(0,0,0,0));
- AvH:=AvailableBandHeight; WorkTop:=AvH; HalfW:=ClientWidth div 2; LineH:=28;
+ AvH:=AvailableBandHeight; WorkTop:=AvH; HalfW:=ClientWidth div 2; LineH:=24;
  case AArea of
   paNone: Result:=Rect(0,0,ClientWidth,AvH);
   paData: Result:=Rect(0,WorkTop,HalfW,WorkTop+LineH);
@@ -368,15 +368,15 @@ end;
 function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer):Integer;
 var L:TList<TLarPivotField>; I,X,ChipW:Integer; S:string;
 begin
- Result:=0; X:=AreaRect(AArea).Left+125; L:=AreaFields(AArea);
+ Result:=0; X:=AreaRect(AArea).Left+6; if AArea<>paNone then X:=AreaRect(AArea).Left+72; L:=AreaFields(AArea);
  try
-  Canvas.Font.Assign(Font);
+  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
   for I:=0 to L.Count-1 do begin
    if L[I]=FDragField then Continue;
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
-   ChipW:=Canvas.TextWidth(S)+52; if ChipW<108 then ChipW:=108;
+   ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
    if AX < X+(ChipW div 2) then Exit(Result);
-   Inc(Result); Inc(X,ChipW+6);
+   Inc(Result); Inc(X,ChipW+4);
   end;
  finally L.Free; end;
 end;
@@ -477,7 +477,7 @@ begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
     ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
     if (A=paNone) and (X+ChipW>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
-    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y); Canvas.LineTo(X-2,Y+20); Canvas.MoveTo(X-7,Y+5); Canvas.LineTo(X-2,Y); Canvas.LineTo(X+3,Y+5); Canvas.MoveTo(X-7,Y+15); Canvas.LineTo(X-2,Y+20); Canvas.LineTo(X+3,Y+15); Canvas.Pen.Width:=1; end;
+    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
