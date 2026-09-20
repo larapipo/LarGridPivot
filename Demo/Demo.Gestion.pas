@@ -20,6 +20,7 @@ type
     FBtnAbrir: TButton;
     FStatus: TLabel;
     procedure AbrirDatos(Sender:TObject);
+    procedure ConfigurarConexionDemo;
     procedure ConfigurarPivot;
   public
     constructor Create(AOwner:TComponent); override;
@@ -43,9 +44,7 @@ begin
   Width:=1280; Height:=720; Position:=poScreenCenter;
 
   FConnection:=TFDConnection.Create(Self);
-  { Assign LoginPrompt/Params here, or replace Connection at integration time.
-    No credentials/database path are embedded in the component or demo. }
-  FConnection.LoginPrompt:=True;
+  ConfigurarConexionDemo;
 
   FQuery:=TFDQuery.Create(Self);
   FQuery.Connection:=FConnection;
@@ -79,6 +78,23 @@ begin
   FPivot.DataSource:=FSource;
 end;
 
+procedure TFrmLarGridPivotGestionDemo.ConfigurarConexionDemo;
+begin
+ { Do not invoke FireDAC's default connection editor: in a runtime-only demo
+   its design-time factory may not be registered and raises "Object factory
+   ... is missing". Configure the connection explicitly instead. }
+ FConnection.LoginPrompt:=False;
+ FConnection.Params.Clear;
+ FConnection.DriverName:='FB';
+ FConnection.Params.Values['Protocol']:='TCPIP';
+ FConnection.Params.Values['Server']:='127.0.0.1';
+ FConnection.Params.Values['Port']:='3050';
+ FConnection.Params.Values['User_Name']:='SYSDBA';
+ FConnection.Params.Values['Password']:='masterkey';
+ FConnection.Params.Values['CharacterSet']:='WIN1252';
+ FConnection.Params.Values['Database']:='';
+end;
+
 procedure TFrmLarGridPivotGestionDemo.UseConnection(AConnection:TFDConnection);
 begin
  if AConnection=nil then Exit;
@@ -91,6 +107,10 @@ procedure TFrmLarGridPivotGestionDemo.AbrirDatos(Sender:TObject);
 begin
   try
     FQuery.Close;
+    if (FQuery.Connection=FConnection) and (Trim(FConnection.Params.Database)='') then begin
+      ShowMessage('Demo Gestión: configure FConnection.Params.Database con la ruta/alias de su base Firebird, o use UseConnection() para reutilizar la TFDConnection abierta del ERP.');
+      Exit;
+    end;
     FQuery.ParamByName('DESDE').AsDateTime:=StartOfTheDay(FDesde.Date);
     FQuery.ParamByName('HASTA').AsDateTime:=EndOfTheDay(FHasta.Date);
     FQuery.ParamByName('VENDEDOR').AsString:='***';
