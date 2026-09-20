@@ -36,6 +36,7 @@ type
     procedure BuildHeaders(ARowFields, AColumnFields, ADataFields: TList<TLarPivotField>;
       AHeaderTop, AHeaderHeight, ARowHeaderWidth: Integer);
     function HitTest(AX, AY: Integer): TLarPivotHitTest;
+    function FieldAtResizeEdge(AX, AY, ATolerance: Integer): TLarPivotField;
     property Items: TObjectList<TLarPivotViewItem> read FItems;
     property HeaderTop: Integer read FHeaderTop;
     property HeaderHeight: Integer read FHeaderHeight;
@@ -141,6 +142,17 @@ begin
   Result.RowKey:=Item.RowKey; Result.ColumnKey:=Item.ColumnKey;
   Result.Level:=Item.Level; Result.DataIndex:=Item.DataIndex;
   Exit;
+ end;
+function TLarPivotViewInfo.FieldAtResizeEdge(AX,AY,ATolerance:Integer):TLarPivotField;
+var I,Dist:Integer; Item:TLarPivotViewItem;
+begin
+ Result:=nil;
+ for I:=FItems.Count-1 downto 0 do begin
+  Item:=FItems[I];
+  if (Item.Kind<>pvekFieldHeader) or (Item.Field=nil) then Continue;
+  if (AY<Item.Bounds.Top) or (AY>=Item.Bounds.Bottom) then Continue;
+  Dist:=Abs(AX-Item.Bounds.Right);
+  if Dist<=ATolerance then Exit(Item.Field);
  end;
 end;
 
