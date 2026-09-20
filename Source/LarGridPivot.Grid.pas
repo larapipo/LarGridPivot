@@ -22,6 +22,8 @@ type
     FDraggingField: Boolean;
     FResizingField: TLarPivotField;
     FResizeStartX, FResizeStartWidth: Integer;
+    FDragTargetArea: TLarPivotArea;
+    FDragTargetIndex: Integer;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
     function AreaFromY(AY: Integer): TLarPivotArea;
@@ -86,7 +88,8 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
- FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150; FFields:=TLarPivotFields.Create(Self);
+ FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150;
+ FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
@@ -320,6 +323,10 @@ begin
    for J:=0 to L.Count-1 do begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
     ChipW:=Canvas.TextWidth(S)+24; if ChipW<80 then ChipW:=80;
+    if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin
+     Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
+     Canvas.MoveTo(X-3,Y+4); Canvas.LineTo(X-3,Y+H-4); Canvas.Pen.Width:=1;
+    end;
     R:=Rect(X,Y+3,X+ChipW,Y+H-3);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
     Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,6,6);
@@ -328,6 +335,10 @@ begin
     X:=R.Right+6;
    end;
   finally L.Free; end;
+  if FDraggingField and (A=FDragTargetArea) and (FDragTargetIndex>=J) then begin
+   Canvas.Pen.Color:=$00808080; Canvas.Pen.Width:=2;
+   Canvas.MoveTo(X-3,Y+4); Canvas.LineTo(X-3,Y+H-4); Canvas.Pen.Width:=1;
+  end;
   Inc(Y,H);
  end;
 end;
@@ -467,7 +478,13 @@ begin
  end;
  if (Abs(X-FDragStart.X)>=4) or (Abs(Y-FDragStart.Y)>=4) then FDraggingField:=True;
  if FDraggingField then begin
-  if Y<FFieldAreaHeight then Cursor:=crHandPoint else Cursor:=crDefault;
+  if (Y>=0) and (Y<FFieldAreaHeight) then begin
+   FDragTargetArea:=AreaFromY(Y);
+   FDragTargetIndex:=DropIndexAtPoint(FDragTargetArea,X);
+   Cursor:=crHandPoint;
+  end else begin
+   FDragTargetArea:=paNone; FDragTargetIndex:=-1; Cursor:=crDefault;
+  end;
   Invalidate;
  end;
 end;
@@ -487,7 +504,8 @@ begin
    MoveField(F.FieldName,A,N);
   end;
  finally
-  FDragField:=nil; FDraggingField:=False; MouseCapture:=False; Cursor:=crDefault; Invalidate;
+  FDragField:=nil; FDraggingField:=False; FDragTargetArea:=paNone; FDragTargetIndex:=-1;
+  MouseCapture:=False; Cursor:=crDefault; Invalidate;
  end;
 end;
 
