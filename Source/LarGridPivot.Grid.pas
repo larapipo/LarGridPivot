@@ -593,6 +593,7 @@ begin
   end else begin
    FDragTargetArea:=paNone; FDragTargetIndex:=-1; Cursor:=crDefault;
   end;
+  { Double buffering removes erase/fill flicker; repaint only while the insertion target can change. }
   Invalidate;
  end;
 end;
