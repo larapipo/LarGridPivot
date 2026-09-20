@@ -19,9 +19,9 @@ type
     FAreaPanel: TPanel;
     FAvailable, FRows, FColumns, FValues, FFilters: TListBox;
     FBtnToRows, FBtnToColumns, FBtnToValues, FBtnToFilters, FBtnRemove: TButton;
-    FBtnSave, FBtnLoad: TButton;
+    FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnGrandTotal: TButton;
     FLayout: string;
-    procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer);
+    procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL');
     procedure ConfigurePivot;
     procedure RefreshAreaLists;
     function SelectedFieldName: string;
@@ -33,6 +33,9 @@ type
     procedure RemoveField(Sender: TObject);
     procedure SaveLayout(Sender: TObject);
     procedure LoadLayout(Sender: TObject);
+    procedure ToggleRowTotals(Sender:TObject);
+    procedure ToggleColumnTotals(Sender:TObject);
+    procedure ToggleGrandTotal(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -58,12 +61,14 @@ constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
 begin
   inherited CreateNew(AOwner);
   Caption:='LarGridPivot v1 - Pivot interactivo';
-  Width:=1180; Height:=650; Position:=poScreenCenter;
+  Width:=1320; Height:=700; Position:=poScreenCenter;
 
   FData:=TClientDataSet.Create(Self);
   FData.FieldDefs.Add('VENDEDOR',ftString,40);
   FData.FieldDefs.Add('MES',ftString,20);
   FData.FieldDefs.Add('SUCURSAL',ftString,20);
+  FData.FieldDefs.Add('ANIO',ftInteger);
+  FData.FieldDefs.Add('RUBRO',ftString,30);
   FData.FieldDefs.Add('VENTA',ftCurrency);
   FData.FieldDefs.Add('CANTIDAD',ftInteger);
   FData.CreateDataSet;
@@ -72,6 +77,18 @@ begin
   AddSale('PEDRO','ENERO','NORTE',98300,7);
   AddSale('PEDRO','FEBRERO','NORTE',120000,9);
   AddSale('JUAN','ENERO','NORTE',10000,2);
+  AddSale('ANA','MARZO','CENTRO',84500,6,2026,'FERRETERIA');
+  AddSale('ANA','ABRIL','SUR',91750,8,2026,'FERRETERIA');
+  AddSale('LUIS','ENERO','SUR',67200,5,2026,'ELECTRICIDAD');
+  AddSale('LUIS','FEBRERO','CENTRO',73400,6,2026,'ELECTRICIDAD');
+  AddSale('PEDRO','MARZO','NORTE',132600,11,2026,'PINTURAS');
+  AddSale('JUAN','ABRIL','CENTRO',156800,13,2026,'PINTURAS');
+  AddSale('ANA','ENERO','NORTE',77800,7,2025,'FERRETERIA');
+  AddSale('LUIS','FEBRERO','SUR',82400,8,2025,'ELECTRICIDAD');
+  AddSale('PEDRO','MARZO','CENTRO',109900,9,2025,'PINTURAS');
+  AddSale('JUAN','ABRIL','NORTE',118300,10,2025,'FERRETERIA');
+  AddSale('MARTA','ENERO','CENTRO',96300,8,2026,'BAZAR');
+  AddSale('MARTA','FEBRERO','SUR',104200,9,2026,'BAZAR');
 
   FSource:=TDataSource.Create(Self); FSource.DataSet:=FData;
 
@@ -84,6 +101,8 @@ begin
   MakeButton(FBtnRemove,448,6,'Quitar',RemoveField);
   MakeButton(FBtnSave,690,6,'Guardar vista',SaveLayout);
   MakeButton(FBtnLoad,800,6,'Restaurar vista',LoadLayout);
+  MakeButton(FBtnRowTotals,910,6,'Tot. filas',ToggleRowTotals);
+  MakeButton(FBtnColumnTotals,1020,6,'Tot. columnas',ToggleColumnTotals);
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
@@ -99,7 +118,7 @@ begin
   RefreshAreaLists;
 end;
 
-procedure TFrmLarGridPivotDemo.AddSale(const AVendedor,AMes,ASucursal:string; AVenta:Currency; ACantidad:Integer);
+procedure TFrmLarGridPivotDemo.AddSale(const AVendedor,AMes,ASucursal:string; AVenta:Currency; ACantidad:Integer; AAnio:Integer; const ARubro:string);
 begin
   FData.Append;
   FData.FieldByName('VENDEDOR').AsString:=AVendedor;
@@ -107,6 +126,8 @@ begin
   FData.FieldByName('SUCURSAL').AsString:=ASucursal;
   FData.FieldByName('VENTA').AsCurrency:=AVenta;
   FData.FieldByName('CANTIDAD').AsInteger:=ACantidad;
+  FData.FieldByName('ANIO').AsInteger:=AAnio;
+  FData.FieldByName('RUBRO').AsString:=ARubro;
   FData.Post;
 end;
 
@@ -180,5 +201,14 @@ begin
   FPivot.LoadLayoutFromString(FLayout);
   RefreshAreaLists;
 end;
+
+procedure TFrmLarGridPivotDemo.ToggleRowTotals(Sender:TObject);
+begin FPivot.ShowRowTotals:=not FPivot.ShowRowTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.ToggleColumnTotals(Sender:TObject);
+begin FPivot.ShowColumnTotals:=not FPivot.ShowColumnTotals; FPivot.Rebuild; end;
+
+procedure TFrmLarGridPivotDemo.ToggleGrandTotal(Sender:TObject);
+begin FPivot.ShowGrandTotal:=not FPivot.ShowGrandTotal; FPivot.Rebuild; end;
 
 end.
