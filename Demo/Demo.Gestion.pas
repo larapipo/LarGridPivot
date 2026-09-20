@@ -147,6 +147,8 @@ begin
     RowField('RUBRODETALLE','Rubro',0);
     RowField('SUBRUBRODETALL','Subrubro',1);
     RowField('DETALLE_STK','Artículo',2);
+    { NROCPBTE remains available above the pivot: dragging it after Artículo
+      produces the leaf rows shown in the Gestion/DevExpress reference video. }
     F:=FPivot.FieldByName('MES'); if F<>nil then begin F.Caption:='Mes'; F.Area:=paColumn; F.AreaIndex:=0; end;
     DataField('CANTIDAD','Cantidad','#,##0.000',0);
     DataField('TOTAL_FINAL','Venta','#,##0.00',1);
