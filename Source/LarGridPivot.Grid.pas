@@ -250,23 +250,35 @@ procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
 begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
 
 function TLarGridPivot.ThemeHeaderColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clBtnFace); end;
+begin
+ if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnFace) else
+ case FTheme of ptClassicBlue:Result:=$00F2E3D5; ptLight:Result:=$00F5F5F5;
+ ptSilver:Result:=$00E8E8E8; ptOffice:Result:=$00F0E6D6; ptDark:Result:=$00383838;
+ else Result:=clBtnFace; end;
+end;
 function TLarGridPivot.ThemeTotalColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clHighlight); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlight)
+ else if FTheme=ptDark then Result:=$00505050 else Result:=$00E6D4BE; end;
 function TLarGridPivot.ThemeGridColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clBtnShadow); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnShadow)
+ else if FTheme=ptDark then Result:=$00606060 else Result:=$00C8C8C8; end;
 function TLarGridPivot.ThemePanelColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clWindow); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindow)
+ else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite; end;
 function TLarGridPivot.ThemeTextColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clWindowText); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindowText)
+ else if FTheme=ptDark then Result:=$00E8E8E8 else Result:=clWindowText; end;
 function TLarGridPivot.ThemeHeaderTextColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clBtnText); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnText)
+ else Result:=ThemeTextColor; end;
 function TLarGridPivot.ThemeTotalTextColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clHighlightText); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlightText)
+ else Result:=ThemeTextColor; end;
 function TLarGridPivot.ThemeCellColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clWindow); end;
+begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindow)
+ else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite; end;
 function TLarGridPivot.ThemeChipColor:TColor;
-begin Result:=StyleServices.GetSystemColor(clBtnFace); end;
+begin Result:=ThemeHeaderColor; end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
 begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
