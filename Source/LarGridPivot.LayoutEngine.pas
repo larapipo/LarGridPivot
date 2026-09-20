@@ -40,6 +40,7 @@ type
     FColumns: TObjectList<TLarPivotVisualColumn>;
     function KeyPart(const AKey: string; ALevel: Integer): string;
     procedure AssignNodeGeometry(ANode: TLarPivotHeaderNode);
+    procedure AddVisualColumns(ANode: TLarPivotHeaderNode; ADataFields: TList<TLarPivotField>; var AX: Integer);
   public
     constructor Create;
     destructor Destroy; override;
@@ -130,6 +131,20 @@ begin
  ANode.Left:=MinL; ANode.Width:=MaxR-MinL;
 end;
 
+procedure TLarPivotLayoutEngine.AddVisualColumns(ANode:TLarPivotHeaderNode;
+ ADataFields:TList<TLarPivotField>;var AX:Integer);
+var C:TLarPivotHeaderNode; D:Integer;
+begin
+ if ANode.Children.Count>0 then begin
+  for C in ANode.Children do AddVisualColumns(C,ADataFields,AX);
+  Exit;
+ end;
+ for D:=0 to ADataFields.Count-1 do begin
+  FColumns.Add(TLarPivotVisualColumn.Create(ANode.ColumnKey,ADataFields[D],AX,ADataFields[D].Width));
+  Inc(AX,ADataFields[D].Width);
+ end;
+end;
+
 procedure TLarPivotLayoutEngine.Build(AModel:TLarPivotModel;
  AColumnFields,ADataFields:TList<TLarPivotField>;AStartX:Integer);
 var Col,Lvl,D,X:Integer; K,Cap,Prefix:string; Root,Node,Candidate:TLarPivotHeaderNode;
@@ -164,11 +179,9 @@ begin
    if Node.KeyPrefix='' then Node.KeyPrefix:=Prefix;
    if Lvl=AColumnFields.Count-1 then Node.ColumnKey:=K;
   end;
-  for D:=0 to ADataFields.Count-1 do begin
-   FColumns.Add(TLarPivotVisualColumn.Create(K,ADataFields[D],X,ADataFields[D].Width));
-   Inc(X,ADataFields[D].Width);
-  end;
  end;
+ X:=AStartX;
+ for Root in FRoots do AddVisualColumns(Root,ADataFields,X);
  for Root in FRoots do AssignNodeGeometry(Root);
 end;
 
