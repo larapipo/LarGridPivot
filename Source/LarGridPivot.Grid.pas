@@ -795,9 +795,22 @@ begin
   PopulateFilterValues(AField,Values);
 
   Frm.BorderStyle:=bsToolWindow; Frm.Caption:=AField.Caption;
-  Frm.Position:=poDesigned; Frm.Width:=300; Frm.Height:=360;
+  Frm.Position:=poDesigned; Frm.Height:=360;
   Frm.Font.Assign(Font); Frm.Color:=ThemePanelColor;
+  { Size the popup from its actual values.  Text-heavy fields such as article
+    descriptions should not be forced into the old fixed 300px window. }
+  Frm.Canvas.Font.Assign(Font);
+  var MaxTextW:=180;
+  for I:=0 to Values.Count-1 do
+   if Frm.Canvas.TextWidth(Values[I])>MaxTextW then
+    MaxTextW:=Frm.Canvas.TextWidth(Values[I]);
+  Frm.Width:=MaxTextW+72;
+  if Frm.Width<300 then Frm.Width:=300;
+  if Frm.Width>Screen.WorkAreaWidth-40 then Frm.Width:=Screen.WorkAreaWidth-40;
   Frm.Left:=Mouse.CursorPos.X-20; Frm.Top:=Mouse.CursorPos.Y+8;
+  if Frm.Left+Frm.Width>Screen.WorkAreaRect.Right then
+   Frm.Left:=Screen.WorkAreaRect.Right-Frm.Width-8;
+  if Frm.Left<Screen.WorkAreaRect.Left then Frm.Left:=Screen.WorkAreaRect.Left+8;
 
   CL:=TCheckListBox.Create(Frm); CL.Parent:=Frm; CL.Align:=alClient;
   CL.BorderStyle:=bsNone; CL.Font.Assign(Font); CL.Color:=ThemeCellColor;
