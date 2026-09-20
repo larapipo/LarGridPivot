@@ -19,10 +19,6 @@ type
     FFieldAreaHeight: Integer;
     FShowFieldPanel:Boolean;
     FFieldPanelFontSize:Integer;
-    function EffectiveFieldAreaHeight:Integer;
-    function AvailableBandHeight:Integer;
-    procedure SetShowFieldPanel(const Value:Boolean);
-    procedure SetFieldPanelFontSize(const Value:Integer);
     FDragField: TLarPivotField;
     FDragStart: TPoint;
     FDraggingField: Boolean;
@@ -31,6 +27,10 @@ type
     FDragTargetArea: TLarPivotArea;
     FDragTargetIndex: Integer;
     FFilterButtonField: TLarPivotField;
+    function EffectiveFieldAreaHeight:Integer;
+    function AvailableBandHeight:Integer;
+    procedure SetShowFieldPanel(const Value:Boolean);
+    procedure SetFieldPanelFontSize(const Value:Integer);
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
     function AreaFromPoint(AX, AY: Integer): TLarPivotArea;
