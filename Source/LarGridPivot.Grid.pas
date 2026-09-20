@@ -633,15 +633,24 @@ end;
 
 procedure TLarGridPivot.BuildFilterValueCache;
 var DS:TDataSet; B:TBookmark; HasBookmark:Boolean; I:Integer; F:TField;
- Lists:TObjectList<TStringList>; L:TStringList; S,CacheKey,Cached:string;
+ Lists:TObjectList<TStringList>; FieldRefs:TList<TField>; L:TStringList;
+ S,CacheKey,Cached:string;
 begin
  FFilterValueCache.Clear;
  if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
  DS:=FDataSource.DataSet; if not DS.Active then Exit;
  Lists:=TObjectList<TStringList>.Create(True);
+ FieldRefs:=TList<TField>.Create;
  try
+  { Resolve dataset fields once.  FindField inside the 43k-record loop was
+    unnecessarily repeated for every pivot field and every record. }
   for I:=0 to FFields.Count-1 do begin
-   L:=TStringList.Create; L.Sorted:=True; L.Duplicates:=dupIgnore;
+   F:=DS.FindField(FFields[I].FieldName);
+   FieldRefs.Add(F);
+   L:=TStringList.Create;
+   { Collect unsorted: insertion stays O(1). Sorting a large ARTICULO list
+     while scanning makes every insertion increasingly expensive. }
+   L.Sorted:=False; L.Duplicates:=dupAccept;
    Lists.Add(L);
   end;
   HasBookmark:=not DS.IsEmpty;
@@ -651,7 +660,7 @@ begin
    DS.First;
    while not DS.Eof do begin
     for I:=0 to FFields.Count-1 do begin
-     F:=DS.FindField(FFields[I].FieldName);
+     F:=FieldRefs[I];
      if F<>nil then begin
       if F.IsNull then S:='(null)' else S:=F.AsString;
       Lists[I].Add(S);
@@ -666,12 +675,24 @@ begin
    end;
    DS.EnableControls;
   end;
+  { Sort once after collection and remove adjacent duplicates in one pass. }
   for I:=0 to FFields.Count-1 do begin
+   L:=Lists[I];
+   L.Sort;
+   if L.Count>1 then begin
+    var J:=L.Count-1;
+    while J>0 do begin
+     if SameText(L[J],L[J-1]) then L.Delete(J);
+     Dec(J);
+    end;
+   end;
    CacheKey:=UpperCase(FFields[I].FieldName);
-   Cached:=StringReplace(Lists[I].Text,sLineBreak,#30,[rfReplaceAll]);
+   Cached:=StringReplace(L.Text,sLineBreak,#30,[rfReplaceAll]);
    FFilterValueCache.Values[CacheKey]:=Cached;
   end;
- finally Lists.Free; end;
+ finally
+  FieldRefs.Free; Lists.Free;
+ end;
 end;
 
 procedure TLarGridPivot.PopulateFilterValues(AField:TLarPivotField;AValues:TStrings);
