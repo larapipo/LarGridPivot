@@ -156,27 +156,27 @@ var FS:TFileStream;
 begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
 
 function TLarGridPivot.ResizeFieldAtPoint(AX,AY:Integer):TLarPivotField;
-var RFs,DFs:TList<TLarPivotField>; I,X,Y0,HeaderLevels:Integer;
+var RFs,DFs,CFs:TList<TLarPivotField>; I,D,Col,X,Y0,HeaderLevels:Integer;
 begin
  Result:=nil; Y0:=FFieldAreaHeight;
- DFs:=DataFields; RFs:=AxisFields(paRow);
+ DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
-  HeaderLevels:=AreaFields(paColumn).Count;
-  if DFs.Count>1 then Inc(HeaderLevels);
+  HeaderLevels:=CFs.Count; if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
   if (AY<Y0) or (AY>Y0+HeaderLevels*FHeaderHeight) then Exit;
   X:=0;
   for I:=0 to RFs.Count-1 do begin
-   Inc(X,RFs[I].Width);
-   if Abs(AX-X)<=4 then Exit(RFs[I]);
+   Inc(X,RFs[I].Width); if Abs(AX-X)<=4 then Exit(RFs[I]);
   end;
-  for I:=0 to DFs.Count-1 do begin
-   Inc(X,DFs[I].Width);
-   if Abs(AX-X)<=4 then Exit(DFs[I]);
-  end;
- finally
-  RFs.Free; DFs.Free;
- end;
+  for Col:=0 to FEngine.Model.ColumnKeys.Count-1 do
+   for D:=0 to DFs.Count-1 do begin
+    Inc(X,DFs[D].Width); if Abs(AX-X)<=4 then Exit(DFs[D]);
+   end;
+  if FShowRowTotals then
+   for D:=0 to DFs.Count-1 do begin
+    Inc(X,DFs[D].Width); if Abs(AX-X)<=4 then Exit(DFs[D]);
+   end;
+ finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
 
 function TLarGridPivot.AreaCaption(AArea:TLarPivotArea):string;
@@ -305,7 +305,7 @@ function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
 
 procedure TLarGridPivot.Paint;
-var R:TRect; Row,Col,D,Lvl,CellW,X,Y,HeaderLevels,RowHeaderTotal,ColSpanW:Integer;
+var R:TRect; Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal,ColSpanW,LeafX:Integer;
  RowKey,ColKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
@@ -327,7 +327,6 @@ begin
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0; for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
-  CellW:=100;
   Y:=FFieldAreaHeight;
   X:=0;
   if RFs.Count>0 then
@@ -341,17 +340,20 @@ begin
    ColKey:=FEngine.Model.ColumnKeys[Col]; ColSpanW:=0; for D:=0 to DFs.Count-1 do Inc(ColSpanW,DFs[D].Width);
    for Lvl:=0 to CFs.Count-1 do
     DrawCell(Rect(X,Y+Lvl*FHeaderHeight,X+ColSpanW,Y+(Lvl+1)*FHeaderHeight),KeyPart(ColKey,Lvl),taCenter,True);
-   if DFs.Count>1 then
-    for D:=0 to DFs.Count-1 do
-     DrawCell(Rect(X,Y+CFs.Count*FHeaderHeight,X+DFs[D].Width,Y+(CFs.Count+1)*FHeaderHeight),DFs[D].Caption,taCenter,True); Inc(X,DFs[D].Width);
-   if DFs.Count>1 then Dec(X,ColSpanW);
+   if DFs.Count>1 then begin
+    LeafX:=X;
+    for D:=0 to DFs.Count-1 do begin
+     DrawCell(Rect(LeafX,Y+CFs.Count*FHeaderHeight,LeafX+DFs[D].Width,Y+(CFs.Count+1)*FHeaderHeight),DFs[D].Caption,taCenter,True);
+     Inc(LeafX,DFs[D].Width);
+    end;
+   end;
    if (CFs.Count=0) and (DFs.Count=1) then DrawCell(Rect(X,Y,X+DFs[0].Width,Y+FHeaderHeight),DFs[0].Caption,taCenter,True);
    Inc(X,ColSpanW);
   end;
   if FShowRowTotals then
    for D:=0 to DFs.Count-1 do begin
     S:='TOTAL'; if DFs.Count>1 then S:=S+' '+DFs[D].Caption;
-    DrawCell(Rect(X,Y,X+CellW,Y+HeaderLevels*FHeaderHeight),S,taCenter,True,True); Inc(X,CellW);
+    DrawCell(Rect(X,Y,X+DFs[D].Width,Y+HeaderLevels*FHeaderHeight),S,taCenter,True,True); Inc(X,DFs[D].Width);
    end;
 
   for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
