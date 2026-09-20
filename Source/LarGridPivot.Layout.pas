@@ -75,7 +75,7 @@ begin
   if Root=nil then raise EConvertError.Create('Layout LarGridPivot invalido');
   try
     V:=Root.GetValue('version'); if V=nil then raise EConvertError.Create('Layout sin version');
-    N:=StrToIntDef(V.Value,0); if N>CurrentVersion then raise EConvertError.CreateFmt('Layout version %d no soportado',[N]);
+    N:=StrToIntDef(V.Value,0); if (N<1) or (N>CurrentVersion) then raise EConvertError.CreateFmt('Layout version %d no soportado',[N]);
     V:=Root.GetValue('showRowTotals'); AShowRowTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showColumnTotals'); AShowColumnTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showGrandTotal'); AShowGrandTotal:=(V=nil) or SameText(V.Value,'true');
@@ -86,6 +86,7 @@ begin
       F.Caption:=JsonText(O,'caption',F.Caption);
       F.Area:=TLarPivotArea(JsonInt(O,'area',Ord(F.Area),Ord(Low(TLarPivotArea)),Ord(High(TLarPivotArea))));
       F.AreaIndex:=JsonInt(O,'areaIndex',F.AreaIndex,-1,MaxInt);
+      if F.Area=paNone then F.AreaIndex:=-1;
       F.SummaryType:=TLarPivotSummaryType(JsonInt(O,'summary',Ord(F.SummaryType),Ord(Low(TLarPivotSummaryType)),Ord(High(TLarPivotSummaryType))));
       F.SortOrder:=TLarPivotSortOrder(JsonInt(O,'sort',Ord(F.SortOrder),Ord(Low(TLarPivotSortOrder)),Ord(High(TLarPivotSortOrder))));
       F.Alignment:=TLarPivotAlignment(JsonInt(O,'alignment',Ord(F.Alignment),Ord(Low(TLarPivotAlignment)),Ord(High(TLarPivotAlignment))));
