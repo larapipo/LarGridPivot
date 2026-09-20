@@ -52,8 +52,7 @@ type
     function ThemeTotalTextColor:TColor;
     function ThemeCellColor:TColor;
     function ThemeChipColor:TColor;
-    function StyleColor(AElement:TStyleColor; AFallback:TColor):TColor;
-    function StyleFontColor(AElement:TStyleFont; AFallback:TColor):TColor;
+
         procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
     procedure WMMouseWheel(var Message:TWMMouseWheel); message WM_MOUSEWHEEL;
@@ -191,50 +190,27 @@ begin
  R:=AreaRect(paRow); Result:=R.Bottom;
 end;
 
-function TLarGridPivot.StyleColor(AElement:TStyleColor;AFallback:TColor):TColor;
-begin
- Result:=AFallback;
- if StyleServices.Enabled then
-  case AElement of
-   scPanel:Result:=StyleServices.GetSystemColor(clBtnFace);
-   scButtonHot:Result:=StyleServices.GetSystemColor(clHighlight);
-   scBorder:Result:=StyleServices.GetSystemColor(clBtnShadow);
-   scWindow:Result:=StyleServices.GetSystemColor(clWindow);
-   scButtonNormal:Result:=StyleServices.GetSystemColor(clBtnFace);
-  end;
-end;
-
-function TLarGridPivot.StyleFontColor(AElement:TStyleFont;AFallback:TColor):TColor;
-begin
- Result:=AFallback;
- if StyleServices.Enabled then
-  case AElement of
-   sfWindowText:Result:=StyleServices.GetSystemColor(clWindowText);
-   sfButtonText:Result:=StyleServices.GetSystemColor(clBtnText);
-  end;
-end;
-
 procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
 begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
 
 function TLarGridPivot.ThemeHeaderColor:TColor;
-begin Result:=StyleColor(scPanel,clBtnFace); end;
+begin Result:=StyleServices.GetSystemColor(clBtnFace); end;
 function TLarGridPivot.ThemeTotalColor:TColor;
-begin Result:=StyleColor(scButtonHot,clBtnFace); end;
+begin Result:=StyleServices.GetSystemColor(clHighlight); end;
 function TLarGridPivot.ThemeGridColor:TColor;
-begin Result:=StyleColor(scBorder,clBtnShadow); end;
+begin Result:=StyleServices.GetSystemColor(clBtnShadow); end;
 function TLarGridPivot.ThemePanelColor:TColor;
-begin Result:=StyleColor(scWindow,clWindow); end;
+begin Result:=StyleServices.GetSystemColor(clWindow); end;
 function TLarGridPivot.ThemeTextColor:TColor;
-begin Result:=StyleFontColor(sfWindowText,clWindowText); end;
+begin Result:=StyleServices.GetSystemColor(clWindowText); end;
 function TLarGridPivot.ThemeHeaderTextColor:TColor;
-begin Result:=StyleFontColor(sfButtonText,clBtnText); end;
+begin Result:=StyleServices.GetSystemColor(clBtnText); end;
 function TLarGridPivot.ThemeTotalTextColor:TColor;
-begin Result:=StyleFontColor(sfButtonText,clBtnText); end;
+begin Result:=StyleServices.GetSystemColor(clHighlightText); end;
 function TLarGridPivot.ThemeCellColor:TColor;
-begin Result:=StyleColor(scWindow,clWindow); end;
+begin Result:=StyleServices.GetSystemColor(clWindow); end;
 function TLarGridPivot.ThemeChipColor:TColor;
-begin Result:=StyleColor(scButtonNormal,clBtnFace); end;
+begin Result:=StyleServices.GetSystemColor(clBtnFace); end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
 begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
