@@ -34,7 +34,6 @@ type
     FSavedViews:TStringList;
     FHierarchyMenu:TPopupMenu;
     FHierarchyHit:TLarPivotHitTest;
-    FHierarchyMousePos:TPoint;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -195,13 +194,24 @@ end;
 function TLarGridPivot.StyleColor(AElement:TStyleColor;AFallback:TColor):TColor;
 begin
  Result:=AFallback;
- if StyleServices.Enabled then Result:=StyleServices.GetSystemColor(GetStyleColor(AElement));
+ if StyleServices.Enabled then
+  case AElement of
+   scPanel:Result:=StyleServices.GetSystemColor(clBtnFace);
+   scButtonHot:Result:=StyleServices.GetSystemColor(clHighlight);
+   scBorder:Result:=StyleServices.GetSystemColor(clBtnShadow);
+   scWindow:Result:=StyleServices.GetSystemColor(clWindow);
+   scButtonNormal:Result:=StyleServices.GetSystemColor(clBtnFace);
+  end;
 end;
 
 function TLarGridPivot.StyleFontColor(AElement:TStyleFont;AFallback:TColor):TColor;
 begin
  Result:=AFallback;
- if StyleServices.Enabled then Result:=StyleServices.GetSystemColor(GetStyleFontColor(AElement));
+ if StyleServices.Enabled then
+  case AElement of
+   sfWindowText:Result:=StyleServices.GetSystemColor(clWindowText);
+   sfButtonText:Result:=StyleServices.GetSystemColor(clBtnText);
+  end;
 end;
 
 procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
