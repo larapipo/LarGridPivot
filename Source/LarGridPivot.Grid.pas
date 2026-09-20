@@ -528,6 +528,13 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
   case Al of taRightJustify:Flags:=Flags or DT_RIGHT;taCenter:Flags:=Flags or DT_CENTER;else Flags:=Flags or DT_LEFT;end;
   DrawText(Canvas.Handle,PChar(Txt),Length(Txt),RR,Flags);
  end;
+ function RowPartEqual(const K1,K2:string;ALevel:Integer):Boolean;
+ var I:Integer;
+ begin
+  Result:=True;
+  for I:=0 to ALevel do
+   if KeyPart(K1,I)<>KeyPart(K2,I) then Exit(False);
+ end;
  function TextFor(const AR,AC:string;F:TLarPivotField):string;
  begin Cell:=FEngine.Model.FindCell(AR,AC,F.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(F.SummaryType) else V:=Null; Result:=FormatCellValue(V,F); end;
 begin
@@ -549,7 +556,16 @@ begin
     pvekFieldHeader,pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekRowValue:
-     DrawCell(VI.Bounds,KeyPart(VI.RowKey,VI.Level),DefaultAlignment(VI.Field));
+     begin
+      S:=KeyPart(VI.RowKey,VI.Level);
+      { Parent row dimensions behave as grouped labels: suppress the repeated
+        caption while the sorted row prefix remains unchanged. }
+      if (VI.Level<RFs.Count-1) then begin
+       Row:=FEngine.Model.RowKeys.IndexOf(VI.RowKey);
+       if (Row>0) and RowPartEqual(VI.RowKey,FEngine.Model.RowKeys[Row-1],VI.Level) then S:='';
+      end;
+      DrawCell(VI.Bounds,S,DefaultAlignment(VI.Field),VI.Level<RFs.Count-1);
+     end;
     pvekDataCell:
      begin
       DF:=VI.Field;
