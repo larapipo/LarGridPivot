@@ -94,9 +94,9 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
- FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=150;
+ FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
- FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; end;
+ FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
@@ -271,19 +271,18 @@ var H,N:Integer;
 begin
  Result:=paNone;
  if (AY<0) or (AY>=FFieldAreaHeight) then Exit;
- H:=FFieldAreaHeight div 5; if H<=0 then Exit;
+ H:=FFieldAreaHeight div 4; if H<=0 then Exit;
  N:=AY div H;
  case N of
-  0:Result:=paNone; 1:Result:=paFilter; 2:Result:=paColumn;
-  3:Result:=paData; 4:Result:=paRow;
+  0:Result:=paNone; 1:Result:=paColumn; 2:Result:=paData; 3:Result:=paRow;
  end;
 end;
 
 function TLarGridPivot.FieldAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
- case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
+ case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
  X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
@@ -316,8 +315,8 @@ end;
 function TLarGridPivot.FilterButtonAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
- case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
+ case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
  X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
@@ -334,8 +333,8 @@ end;
 function TLarGridPivot.SortButtonAtPoint(AX,AY:Integer):TLarPivotField;
 var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,H,Y,ChipW:Integer; S:string; R:TRect;
 begin
- Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 5;
- case A of paNone:Y:=0;paFilter:Y:=H;paColumn:Y:=H*2;paData:Y:=H*3;paRow:Y:=H*4;else Exit;end;
+ Result:=nil; A:=AreaFromY(AY); H:=FFieldAreaHeight div 4;
+ case A of paNone:Y:=0;paColumn:Y:=H;paData:Y:=H*2;paRow:Y:=H*3;else Exit;end;
  X:=125; L:=AreaFields(A);
  try
   Canvas.Font.Assign(Font);
@@ -409,10 +408,10 @@ begin
 end;
 
 procedure TLarGridPivot.DrawFieldAreas;
-const Areas:array[0..4] of TLarPivotArea=(paNone,paFilter,paColumn,paData,paRow);
+const Areas:array[0..3] of TLarPivotArea=(paNone,paColumn,paData,paRow);
 var I,J,X,Y,H,ChipW:Integer; A:TLarPivotArea; R:TRect; F:TLarPivotField; S:string; L:TList<TLarPivotField>;
 begin
- H:=FFieldAreaHeight div 5; Y:=0; Canvas.Font.Assign(Font);
+ H:=FFieldAreaHeight div 4; Y:=0; Canvas.Font.Assign(Font);
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; R:=Rect(0,Y,ClientWidth,Y+H);
   Canvas.Brush.Color:=$00F5F5F5; Canvas.FillRect(R);
