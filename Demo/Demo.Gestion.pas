@@ -21,10 +21,14 @@ type
     FTop: TPanel;
     FDesde, FHasta: TDateTimePicker;
     FAnio, FMes:TEdit;
-    FBtnAbrir: TButton;
-    FStatus: TLabel;
+    FBtnAbrir:TButton;
+    FBtnCampos:TButton;
+    FEstilo:TComboBox;
+    FStatus:TLabel;
     procedure AbrirDatos(Sender:TObject);
     procedure ConfigurarConexionDemo;
+    procedure CambiarEstilo(Sender:TObject);
+    procedure AlternarCampos(Sender:TObject);
     procedure ConfigurarPivot;
   public
     constructor Create(AOwner:TComponent); override;
@@ -70,14 +74,47 @@ begin
   FBtnAbrir.Height:=27; FBtnAbrir.Caption:='Abrir ventas';
   FBtnAbrir.OnClick:=AbrirDatos;
 
+  FEstilo:=TComboBox.Create(Self); FEstilo.Parent:=FTop;
+  FEstilo.Left:=260; FEstilo.Top:=8; FEstilo.Width:=150; FEstilo.Style:=csDropDownList;
+  FEstilo.Items.Add('Estilo de Delphi');
+  FEstilo.Items.Add('Classic Blue');
+  FEstilo.Items.Add('Light');
+  FEstilo.Items.Add('Silver');
+  FEstilo.Items.Add('Office');
+  FEstilo.Items.Add('Dark');
+  FEstilo.ItemIndex:=0; FEstilo.OnChange:=CambiarEstilo;
+
+  FBtnCampos:=TButton.Create(Self); FBtnCampos.Parent:=FTop;
+  FBtnCampos.Left:=420; FBtnCampos.Top:=7; FBtnCampos.Width:=125; FBtnCampos.Height:=27;
+  FBtnCampos.Caption:='Ocultar campos'; FBtnCampos.OnClick:=AlternarCampos;
+
   FStatus:=TLabel.Create(Self); FStatus.Parent:=FTop;
-  FStatus.Left:=390; FStatus.Top:=13;
+  FStatus.Left:=560; FStatus.Top:=13;
   FStatus.Caption:='Gestión local: GESTIONV3.FDB';
 
   FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
   FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=9;
   FPivot.Theme:=ptVclStyle;
   FPivot.DataSource:=FSource;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.CambiarEstilo(Sender:TObject);
+begin
+ case FEstilo.ItemIndex of
+  1:FPivot.Theme:=ptClassicBlue;
+  2:FPivot.Theme:=ptLight;
+  3:FPivot.Theme:=ptSilver;
+  4:FPivot.Theme:=ptOffice;
+  5:FPivot.Theme:=ptDark;
+ else FPivot.Theme:=ptVclStyle;
+ end;
+end;
+
+procedure TFrmLarGridPivotGestionDemo.AlternarCampos(Sender:TObject);
+begin
+ FPivot.ShowFieldPanel:=not FPivot.ShowFieldPanel;
+ if FPivot.ShowFieldPanel then FBtnCampos.Caption:='Ocultar campos'
+ else FBtnCampos.Caption:='Mostrar campos';
 end;
 
 procedure TFrmLarGridPivotGestionDemo.ConfigurarConexionDemo;
@@ -133,7 +170,7 @@ var F:TLarPivotField;
   procedure RowField(const AName,ACaption:string; AIndex:Integer);
   begin
     F:=FPivot.FieldByName(AName); if F=nil then Exit;
-    F.Caption:=ACaption; F.Area:=paRow; F.AreaIndex:=AIndex; F.ShowSubTotal:=True;
+    F.Caption:=ACaption; F.Area:=paRow; F.AreaIndex:=AIndex; F.ShowSubTotal:=False;
   end;
   procedure DataField(const AName,ACaption,AFormat:string; AIndex:Integer);
   begin
