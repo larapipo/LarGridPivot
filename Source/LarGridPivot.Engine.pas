@@ -178,13 +178,17 @@ begin
           V := AProvider.GetValue(F.FieldName);
           AddValue(RowKey, ColKey, F, V);
           AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
-          { Accumulate every non-leaf row prefix.  These cells back hierarchical
-            row subtotals such as SUCURSAL -> VENDEDOR. }
-          for Lvl:=0 to RowFields.Count-2 do begin
+          { Prefix aggregates are expensive on large datasets.  Since subtotals
+            are opt-in, build them only for row levels that actually request a
+            subtotal.  Collapsed groups without a subtotal use their detail
+            aggregate path in the view and do not justify multiplying every
+            input record by every hierarchy level. }
+          for Lvl:=0 to RowFields.Count-2 do
+           if RowFields[Lvl].ShowSubTotal then begin
             PrefixKey:=RowPrefix(RowKey,Lvl);
             AddValueRaw(PrefixKey,ColKey,F,V);
             AddValueRaw(PrefixKey,LAR_PIVOT_TOTAL_KEY,F,V);
-          end;
+           end;
           AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
           AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
         end;
