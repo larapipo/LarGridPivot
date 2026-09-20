@@ -117,20 +117,38 @@ begin
 end;
 
 procedure TLarGridPivot.MoveField(const AFieldName:string; AArea:TLarPivotArea; AIndex:Integer);
-var F:TLarPivotField; I,MaxIndex:Integer; OldArea:TLarPivotArea;
+var F,T:TLarPivotField; I,J:Integer; OldArea:TLarPivotArea; L:TList<TLarPivotField>;
 begin
  F:=FieldByName(AFieldName); OldArea:=F.Area; BeginUpdate;
  try
-  F.Area:=AArea;
-  if AArea=paNone then F.AreaIndex:=-1 else begin
-   MaxIndex:=-1; for I:=0 to FFields.Count-1 do if (FFields[I]<>F) and (FFields[I].Area=AArea) and (FFields[I].AreaIndex>MaxIndex) then MaxIndex:=FFields[I].AreaIndex;
-   if AIndex<0 then AIndex:=MaxIndex+1;
-   for I:=0 to FFields.Count-1 do if (FFields[I]<>F) and (FFields[I].Area=AArea) and (FFields[I].AreaIndex>=AIndex) then FFields[I].AreaIndex:=FFields[I].AreaIndex+1;
-   F.AreaIndex:=AIndex;
+  if AArea=paNone then begin
+   F.Area:=paNone; F.AreaIndex:=-1;
+   if OldArea<>paNone then NormalizeAreaIndexes(OldArea);
+   Exit;
   end;
-  if OldArea<>AArea then NormalizeAreaIndexes(OldArea);
-  NormalizeAreaIndexes(AArea);
- finally EndUpdate; end;
+
+  F.Area:=AArea;
+  L:=TList<TLarPivotField>.Create;
+  try
+   for I:=0 to FFields.Count-1 do
+    if (FFields[I]<>F) and (FFields[I].Area=AArea) then L.Add(FFields[I]);
+   for I:=0 to L.Count-2 do
+    for J:=I+1 to L.Count-1 do
+     if L[I].AreaIndex>L[J].AreaIndex then begin
+      T:=L[I]; L[I]:=L[J]; L[J]:=T;
+     end;
+   if AIndex<0 then AIndex:=L.Count;
+   if AIndex<0 then AIndex:=0;
+   if AIndex>L.Count then AIndex:=L.Count;
+   L.Insert(AIndex,F);
+   for I:=0 to L.Count-1 do L[I].AreaIndex:=I;
+  finally
+   L.Free;
+  end;
+  if (OldArea<>AArea) and (OldArea<>paNone) then NormalizeAreaIndexes(OldArea);
+ finally
+  EndUpdate;
+ end;
 end;
 
 procedure TLarGridPivot.RemoveField(const AFieldName:string);
