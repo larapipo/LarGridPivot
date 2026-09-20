@@ -5,7 +5,9 @@ interface
 uses
   System.SysUtils, System.Classes, System.DateUtils,
   Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls,
-  Data.DB, FireDAC.Comp.Client,
+  Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Error, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
+  FireDAC.Phys, FireDAC.Phys.Intf, FireDAC.Phys.FB, FireDAC.Phys.FBDef, FireDAC.DApt,
   LarGridPivot.Grid, LarGridPivot.Types, LarGridPivot.Fields;
 
 type
