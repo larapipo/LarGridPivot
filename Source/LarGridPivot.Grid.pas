@@ -814,17 +814,29 @@ begin
     pvekRowValue:
      begin
       S:=KeyPart(VI.RowKey,VI.Level);
-      { Parent row dimensions behave as grouped labels: suppress the repeated
-        caption while the sorted row prefix remains unchanged. }
+      { Each added row field refines the preceding hierarchy. Parent captions
+        are shown once for their contiguous group; the leaf is always shown. }
       if (VI.Level<RFs.Count-1) then begin
        Row:=FEngine.Model.RowKeys.IndexOf(VI.RowKey);
        if (Row>0) and RowPartEqual(VI.RowKey,FEngine.Model.RowKeys[Row-1],VI.Level) then S:='';
       end;
-      if VI.Level<RFs.Count-1 then begin
-       R:=VI.Bounds; Inc(R.Left,18);
-       DrawCell(R,S,DefaultAlignment(VI.Field),True);
-      end else
-       DrawCell(VI.Bounds,S,DefaultAlignment(VI.Field),False);
+      { Paint the complete cell first; indent only the text so hierarchy
+        buttons never leave an unpainted strip at the left. }
+      DrawCell(VI.Bounds,'',DefaultAlignment(VI.Field),VI.Level<RFs.Count-1);
+      R:=VI.Bounds;
+      if VI.Level<RFs.Count-1 then Inc(R.Left,18) else Inc(R.Left,4);
+      InflateRect(R,-2,-2);
+      Canvas.Brush.Style:=bsClear; Canvas.Font.Assign(Font);
+      Canvas.Font.Color:=ThemeTextColor;
+      if VI.Level<RFs.Count-1 then Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
+      Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
+      case DefaultAlignment(VI.Field) of
+       taRightJustify:Flags:=Flags or DT_RIGHT;
+       taCenter:Flags:=Flags or DT_CENTER;
+       else Flags:=Flags or DT_LEFT;
+      end;
+      DrawText(Canvas.Handle,PChar(S),Length(S),R,Flags);
+      Canvas.Brush.Style:=bsSolid;
      end;
     pvekDataCell:
      begin
