@@ -283,7 +283,7 @@ function TLarGridPivot.AxisFields(AArea:TLarPivotArea):TList<TLarPivotField>;
 begin Result:=AreaFields(AArea); end;
 
 function TLarGridPivot.KeyPart(const AKey:string;ALevel:Integer):string;
-var I,L,N:Integer; P,S:string;
+var I,L,N:Integer; P:string;
 begin
  Result:=''; P:=''; N:=0; I:=1; L:=Length(AKey);
  while I<=L do begin
@@ -305,7 +305,7 @@ function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
 
 procedure TLarGridPivot.Paint;
-var R:TRect; Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal,ColSpanW,LeafX:Integer;
+var Row,Col,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  RowKey,ColKey,S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; Root:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
