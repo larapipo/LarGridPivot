@@ -20,6 +20,7 @@ type
     FPivot: TLarGridPivot;
     FTop: TPanel;
     FDesde, FHasta: TDateTimePicker;
+    FAnio, FMes:TEdit;
     FBtnAbrir: TButton;
     FStatus: TLabel;
     procedure AbrirDatos(Sender:TObject);
@@ -38,7 +39,7 @@ const
     Gestion's metadata. The pivot itself remains database-neutral: it only sees
     the TDataSource below. }
   SQL_VENTAS =
-    'select * from LISTA_COSTO_ART_VENDIDO(:DESDE, :HASTA, :VENDEDOR, :SUCURSAL, :ZONA)';
+    'select v.* from VTAS_ANUAL_ARTIC_2(:anio, :codigo, :cliente, :suc, :mes, :Tipo_Fecha) v';
 
 constructor TFrmLarGridPivotGestionDemo.Create(AOwner:TComponent);
 begin
@@ -59,15 +60,13 @@ begin
   FTop:=TPanel.Create(Self); FTop.Parent:=Self; FTop.Align:=alTop;
   FTop.Height:=42; FTop.BevelOuter:=bvNone;
 
-  FDesde:=TDateTimePicker.Create(Self); FDesde.Parent:=FTop;
-  FDesde.Left:=8; FDesde.Top:=8; FDesde.Width:=120;
-  FDesde.Date:=StartOfTheMonth(Date);
-
-  FHasta:=TDateTimePicker.Create(Self); FHasta.Parent:=FTop;
-  FHasta.Left:=136; FHasta.Top:=8; FHasta.Width:=120; FHasta.Date:=Date;
+  FAnio:=TEdit.Create(Self); FAnio.Parent:=FTop;
+  FAnio.Left:=8; FAnio.Top:=8; FAnio.Width:=70; FAnio.Text:=IntToStr(YearOf(Date));
+  FMes:=TEdit.Create(Self); FMes.Parent:=FTop;
+  FMes.Left:=86; FMes.Top:=8; FMes.Width:=45; FMes.Text:='0';
 
   FBtnAbrir:=TButton.Create(Self); FBtnAbrir.Parent:=FTop;
-  FBtnAbrir.Left:=264; FBtnAbrir.Top:=7; FBtnAbrir.Width:=110;
+  FBtnAbrir.Left:=140; FBtnAbrir.Top:=7; FBtnAbrir.Width:=110;
   FBtnAbrir.Height:=27; FBtnAbrir.Caption:='Abrir ventas';
   FBtnAbrir.OnClick:=AbrirDatos;
 
@@ -111,11 +110,12 @@ begin
   try
     FQuery.Close;
 
-    FQuery.ParamByName('DESDE').AsDateTime:=StartOfTheDay(FDesde.Date);
-    FQuery.ParamByName('HASTA').AsDateTime:=EndOfTheDay(FHasta.Date);
-    FQuery.ParamByName('VENDEDOR').AsString:='***';
-    FQuery.ParamByName('SUCURSAL').AsInteger:=-1;
-    FQuery.ParamByName('ZONA').AsInteger:=-1;
+    FQuery.ParamByName('anio').AsInteger:=StrToIntDef(FAnio.Text,YearOf(Date));
+    FQuery.ParamByName('codigo').AsString:='***';
+    FQuery.ParamByName('cliente').AsString:='***';
+    FQuery.ParamByName('suc').AsInteger:=-1;
+    FQuery.ParamByName('mes').AsInteger:=StrToIntDef(FMes.Text,0);
+    FQuery.ParamByName('Tipo_Fecha').AsString:='F';
     FQuery.Open;
     FPivot.RefreshFields;
     ConfigurarPivot;
@@ -144,11 +144,12 @@ var F:TLarPivotField;
 begin
   FPivot.BeginUpdate;
   try
-    RowField('CODIGOARTICULO','Código',0);
-    RowField('DETALLE','Artículo',1);
+    RowField('RUBRODETALLE','Rubro',0);
+    RowField('SUBRUBRODETALL','Subrubro',1);
+    RowField('DETALLE_STK','Artículo',2);
+    F:=FPivot.FieldByName('MES'); if F<>nil then begin F.Caption:='Mes'; F.Area:=paColumn; F.AreaIndex:=0; end;
     DataField('CANTIDAD','Cantidad','#,##0.000',0);
-    DataField('TOTAL_VENTA','Venta','#,##0.00',1);
-    DataField('TOTAL_COSTO_VENTA','Costo','#,##0.00',2);
+    DataField('TOTAL_FINAL','Venta','#,##0.00',1);
   finally
     FPivot.EndUpdate;
   end;
