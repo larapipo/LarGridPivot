@@ -39,6 +39,7 @@ type
     FRoots: TObjectList<TLarPivotHeaderNode>;
     FColumns: TObjectList<TLarPivotVisualColumn>;
     function KeyPart(const AKey: string; ALevel: Integer): string;
+    function KeyPrefix(const AKey: string; ALevel: Integer): string;
     procedure AssignNodeGeometry(ANode: TLarPivotHeaderNode);
     procedure AddVisualColumns(ANode: TLarPivotHeaderNode; ADataFields: TList<TLarPivotField>; var AX: Integer);
   public
@@ -114,6 +115,20 @@ begin
  if N=ALevel then Result:=P;
 end;
 
+function TLarPivotLayoutEngine.KeyPrefix(const AKey:string;ALevel:Integer):string;
+var I,L,N:Integer;
+begin
+ Result:=AKey; N:=0; I:=1; L:=Length(AKey);
+ while I<=L do begin
+  if AKey[I]=#29 then begin
+   if (I<L) and (AKey[I+1]=#29) then begin Inc(I,2); Continue; end;
+   if N=ALevel then Exit(Copy(AKey,1,I-1));
+   Inc(N);
+  end;
+  Inc(I);
+ end;
+end;
+
 procedure TLarPivotLayoutEngine.AssignNodeGeometry(ANode:TLarPivotHeaderNode);
 var MinL,MaxR:Integer; C:TLarPivotHeaderNode; VC:TLarPivotVisualColumn;
 begin
@@ -162,7 +177,7 @@ begin
   K:=AModel.ColumnKeys[Col]; Node:=nil; Prefix:='';
   for Lvl:=0 to AColumnFields.Count-1 do begin
    Cap:=KeyPart(K,Lvl);
-   if Prefix='' then Prefix:=Cap else Prefix:=Prefix+#29+Cap;
+   Prefix:=KeyPrefix(K,Lvl);
    if Lvl=0 then begin
     Root:=nil;
     if FRoots.Count>0 then begin
