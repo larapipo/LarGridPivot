@@ -622,25 +622,62 @@ begin
 end;
 
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
-var Fil:TLarPivotFilter; Values:TStringList; S,Prompt:string;
+var
+ Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
+ CL:TCheckListBox; BtnOK,BtnCancel:TButton; I:Integer; AllSelected:Boolean;
+ procedure ToggleAll(Sender:TObject);
+ var K:Integer; NewState:Boolean;
+ begin
+  NewState:=CL.Checked[0];
+  for K:=1 to CL.Items.Count-1 do CL.Checked[K]:=NewState;
+ end;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
  Values:=TStringList.Create;
+ Frm:=TForm.CreateNew(Self);
  try
   Values.Sorted:=True; Values.Duplicates:=dupIgnore;
   PopulateFilterValues(AField,Values);
-  Prompt:='Valores disponibles para '+AField.Caption+':'+sLineBreak+
-    Values.Text+sLineBreak+'Ingrese un valor exacto. Deje vacio para quitar el filtro:';
-  S:='';
-  if Fil.Values.Count=1 then S:=Fil.Values[0];
-  if not InputQuery('Filtro - '+AField.Caption,Prompt,S) then Exit;
+
+  Frm.BorderStyle:=bsToolWindow; Frm.Caption:=AField.Caption;
+  Frm.Position:=poDesigned; Frm.Width:=300; Frm.Height:=360;
+  Frm.Font.Assign(Font); Frm.Color:=ThemePanelColor;
+  Frm.Left:=Mouse.CursorPos.X-20; Frm.Top:=Mouse.CursorPos.Y+8;
+
+  CL:=TCheckListBox.Create(Frm); CL.Parent:=Frm; CL.Align:=alClient;
+  CL.BorderStyle:=bsNone; CL.Font.Assign(Font); CL.Color:=ThemeCellColor;
+  CL.Font.Color:=ThemeTextColor; CL.ItemHeight:=22;
+  CL.Items.Add('(Mostrar todos)');
+  AllSelected:=not Fil.Enabled;
+  for I:=0 to Values.Count-1 do begin
+   CL.Items.Add(Values[I]);
+   CL.Checked[I+1]:=AllSelected or (Fil.Values.IndexOf(Values[I])>=0);
+  end;
+  CL.Checked[0]:=AllSelected;
+  CL.OnClickCheck:=ToggleAll;
+
+  P:=TPanel.Create(Frm); P.Parent:=Frm; P.Align:=alBottom; P.Height:=42;
+  P.BevelOuter:=bvNone; P.Color:=ThemePanelColor;
+
+  BtnCancel:=TButton.Create(Frm); BtnCancel.Parent:=P; BtnCancel.Caption:='Cancelar';
+  BtnCancel.ModalResult:=mrCancel; BtnCancel.Width:=82; BtnCancel.Height:=25;
+  BtnCancel.Top:=8; BtnCancel.Left:=P.Width-90; BtnCancel.Anchors:=[akTop,akRight];
+
+  BtnOK:=TButton.Create(Frm); BtnOK.Parent:=P; BtnOK.Caption:='Aceptar';
+  BtnOK.ModalResult:=mrOk; BtnOK.Default:=True; BtnOK.Width:=82; BtnOK.Height:=25;
+  BtnOK.Top:=8; BtnOK.Left:=P.Width-178; BtnOK.Anchors:=[akTop,akRight];
+
+  if Frm.ShowModal<>mrOk then Exit;
   Fil.Clear;
-  S:=Trim(S);
-  if S<>'' then Fil.Values.Add(S);
-  Fil.Enabled:=S<>'';
+  if not CL.Checked[0] then
+   for I:=1 to CL.Items.Count-1 do
+    if CL.Checked[I] then Fil.Values.Add(CL.Items[I]);
+  Fil.Enabled:=(not CL.Checked[0]) and (Fil.Values.Count<Values.Count);
   Rebuild;
- finally Values.Free; end;
+ finally
+  Frm.Free; Values.Free;
+ end;
 end;
 
 procedure TLarGridPivot.DrawFieldAreas;
