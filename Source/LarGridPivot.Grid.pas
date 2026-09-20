@@ -815,9 +815,15 @@ begin
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekExpandButton:
      begin
-      Canvas.Brush.Color:=ThemeChipColor; Canvas.FillRect(VI.Bounds); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(VI.Bounds);
-      Canvas.Font.Assign(Font); Canvas.Font.Style:=[]; Canvas.Font.Size:=7; Canvas.Font.Color:=ThemeHeaderTextColor;
-      DrawText(Canvas.Handle,PChar(VI.Caption),Length(VI.Caption),VI.Bounds,DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+      { Compact square hierarchy button, matching the familiar tree/pivot +/- affordance. }
+      R:=VI.Bounds;
+      Canvas.Brush.Color:=ThemeChipColor; Canvas.FillRect(R);
+      Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(R);
+      Canvas.Pen.Color:=ThemeHeaderTextColor;
+      Canvas.MoveTo(R.Left+3,(R.Top+R.Bottom) div 2); Canvas.LineTo(R.Right-3,(R.Top+R.Bottom) div 2);
+      if VI.Caption='+' then begin
+       Canvas.MoveTo((R.Left+R.Right) div 2,R.Top+3); Canvas.LineTo((R.Left+R.Right) div 2,R.Bottom-3);
+      end;
      end;
     pvekRowValue:
      begin
