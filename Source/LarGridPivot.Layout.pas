@@ -65,6 +65,11 @@ class procedure TLarPivotLayout.LoadFromString(const AJSON: string;
   AFields: TLarPivotFields; AFilters: TLarPivotFilters;
   out AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean);
 var Root, O: TJSONObject; Arr, Vals: TJSONArray; I,J,N:Integer; F:TLarPivotField; Fil:TLarPivotFilter; V:TJSONValue;
+  function JsonText(AObj:TJSONObject;const AName,ADefault:string):string;
+  var JV:TJSONValue;
+  begin JV:=AObj.GetValue(AName); if JV=nil then Result:=ADefault else Result:=JV.Value; end;
+  function JsonInt(AObj:TJSONObject;const AName:string;ADefault,AMin,AMax:Integer):Integer;
+  begin Result:=StrToIntDef(JsonText(AObj,AName,''),ADefault); if Result<AMin then Result:=AMin else if Result>AMax then Result:=AMax; end;
 begin
   Root := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
   if Root=nil then raise EConvertError.Create('Layout LarGridPivot invalido');
@@ -75,14 +80,29 @@ begin
     V:=Root.GetValue('showColumnTotals'); AShowColumnTotals:=(V=nil) or SameText(V.Value,'true');
     V:=Root.GetValue('showGrandTotal'); AShowGrandTotal:=(V=nil) or SameText(V.Value,'true');
     Arr:=Root.GetValue('fields') as TJSONArray;
-    if Arr<>nil then for I:=0 to Arr.Count-1 do begin O:=Arr.Items[I] as TJSONObject; F:=AFields.FindField(O.GetValue<string>('name')); if F=nil then Continue;
-      F.Caption:=O.GetValue<string>('caption'); F.Area:=TLarPivotArea(StrToIntDef(O.GetValue('area').Value,0)); F.AreaIndex:=StrToIntDef(O.GetValue('areaIndex').Value,-1);
-      F.SummaryType:=TLarPivotSummaryType(StrToIntDef(O.GetValue('summary').Value,0)); F.SortOrder:=TLarPivotSortOrder(StrToIntDef(O.GetValue('sort').Value,0));
-      F.Alignment:=TLarPivotAlignment(StrToIntDef(O.GetValue('alignment').Value,0)); F.HeaderAlignment:=TLarPivotAlignment(StrToIntDef(O.GetValue('headerAlignment').Value,0));
-      F.DisplayFormat:=O.GetValue<string>('displayFormat'); F.Width:=StrToIntDef(O.GetValue('width').Value,100); V:=O.GetValue('visible'); F.Visible:=(V=nil) or SameText(V.Value,'true');
+    if Arr<>nil then for I:=0 to Arr.Count-1 do begin
+      O:=Arr.Items[I] as TJSONObject; if O=nil then Continue;
+      F:=AFields.FindField(JsonText(O,'name','')); if F=nil then Continue;
+      F.Caption:=JsonText(O,'caption',F.Caption);
+      F.Area:=TLarPivotArea(JsonInt(O,'area',Ord(F.Area),Ord(Low(TLarPivotArea)),Ord(High(TLarPivotArea))));
+      F.AreaIndex:=JsonInt(O,'areaIndex',F.AreaIndex,-1,MaxInt);
+      F.SummaryType:=TLarPivotSummaryType(JsonInt(O,'summary',Ord(F.SummaryType),Ord(Low(TLarPivotSummaryType)),Ord(High(TLarPivotSummaryType))));
+      F.SortOrder:=TLarPivotSortOrder(JsonInt(O,'sort',Ord(F.SortOrder),Ord(Low(TLarPivotSortOrder)),Ord(High(TLarPivotSortOrder))));
+      F.Alignment:=TLarPivotAlignment(JsonInt(O,'alignment',Ord(F.Alignment),Ord(Low(TLarPivotAlignment)),Ord(High(TLarPivotAlignment))));
+      F.HeaderAlignment:=TLarPivotAlignment(JsonInt(O,'headerAlignment',Ord(F.HeaderAlignment),Ord(Low(TLarPivotAlignment)),Ord(High(TLarPivotAlignment))));
+      F.DisplayFormat:=JsonText(O,'displayFormat',F.DisplayFormat);
+      F.Width:=JsonInt(O,'width',F.Width,40,MaxInt);
+      V:=O.GetValue('visible'); F.Visible:=(V=nil) or SameText(V.Value,'true');
     end;
     AFilters.Clear; Arr:=Root.GetValue('filters') as TJSONArray;
-    if Arr<>nil then for I:=0 to Arr.Count-1 do begin O:=Arr.Items[I] as TJSONObject; Fil:=AFilters.Ensure(O.GetValue<string>('field')); V:=O.GetValue('enabled'); Fil.Enabled:=(V=nil) or SameText(V.Value,'true'); Vals:=O.GetValue('values') as TJSONArray; if Vals<>nil then for J:=0 to Vals.Count-1 do Fil.Values.Add(Vals.Items[J].Value); end;
+    if Arr<>nil then for I:=0 to Arr.Count-1 do begin
+      O:=Arr.Items[I] as TJSONObject; if O=nil then Continue;
+      if JsonText(O,'field','')='' then Continue;
+      Fil:=AFilters.Ensure(JsonText(O,'field','')); V:=O.GetValue('enabled');
+      Fil.Enabled:=(V=nil) or SameText(V.Value,'true');
+      Vals:=O.GetValue('values') as TJSONArray;
+      if Vals<>nil then for J:=0 to Vals.Count-1 do Fil.Values.Add(Vals.Items[J].Value);
+    end;
   finally Root.Free; end;
 end;
 
