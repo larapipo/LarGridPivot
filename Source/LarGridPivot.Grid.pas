@@ -376,7 +376,10 @@ begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; Invalidate; en
 procedure TLarGridPivot.BuildFieldsFromDataSet;
 var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField;
 begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSource.DataSet; if not DS.Active then Exit;
- FFields.BeginUpdate; try FFields.Clear; for I:=0 to DS.FieldCount-1 do begin DF:=DS.Fields[I]; PF:=FFields.Add; PF.FieldName:=DF.FieldName; PF.Caption:=DF.DisplayLabel; PF.Width:=100;
+ FFields.BeginUpdate; try FFields.Clear; for I:=0 to DS.FieldCount-1 do begin DF:=DS.Fields[I]; PF:=FFields.Add; PF.FieldName:=DF.FieldName;
+ { The user-facing label always starts from the dataset field caption. FieldName
+   remains only the binding key, so applications can expose friendly captions. }
+ if Trim(DF.DisplayLabel)<>'' then PF.Caption:=DF.DisplayLabel else PF.Caption:=DF.FieldName; PF.Width:=100;
  case DF.DataType of ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc,ftFloat,ftCurrency,ftBCD,ftFMTBcd,ftSingle,ftExtended:PF.Alignment:=pvaRight;
  ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
 procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
