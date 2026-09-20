@@ -674,8 +674,8 @@ begin
        DrawCell(VI.Bounds,VI.Caption,taLeftJustify,True,True)
       else begin
        DF:=VI.Field;
-       if (VI.RowKey=LAR_PIVOT_TOTAL_KEY) and (VI.ColumnKey<>LAR_PIVOT_TOTAL_KEY) then
-        S:=TextFor(LAR_PIVOT_TOTAL_KEY,VI.ColumnKey,DF)
+       if VI.ColumnKey<>LAR_PIVOT_TOTAL_KEY then
+        S:=TextFor(VI.RowKey,VI.ColumnKey,DF)
        else
         S:=TextFor(VI.RowKey,LAR_PIVOT_TOTAL_KEY,DF);
        DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
