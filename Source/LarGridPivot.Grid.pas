@@ -13,7 +13,7 @@ type
   TLarGridPivot = class(TCustomControl)
   private
     FDataSource: TDataSource; FDataLink: TDataLink; FFields: TLarPivotFields;
-    FEngine: TLarPivotEngine; FLayoutEngine: TLarPivotLayoutEngine; FViewInfo: TLarPivotViewInfo; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
+    FEngine: TLarPivotEngine; FSnapshot:ILarPivotDataProvider; FLayoutEngine: TLarPivotLayoutEngine; FViewInfo: TLarPivotViewInfo; FHeaderHeight, FRowHeight, FRowHeaderWidth: Integer;
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
     FFieldAreaHeight: Integer;
@@ -224,7 +224,13 @@ begin
 end;
 
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
-procedure TLarGridPivot.DataChanged(Sender:TObject); begin FFilterValueCache.Clear; if (FUpdating=0) and not FRebuilding then Rebuild; end;
+procedure TLarGridPivot.DataChanged(Sender:TObject);
+begin
+ if FRebuilding then Exit;
+ FFilterValueCache.Clear;
+ FSnapshot:=nil;
+ if FUpdating=0 then Rebuild;
+end;
 
 function TLarGridPivot.AvailableBandHeight:Integer;
 var L:TList<TLarPivotField>; I,X,W,Rows,Usable:Integer; S:string;
@@ -405,7 +411,17 @@ procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuildi
 procedure TLarGridPivot.Rebuild;
 var P:ILarPivotDataProvider;
 begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
- if FFields.Count=0 then BuildFieldsFromDataSet; P:=TLarDataSetPivotProvider.Create(FDataSource.DataSet); try FEngine.Build(P); finally P:=nil; end; BuildFilterValueCache; FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
+ if FFields.Count=0 then BuildFieldsFromDataSet;
+ { Snapshot the dataset once. Subsequent filter/layout rebuilds operate only
+   on memory and never walk the application's live dataset again. }
+ if FSnapshot=nil then begin
+  FSnapshot:=TLarMemoryPivotProvider.Create(FDataSource.DataSet);
+  BuildFilterValueCache;
+ end;
+ P:=FSnapshot;
+ FEngine.Build(P);
+ P:=nil;
+ FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
