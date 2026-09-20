@@ -42,7 +42,6 @@ type
     FViewDirty:Boolean;
     FScrollDirty:Boolean;
     FFilterValueCache:TStringList;
-    FFilterRecordCache:TDictionary<string,TArray<string>>;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -90,7 +89,6 @@ type
     procedure FilterChecklistClickCheck(Sender:TObject);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     procedure BuildFilterValueCache;
-    function TryBuildFilteredModelFromCache:Boolean;
     procedure ToggleFieldSort(AField:TLarPivotField; AKeepExisting:Boolean=False);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
@@ -171,14 +169,13 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
- FFilterRecordCache:=TDictionary<string,TArray<string>>.Create;
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterRecordCache.Free; FFilterValueCache.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 function TLarGridPivot.AutoLayoutFileName:string;
@@ -227,7 +224,7 @@ begin
 end;
 
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
-procedure TLarGridPivot.DataChanged(Sender:TObject); begin FFilterValueCache.Clear; FFilterRecordCache.Clear; if (FUpdating=0) and not FRebuilding then Rebuild; end;
+procedure TLarGridPivot.DataChanged(Sender:TObject); begin FFilterValueCache.Clear; if (FUpdating=0) and not FRebuilding then Rebuild; end;
 
 function TLarGridPivot.AvailableBandHeight:Integer;
 var L:TList<TLarPivotField>; I,X,W,Rows,Usable:Integer; S:string;
