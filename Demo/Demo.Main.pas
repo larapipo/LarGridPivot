@@ -123,8 +123,12 @@ begin
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
-  FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
   FStyleCombo.OnChange:=ChangeVclStyle;
+  { Assign ItemIndex only after the handler is installed and never request a
+    style by a stale name saved by the form/IDE. }
+  FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
+  if (FStyleCombo.ItemIndex<0) and (FStyleCombo.Items.Count>0) then
+    FStyleCombo.ItemIndex:=0;
   MakeButton(FBtnGestion,745,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
@@ -249,7 +253,8 @@ procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
 begin
  if (FStyleCombo.ItemIndex>=0) and
     (TStyleManager.ActiveStyle.Name<>FStyleCombo.Items[FStyleCombo.ItemIndex]) then begin
-  TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]);
+  if TStyleManager.StyleNames.IndexOf(FStyleCombo.Items[FStyleCombo.ItemIndex])<0 then Exit;
+  if not TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]) then Exit;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
  end;
