@@ -28,6 +28,7 @@ type
     FDragTargetArea: TLarPivotArea;
     FDragTargetIndex: Integer;
     FFilterButtonField: TLarPivotField;
+    FHotFilterField: TLarPivotField;
     FHScrollPos, FVScrollPos:Integer;
     FContentWidth, FContentHeight:Integer;
     FCollapsedGroups:TStringList;
@@ -38,6 +39,7 @@ type
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
     procedure HierarchyCollapseAllClick(Sender:TObject);
+    procedure HierarchyToggleSubtotalClick(Sender:TObject);
     procedure ShowHierarchyMenu(X,Y:Integer; const AHit:TLarPivotHitTest);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
@@ -149,7 +151,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
- FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
+ FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
@@ -916,6 +918,17 @@ begin
   ToggleGroup(FHierarchyHit.RowKey,FHierarchyHit.Level);
 end;
 
+procedure TLarGridPivot.HierarchyToggleSubtotalClick(Sender:TObject);
+var RFs:TList<TLarPivotField>;
+begin
+ RFs:=AxisFields(paRow);
+ try
+  if (FHierarchyHit.Level>=0) and (FHierarchyHit.Level<RFs.Count) then
+   RFs[FHierarchyHit.Level].ShowSubTotal:=not RFs[FHierarchyHit.Level].ShowSubTotal;
+ finally RFs.Free; end;
+ Rebuild;
+end;
+
 procedure TLarGridPivot.HierarchyExpandAllClick(Sender:TObject);
 begin
  FCollapsedGroups.Clear; Invalidate;
@@ -949,6 +962,10 @@ begin
  AddItem('-',nil);
  AddItem('Expandir todo',HierarchyExpandAllClick);
  AddItem('Contraer todo',HierarchyCollapseAllClick);
+ if (AHit.Level>=0) then begin
+  AddItem('-',nil);
+  AddItem('Mostrar / ocultar subtotal',HierarchyToggleSubtotalClick);
+ end;
  P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
 end;
 
