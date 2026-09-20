@@ -17,6 +17,12 @@ type
     FUpdating: Integer; FRebuilding: Boolean;
     FShowRowTotals, FShowColumnTotals, FShowGrandTotal: Boolean;
     FFieldAreaHeight: Integer;
+    FShowFieldPanel: Boolean;
+    FFieldPanelFontSize: Integer;
+    function EffectiveFieldAreaHeight:Integer;
+    function AvailableBandHeight:Integer;
+    procedure SetShowFieldPanel(const Value:Boolean);
+    procedure SetFieldPanelFontSize(const Value:Integer);
     FDragField: TLarPivotField;
     FDragStart: TPoint;
     FDraggingField: Boolean;
@@ -81,6 +87,8 @@ type
     property ShowRowTotals: Boolean read FShowRowTotals write SetShowRowTotals default True;
     property ShowColumnTotals: Boolean read FShowColumnTotals write SetShowColumnTotals default True;
     property ShowGrandTotal: Boolean read FShowGrandTotal write SetShowGrandTotal default True;
+    property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
+    property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
   end;
 
 implementation
@@ -96,6 +104,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
@@ -105,6 +114,35 @@ procedure TLarGridPivot.SetDataSource(const Value:TDataSource); begin if FDataSo
 procedure TLarGridPivot.SetFields(const Value:TLarPivotFields); begin FFields.Assign(Value); Rebuild; end;
 procedure TLarGridPivot.Notification(AComponent:TComponent;Operation:TOperation); begin inherited; if (Operation=opRemove) and (AComponent=FDataSource) then DataSource:=nil; end;
 procedure TLarGridPivot.DataChanged(Sender:TObject); begin if (FUpdating=0) and not FRebuilding then Rebuild; end;
+
+function TLarGridPivot.EffectiveFieldAreaHeight:Integer;
+begin if FShowFieldPanel then Result:=FFieldAreaHeight else Result:=0; end;
+
+procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
+begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
+
+procedure TLarGridPivot.SetFieldPanelFontSize(const Value:Integer);
+var N:Integer;
+begin N:=Value; if N<6 then N:=6; if N>14 then N:=14;
+ if N=FFieldPanelFontSize then Exit; FFieldPanelFontSize:=N; Invalidate; end;
+
+function TLarGridPivot.AvailableBandHeight:Integer;
+var L:TList<TLarPivotField>; I,X,W,Rows,Usable:Integer; S:string;
+begin
+ if not FShowFieldPanel then Exit(0);
+ L:=AreaFields(paNone);
+ try
+  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+  X:=8; Rows:=1; Usable:=ClientWidth-16;
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
+   if (X+W>Usable) and (X>8) then begin Inc(Rows); X:=8; end;
+   Inc(X,W+4);
+  end;
+  Result:=Rows*24+8;
+ finally L.Free; end;
+end;
 
 procedure TLarGridPivot.SetHeaderHeight(const Value:Integer);
 var N:Integer;
