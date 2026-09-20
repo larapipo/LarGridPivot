@@ -123,12 +123,10 @@ begin
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
-  FStyleCombo.OnChange:=ChangeVclStyle;
-  { Assign ItemIndex only after the handler is installed and never request a
-    style by a stale name saved by the form/IDE. }
+  { Only styles linked into this EXE are returned by StyleNames. Do not
+    auto-activate an arbitrary first entry when the active style is absent. }
   FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
-  if (FStyleCombo.ItemIndex<0) and (FStyleCombo.Items.Count>0) then
-    FStyleCombo.ItemIndex:=0;
+  FStyleCombo.OnChange:=ChangeVclStyle;
   MakeButton(FBtnGestion,745,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
