@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Messages, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
