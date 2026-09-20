@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Data.DB,
+  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -352,7 +352,7 @@ begin
 end;
 
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
-var Fil:TLarPivotFilter; Values:TStringList; I:Integer; S,Prompt:string;
+var Fil:TLarPivotFilter; Values:TStringList; S,Prompt:string;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
