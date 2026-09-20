@@ -20,6 +20,7 @@ type
     procedure SortKeys(AKeys: TList<string>; AFields: TList<TLarPivotField>);
     function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
+    function RowPrefix(const ARowKey:string; ALevel:Integer):string;
   public
     constructor Create(AFields: TLarPivotFields);
     destructor Destroy; override;
@@ -141,8 +142,22 @@ begin
   Cell.Accumulator.Add(AValue);
 end;
 
+function TLarPivotEngine.RowPrefix(const ARowKey:string;ALevel:Integer):string;
+var P,I,L:Integer;
+begin
+ Result:=''; P:=1; I:=0; L:=Length(ARowKey);
+ while (P<=L) and (I<=ALevel) do begin
+  if ARowKey[P]=#29 then begin
+   if (P<L) and (ARowKey[P+1]=#29) then begin Result:=Result+#29#29; Inc(P,2); Continue; end;
+   if I=ALevel then Exit;
+   Result:=Result+#29; Inc(I); Inc(P); Continue;
+  end;
+  Result:=Result+ARowKey[P]; Inc(P);
+ end;
+end;
+
 procedure TLarPivotEngine.Build(const AProvider: ILarPivotDataProvider);
-var RowKey, ColKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant;
+var RowKey, ColKey, PrefixKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant; Lvl:Integer;
 begin
   if AProvider = nil then raise EArgumentNilException.Create('AProvider');
   FModel.Clear;
@@ -161,6 +176,13 @@ begin
           V := AProvider.GetValue(F.FieldName);
           AddValue(RowKey, ColKey, F, V);
           AddValue(RowKey, LAR_PIVOT_TOTAL_KEY, F, V);
+          { Accumulate every non-leaf row prefix.  These cells back hierarchical
+            row subtotals such as SUCURSAL -> VENDEDOR. }
+          for Lvl:=0 to RowFields.Count-2 do begin
+            PrefixKey:=RowPrefix(RowKey,Lvl);
+            AddValue(PrefixKey,ColKey,F,V);
+            AddValue(PrefixKey,LAR_PIVOT_TOTAL_KEY,F,V);
+          end;
           AddValue(LAR_PIVOT_TOTAL_KEY, ColKey, F, V);
           AddValue(LAR_PIVOT_TOTAL_KEY, LAR_PIVOT_TOTAL_KEY, F, V);
         end;
