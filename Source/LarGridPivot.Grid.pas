@@ -283,7 +283,7 @@ function TLarGridPivot.ThemeChipColor:TColor;
 begin Result:=ThemeHeaderColor; end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
-begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; Invalidate; end;
+begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 
 procedure TLarGridPivot.SetFieldPanelFontSize(const Value:Integer);
 var N:Integer;
@@ -383,11 +383,11 @@ procedure TLarGridPivot.SetRowHeaderWidth(const Value:Integer);
 var N:Integer;
 begin N:=Value; if N<40 then N:=40; if N=FRowHeaderWidth then Exit; FRowHeaderWidth:=N; Invalidate; end;
 procedure TLarGridPivot.SetShowRowTotals(const Value:Boolean);
-begin if Value=FShowRowTotals then Exit; FShowRowTotals:=Value; Invalidate; end;
+begin if Value=FShowRowTotals then Exit; FShowRowTotals:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 procedure TLarGridPivot.SetShowColumnTotals(const Value:Boolean);
-begin if Value=FShowColumnTotals then Exit; FShowColumnTotals:=Value; Invalidate; end;
+begin if Value=FShowColumnTotals then Exit; FShowColumnTotals:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 procedure TLarGridPivot.SetShowGrandTotal(const Value:Boolean);
-begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; Invalidate; end;
+begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 
 procedure TLarGridPivot.BuildFieldsFromDataSet;
 var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField;
@@ -1064,7 +1064,7 @@ end;
 
 procedure TLarGridPivot.HierarchyExpandAllClick(Sender:TObject);
 begin
- FCollapsedGroups.Clear; Invalidate;
+ FCollapsedGroups.Clear; FViewDirty:=True; FScrollDirty:=True; Invalidate;
 end;
 
 procedure TLarGridPivot.HierarchyCollapseAllClick(Sender:TObject);
@@ -1080,7 +1080,7 @@ begin
      if FCollapsedGroups.IndexOf(ID)<0 then FCollapsedGroups.Add(ID);
     end;
  finally RFs.Free; end;
- Invalidate;
+ FViewDirty:=True; FScrollDirty:=True; Invalidate;
 end;
 
 procedure TLarGridPivot.ShowHierarchyMenu(X,Y:Integer;const AHit:TLarPivotHitTest);
