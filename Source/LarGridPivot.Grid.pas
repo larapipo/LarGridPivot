@@ -220,7 +220,7 @@ begin
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
-  HeaderLevels:=CFs.Count; if DFs.Count>1 then Inc(HeaderLevels);
+  HeaderLevels:=CFs.Count; if CFs.Count>0 then Inc(HeaderLevels); if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
   RowHeaderTotal:=0;
   for Lvl:=0 to RFs.Count-1 do Inc(RowHeaderTotal,RFs[Lvl].Width);
