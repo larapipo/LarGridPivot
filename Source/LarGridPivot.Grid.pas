@@ -688,7 +688,7 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  R:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
- var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=ThemeTotalColor else Canvas.Brush.Color:=Color;
+ var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=ThemeTotalColor else if Bold then Canvas.Brush.Color:=ThemeHeaderColor else Canvas.Brush.Color:=Color;
   Canvas.FillRect(RR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
   Canvas.Font.Assign(Font); if Bold then Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
   Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
