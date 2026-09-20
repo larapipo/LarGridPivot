@@ -40,6 +40,8 @@ type
     function Next:Boolean;
     function EOF:Boolean;
     function GetRecordCount:Integer;
+    function GetValueByIndex(AIndex:Integer):Variant;
+    function FieldIndexOf(const AFieldName:string):Integer;
   end;
 
   TLarDataSetPivotProvider = class(TInterfacedObject, ILarPivotDataProvider)
@@ -61,6 +63,8 @@ type
     function Next: Boolean;
     function EOF: Boolean;
     function GetRecordCount: Integer;
+    function GetValueByIndex(AIndex:Integer):Variant;
+    function FieldIndexOf(const AFieldName:string):Integer;
     property DataSet: TDataSet read FDataSet;
   end;
 
@@ -230,6 +234,16 @@ end;
 function TLarDataSetPivotProvider.GetRecordCount: Integer;
 begin
   Result := FDataSet.RecordCount;
+end;
+
+function TLarDataSetPivotProvider.FieldIndexOf(const AFieldName:string):Integer;
+var F:TField;
+begin F:=FDataSet.FindField(AFieldName); if F=nil then Result:=-1 else Result:=F.Index; end;
+
+function TLarDataSetPivotProvider.GetValueByIndex(AIndex:Integer):Variant;
+begin
+ if (AIndex<0) or (AIndex>=FDataSet.FieldCount) then Exit(Null);
+ Result:=FDataSet.Fields[AIndex].Value;
 end;
 
 end.
