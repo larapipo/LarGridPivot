@@ -374,8 +374,33 @@ begin
   if RFs.Count=0 then
    DrawCell(Rect(0,Y,RowHeaderTotal,Y+HeaderLevels*FHeaderHeight),'',taLeftJustify,True);
   for VI in FViewInfo.Items do
-   if VI.Kind in [pvekFieldHeader,pvekColumnValue] then
-    DrawCell(VI.Bounds,VI.Caption,taCenter,True);
+   case VI.Kind of
+    pvekFieldHeader,pvekColumnValue:
+     DrawCell(VI.Bounds,VI.Caption,taCenter,True);
+    pvekRowValue:
+     DrawCell(VI.Bounds,KeyPart(VI.RowKey,VI.Level),taLeftJustify);
+    pvekDataCell:
+     begin
+      DF:=VI.Field;
+      S:=TextFor(VI.RowKey,VI.ColumnKey,DF);
+      DrawCell(VI.Bounds,S,DefaultAlignment(DF));
+     end;
+    pvekTotalCell:
+     begin
+      DF:=VI.Field;
+      if (VI.RowKey=LAR_PIVOT_TOTAL_KEY) and (VI.ColumnKey<>LAR_PIVOT_TOTAL_KEY) then
+       S:=TextFor(LAR_PIVOT_TOTAL_KEY,VI.ColumnKey,DF)
+      else
+       S:=TextFor(VI.RowKey,LAR_PIVOT_TOTAL_KEY,DF);
+      DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
+     end;
+    pvekGrandTotalCell:
+     begin
+      DF:=VI.Field;
+      S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF);
+      DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);
+     end;
+   end;
   X:=RowHeaderTotal;
   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
   if FShowRowTotals then
@@ -384,34 +409,17 @@ begin
     DrawCell(Rect(X,Y,X+DFs[D].Width,Y+HeaderLevels*FHeaderHeight),S,taCenter,True,True); Inc(X,DFs[D].Width);
    end;
 
-  for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-   RowKey:=FEngine.Model.RowKeys[Row]; Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight; X:=0;
-   if RFs.Count>0 then for Lvl:=0 to RFs.Count-1 do begin
-    DrawCell(Rect(X,Y,X+RFs[Lvl].Width,Y+FRowHeight),KeyPart(RowKey,Lvl),taLeftJustify); Inc(X,RFs[Lvl].Width);
-   end else begin DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify); X:=RowHeaderTotal; end;
-   for VC in FLayoutEngine.Columns do begin
-    DF:=VC.DataField; S:=TextFor(RowKey,VC.ColumnKey,DF);
-    DrawCell(Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight),S,DefaultAlignment(DF));
+  if RFs.Count=0 then
+   for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
+    Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+Row*FRowHeight;
+    DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
-   X:=RowHeaderTotal;
-   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
-   if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D]; S:=TextFor(RowKey,LAR_PIVOT_TOTAL_KEY,DF);
-    DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
-  end;
 
   if FShowColumnTotals then begin
-   Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight; X:=0;
-   DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'TOTAL',taLeftJustify,True,True); X:=RowHeaderTotal;
-   for VC in FLayoutEngine.Columns do begin
-    DF:=VC.DataField; S:=TextFor(LAR_PIVOT_TOTAL_KEY,VC.ColumnKey,DF);
-    DrawCell(Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True);
-   end;
-   X:=RowHeaderTotal;
-   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
-   if FShowRowTotals then for D:=0 to DFs.Count-1 do begin DF:=DFs[D];
-    if FShowGrandTotal then S:=TextFor(LAR_PIVOT_TOTAL_KEY,LAR_PIVOT_TOTAL_KEY,DF) else S:='';
-    DrawCell(Rect(X,Y,X+DF.Width,Y+FRowHeight),S,DefaultAlignment(DF),True,True); Inc(X,DF.Width); end;
+   Y:=FFieldAreaHeight+HeaderLevels*FHeaderHeight+FEngine.Model.RowKeys.Count*FRowHeight;
+   DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'TOTAL',taLeftJustify,True,True);
   end;
+
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
 
