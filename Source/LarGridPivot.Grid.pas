@@ -639,7 +639,7 @@ function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):st
 
 procedure TLarGridPivot.Paint;
 var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
- S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
+ R:TRect; S:string; DF:TLarPivotField; Cell:TLarPivotResultCell; V:Variant; Flags:Cardinal;
  DFs,RFs,CFs:TList<TLarPivotField>; VC:TLarPivotVisualColumn; VI:TLarPivotViewItem;
  procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);
  var RR:TRect; begin RR:=ARect; if Total then Canvas.Brush.Color:=$00F3F3F3 else Canvas.Brush.Color:=Color;
@@ -695,7 +695,11 @@ begin
        Row:=FEngine.Model.RowKeys.IndexOf(VI.RowKey);
        if (Row>0) and RowPartEqual(VI.RowKey,FEngine.Model.RowKeys[Row-1],VI.Level) then S:='';
       end;
-      DrawCell(VI.Bounds,S,DefaultAlignment(VI.Field),VI.Level<RFs.Count-1);
+      if VI.Level<RFs.Count-1 then begin
+       R:=VI.Bounds; Inc(R.Left,18);
+       DrawCell(R,S,DefaultAlignment(VI.Field),True);
+      end else
+       DrawCell(VI.Bounds,S,DefaultAlignment(VI.Field),False);
      end;
     pvekDataCell:
      begin
