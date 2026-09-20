@@ -118,6 +118,7 @@ begin
   FThemeCombo:=TComboBox.Create(Self); FThemeCombo.Parent:=FTop;
   FThemeCombo.Left:=563; FThemeCombo.Top:=8; FThemeCombo.Width:=145;
   FThemeCombo.Style:=csDropDownList;
+  FThemeCombo.Items.Add('Estilo VCL activo');
   FThemeCombo.Items.Add('Classic Blue');
   FThemeCombo.Items.Add('Light');
   FThemeCombo.Items.Add('Silver');
