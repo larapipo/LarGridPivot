@@ -654,6 +654,11 @@ begin
    CL.Items.Add(Values[I]);
    CL.Checked[I+1]:=AllSelected or (Fil.Values.IndexOf(Values[I])>=0);
   end;
+  if Fil.Enabled then begin
+   AllSelected:=True;
+   for I:=1 to CL.Items.Count-1 do
+    if not CL.Checked[I] then begin AllSelected:=False; Break; end;
+  end;
   CL.Checked[0]:=AllSelected;
   CL.OnClickCheck:=ToggleAll;
 
