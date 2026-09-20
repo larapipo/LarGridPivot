@@ -2,6 +2,9 @@ unit LarGridPivot.Types;
 
 interface
 
+uses
+  System.Types;
+
 const
   LAR_GRID_PIVOT_VERSION_MAJOR = 1;
   LAR_GRID_PIVOT_VERSION_MINOR = 0;
@@ -22,6 +25,30 @@ type
     pctGrandTotal
   );
 
+  TLarPivotViewElementKind = (
+    pvekNone,
+    pvekFieldHeader,
+    pvekRowValue,
+    pvekColumnValue,
+    pvekDataCell,
+    pvekTotalCell,
+    pvekGrandTotalCell,
+    pvekExpandButton,
+    pvekFilterButton,
+    pvekFieldArea
+  );
+
+  TLarPivotHitTest = record
+    Kind: TLarPivotViewElementKind;
+    Bounds: TRect;
+    FieldName: string;
+    RowKey: string;
+    ColumnKey: string;
+    Level: Integer;
+    DataIndex: Integer;
+    class function Empty: TLarPivotHitTest; static;
+  end;
+
   TLarPivotCellSpan = record
     RowSpan: Integer;
     ColSpan: Integer;
@@ -29,6 +56,17 @@ type
   end;
 
 implementation
+
+class function TLarPivotHitTest.Empty:TLarPivotHitTest;
+begin
+ Result.Kind:=pvekNone;
+ Result.Bounds:=Rect(0,0,0,0);
+ Result.FieldName:='';
+ Result.RowKey:='';
+ Result.ColumnKey:='';
+ Result.Level:=-1;
+ Result.DataIndex:=-1;
+end;
 
 class function TLarPivotCellSpan.Create(ARowSpan,
   AColSpan: Integer): TLarPivotCellSpan;
