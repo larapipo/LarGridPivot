@@ -1325,19 +1325,31 @@ begin
 end;
 
 procedure TLarGridPivot.HierarchyCollapseAllClick(Sender:TObject);
-var RFs:TList<TLarPivotField>; Row,Lvl:Integer; ID:string;
+var RFs:TList<TLarPivotField>; Row,Lvl:Integer; ID:string; Seen:TDictionary<string,Byte>;
 begin
  RFs:=AxisFields(paRow);
+ Seen:=TDictionary<string,Byte>.Create;
  try
-  FCollapsedGroups.Clear;
-  if RFs.Count>1 then
-   for Row:=0 to FEngine.Model.RowKeys.Count-1 do
-    for Lvl:=0 to RFs.Count-2 do begin
-     ID:=GroupID(FEngine.Model.RowKeys[Row],Lvl);
-     if FCollapsedGroups.IndexOf(ID)<0 then FCollapsedGroups.Add(ID);
-    end;
- finally RFs.Free; end;
- FViewDirty:=True; FScrollDirty:=True; Invalidate;
+  FCollapsedGroups.BeginUpdate;
+  try
+   FCollapsedGroups.Clear;
+   if RFs.Count>1 then
+    for Row:=0 to FEngine.Model.RowKeys.Count-1 do
+     for Lvl:=0 to RFs.Count-2 do begin
+      ID:=GroupID(FEngine.Model.RowKeys[Row],Lvl);
+      if not Seen.ContainsKey(ID) then begin
+       Seen.Add(ID,0);
+       FCollapsedGroups.Add(ID);
+      end;
+     end;
+  finally
+   FCollapsedGroups.EndUpdate;
+  end;
+ finally
+  Seen.Free;
+  RFs.Free;
+ end;
+ RefreshViewOnly;
 end;
 
 procedure TLarGridPivot.ShowHierarchyMenu(X,Y:Integer;const AHit:TLarPivotHitTest);
