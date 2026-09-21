@@ -108,6 +108,7 @@ type
     function KeyPart(const AKey: string; ALevel: Integer): string;
     procedure NormalizeAreaIndexes(AArea: TLarPivotArea);
     procedure BuildViewInfo;
+    procedure RefreshViewOnly;
     function AutoLayoutFileName:string;
     procedure RestoreAutoLayout;
     procedure SaveAutoLayout;
@@ -541,6 +542,13 @@ begin FS:=TFileStream.Create(AFileName,fmCreate); try SaveLayoutToStream(FS); fi
 procedure TLarGridPivot.LoadLayoutFromFile(const AFileName:string);
 var FS:TFileStream;
 begin FS:=TFileStream.Create(AFileName,fmOpenRead or fmShareDenyWrite); try LoadLayoutFromStream(FS); finally FS.Free; end; end;
+
+procedure TLarGridPivot.RefreshViewOnly;
+begin
+ FViewDirty:=True;
+ FScrollDirty:=True;
+ Invalidate;
+end;
 
 procedure TLarGridPivot.BuildViewInfo;
 var DFs,RFs,CFs:TList<TLarPivotField>; Lvl,HeaderLevels,RowHeaderTotal:Integer;
@@ -1386,7 +1394,7 @@ begin
  if Button<>mbLeft then Exit;
  if Assigned(FResizingField) then begin
   FResizingField:=nil; MouseCapture:=False; Cursor:=crDefault;
-  FViewDirty:=True; FScrollDirty:=True; Invalidate; Exit;
+  RefreshViewOnly; Exit;
  end;
  F:=FDragField;
  try
