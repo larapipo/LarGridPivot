@@ -64,7 +64,23 @@ constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
     B:=TButton.Create(Self); B.Parent:=FTop; B.Left:=ALeft; B.Top:=ATop;
     B.Width:=105; B.Height:=27; B.Caption:=ACaption; B.OnClick:=AClick;
   end;
-var StyleName:string;
+var StyleName, BDSPath, PublicPath:string;
+  procedure LoadStylesFromFolder(const AFolder:string);
+  var Files:TStringDynArray; FileName:string;
+  begin
+    if (AFolder='') or not TDirectory.Exists(AFolder) then Exit;
+    try
+      Files:=TDirectory.GetFiles(AFolder,'*.vsf',TSearchOption.soAllDirectories);
+      for FileName in Files do
+        try
+          TStyleManager.LoadFromFile(FileName);
+        except
+          { Ignore an individual incompatible/duplicate style and continue. }
+        end;
+    except
+      { A missing/inaccessible optional style folder must not stop the demo. }
+    end;
+  end;
 begin
   inherited CreateNew(AOwner);
   Caption:='LarGridPivot v1 - Pivot interactivo';
@@ -122,6 +138,17 @@ begin
   MakeButton(FBtnFields,448,6,'Mostrar campos',ToggleFields);
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
+  { The component itself never requires a particular style. The demo loads
+    installed .vsf files only so the selector can exercise real VCL Styles. }
+  LoadStylesFromFolder(TPath.Combine(ExtractFilePath(ParamStr(0)),'Styles'));
+  BDSPath:=GetEnvironmentVariable('BDS');
+  if BDSPath<>'' then begin
+    LoadStylesFromFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
+    LoadStylesFromFolder(TPath.Combine(BDSPath,'Styles'));
+  end;
+  PublicPath:=GetEnvironmentVariable('PUBLIC');
+  if PublicPath<>'' then
+    LoadStylesFromFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
   for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
   { Only styles linked into this EXE are returned by StyleNames. Do not
     auto-activate an arbitrary first entry when the active style is absent. }
