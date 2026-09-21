@@ -1446,6 +1446,22 @@ begin
   if RowHeaderTotal=0 then RowHeaderTotal:=FRowHeaderWidth;
   BuildViewInfo;
   UpdateScrollBars;
+
+  { The row-axis captions are one HeaderHeight high. Explicitly paint the
+    unused upper-left hierarchy bands as separate header cells. Without these
+    separators the Windows background made SUCURSAL/VENDEDOR/RUBRO look like
+    one giant vertically merged header even though their ViewInfo bounds were
+    only one band high. }
+  if (RFs.Count>0) and (HeaderLevels>1) then
+   for Lvl:=0 to RFs.Count-1 do begin
+    X:=0;
+    for D:=0 to Lvl-1 do Inc(X,RFs[D].Width);
+    for D:=0 to HeaderLevels-2 do
+     DrawCell(Rect(X,EffectiveFieldAreaHeight+D*FHeaderHeight,
+       X+RFs[Lvl].Width,EffectiveFieldAreaHeight+(D+1)*FHeaderHeight),
+       '',taCenter,True);
+   end;
+
   SaveDC(Canvas.Handle);
   { The scrolling body starts below the frozen result header.  Clipping it at
     the field-area edge allowed rows to paint through the header before the
