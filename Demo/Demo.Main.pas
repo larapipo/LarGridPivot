@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Types, System.IOUtils,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes, Vcl.Styles,
   Data.DB, Datasnap.DBClient,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Grid;
@@ -146,6 +146,11 @@ begin
     LoadStylesFromFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
     LoadStylesFromFolder(TPath.Combine(BDSPath,'Styles'));
   end;
+  { BDS is normally an IDE/build environment variable and may not exist in
+    the launched demo. Delphi 12 Athens default install path fallback. }
+  BDSPath:=GetEnvironmentVariable('ProgramFiles(x86)');
+  if BDSPath<>'' then
+    LoadStylesFromFolder(TPath.Combine(BDSPath,'Embarcadero\Studio\23.0\Redist\styles\vcl'));
   PublicPath:=GetEnvironmentVariable('PUBLIC');
   if PublicPath<>'' then
     LoadStylesFromFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
