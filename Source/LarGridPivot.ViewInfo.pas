@@ -41,7 +41,7 @@ type
       AHeaderTop, AHeaderHeight, ARowHeaderWidth: Integer);
     procedure BuildBody(ARowFields, ADataFields: TList<TLarPivotField>; ARows: TList<string>;
       AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean; ACollapsedGroups:TStrings;
-      AViewTop, AViewBottom:Integer);
+      AViewLeft, AViewTop, AViewRight, AViewBottom:Integer);
     function HitTest(AX, AY: Integer): TLarPivotHitTest;
     function FieldAtResizeEdge(AX, AY, ATolerance: Integer): TLarPivotField;
     property Items: TObjectList<TLarPivotViewItem> read FItems;
@@ -156,7 +156,7 @@ end;
 
 procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
  ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings;
- AViewTop,AViewBottom:Integer);
+ AViewLeft,AViewTop,AViewRight,AViewBottom:Integer);
 var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
  PrefixCache,PartCache:TDictionary<string,string>;
  function KeyPart(const AKey:string;ALevel:Integer):string;
@@ -186,6 +186,8 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
  end;
  function RowVisible(AY:Integer):Boolean;
  begin Result:=(AY+FRowHeight>=AViewTop) and (AY<=AViewBottom); end;
+ function ColumnVisible(ALeft,AWidth:Integer):Boolean;
+ begin Result:=(ALeft+AWidth>=AViewLeft) and (ALeft<=AViewRight); end;
  function GroupID(const AKey:string;ALevel:Integer):string;
  begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
  function IsCollapsed(const AKey:string;ALevel:Integer):Boolean;
@@ -215,6 +217,7 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
   FItems.Add(It);
   for J:=0 to FLayout.Columns.Count-1 do begin
    Col:=FLayout.Columns[J];
+   if not ColumnVisible(Col.Left,Col.Width) then Continue;
    It:=TLarPivotViewItem.Create; It.Kind:=pvekTotalCell; It.Field:=Col.DataField;
    It.RowKey:=Prefix; It.ColumnKey:=Col.ColumnKey; It.Level:=ALevel; It.DataIndex:=J;
    It.Bounds:=Rect(Col.Left,AY,Col.Left+Col.Width,AY+FRowHeight); FItems.Add(It);
@@ -259,7 +262,9 @@ begin
      X:=0; for I:=0 to Lvl-1 do Inc(X,ARowFields[I].Width);
      Item.Bounds:=Rect(X+3,Y+(FRowHeight-11) div 2,X+14,Y+(FRowHeight-11) div 2+11); FItems.Add(Item);
      for I:=0 to FLayout.Columns.Count-1 do begin
-      VC:=FLayout.Columns[I]; Item:=TLarPivotViewItem.Create; Item.Kind:=pvekTotalCell; Item.Field:=VC.DataField;
+      VC:=FLayout.Columns[I];
+      if not ColumnVisible(VC.Left,VC.Width) then Continue;
+      Item:=TLarPivotViewItem.Create; Item.Kind:=pvekTotalCell; Item.Field:=VC.DataField;
       Item.RowKey:=PrefixKey(ARows[Row],Lvl); Item.ColumnKey:=VC.ColumnKey; Item.Level:=Lvl;
       Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight); FItems.Add(Item);
      end;
@@ -285,7 +290,9 @@ begin
    Inc(X,ARowFields[I].Width);
   end;
   for I:=0 to FLayout.Columns.Count-1 do begin
-   VC:=FLayout.Columns[I]; Item:=TLarPivotViewItem.Create; Item.Kind:=pvekDataCell; Item.Field:=VC.DataField;
+   VC:=FLayout.Columns[I];
+   if not ColumnVisible(VC.Left,VC.Width) then Continue;
+   Item:=TLarPivotViewItem.Create; Item.Kind:=pvekDataCell; Item.Field:=VC.DataField;
    Item.RowKey:=ARows[Row]; Item.ColumnKey:=VC.ColumnKey; Item.DataIndex:=I;
    Item.Bounds:=Rect(VC.Left,Y,VC.Left+VC.Width,Y+FRowHeight); FItems.Add(Item);
   end;
