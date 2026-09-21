@@ -1305,6 +1305,7 @@ begin
   { Build the worksheet from the pivot layout, preserving the visible
     column hierarchy instead of flattening ColumnKey into one caption. }
   HeaderRows:=CFs.Count;
+  if CFs.Count>0 then Inc(HeaderRows); { field-name band, e.g. Mes }
   if FLayoutEngine.Columns.Count>0 then Inc(HeaderRows); { data-field band }
   if HeaderRows=0 then HeaderRows:=1;
   Sheet:='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
@@ -1314,27 +1315,41 @@ begin
   { Row fields span the complete pivot header. }
   for Level:=0 to HeaderRows-1 do begin
    Line:='<row r="'+IntToStr(Level+1)+'">';
-   if Level=0 then
+   if Level=0 then begin
     for I:=0 to RFs.Count-1 do begin
      Line:=Line+TextCell(I,1,RFs[I].Caption);
      if HeaderRows>1 then
       begin Merges:=Merges+'<mergeCell ref="'+ColName(I)+'1:'+ColName(I)+IntToStr(HeaderRows)+'"/>'; Inc(MergeCount); end;
     end;
+    { Same top field-name band shown by the pivot: Mes, Semana, Dia, etc. }
+    if (CFs.Count>0) and (FLayoutEngine.Columns.Count>0) then begin
+     S:='';
+     for I:=0 to CFs.Count-1 do begin
+      if I>0 then S:=S+' / ';
+      if CFs[I].Caption<>'' then S:=S+CFs[I].Caption else S:=S+CFs[I].FieldName;
+     end;
+     Line:=Line+TextCell(RFs.Count,1,S);
+     if FLayoutEngine.Columns.Count>1 then begin
+      Merges:=Merges+'<mergeCell ref="'+ColName(RFs.Count)+'1:'+
+        ColName(RFs.Count+FLayoutEngine.Columns.Count-1)+'1"/>'; Inc(MergeCount);
+     end;
+    end;
+   end;
 
    { One real Excel header row for each column hierarchy level. }
-   if Level<CFs.Count then begin
+   if (CFs.Count>0) and (Level>0) and (Level<=CFs.Count) then begin
     D:=0;
     while D<FLayoutEngine.Columns.Count do begin
-     S:=KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level);
+     S:=KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level-1);
      StartCol:=RFs.Count+D;
      EndCol:=D;
      while (EndCol+1<FLayoutEngine.Columns.Count) and
-       (KeyPart(FLayoutEngine.Columns[EndCol+1].ColumnKey,Level)=S) do Inc(EndCol);
+       (KeyPart(FLayoutEngine.Columns[EndCol+1].ColumnKey,Level-1)=S) do Inc(EndCol);
      { Do not merge across a change in any parent level. }
-     if Level>0 then
+     if Level>1 then
       while (EndCol>D) and
-       (KeyPart(FLayoutEngine.Columns[EndCol].ColumnKey,Level-1)<>
-        KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level-1)) do Dec(EndCol);
+       (KeyPart(FLayoutEngine.Columns[EndCol].ColumnKey,Level-2)<>
+        KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level-2)) do Dec(EndCol);
      Line:=Line+TextCell(StartCol,Level+1,S);
      if EndCol>D then
       begin
