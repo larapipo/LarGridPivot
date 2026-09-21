@@ -36,6 +36,7 @@ type
     FSavedViews:TStringList;
     FHierarchyMenu:TPopupMenu;
     FFieldMenu:TPopupMenu;
+    FGridMenu:TPopupMenu;
     FMenuField:TLarPivotField;
     FHierarchyHit:TLarPivotHitTest;
     FAutoSaveLayout:Boolean;
@@ -61,6 +62,9 @@ type
     procedure FieldSortDescClick(Sender:TObject);
     procedure FieldSortNoneClick(Sender:TObject);
     procedure FieldFilterClick(Sender:TObject);
+    procedure GridExportExcelClick(Sender:TObject);
+    procedure GridExportCSVClick(Sender:TObject);
+    procedure ShowGridMenu(X,Y:Integer);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
     procedure ToggleGroup(const ARowKey:string; ALevel:Integer);
@@ -192,11 +196,12 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
  FHierarchyMenu:=TPopupMenu.Create(Self);
- FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
+ FFieldMenu:=TPopupMenu.Create(Self);
+ FGridMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 procedure TLarGridPivot.BeginBusy;
 begin
  if FBusyDepth=0 then begin
@@ -1600,6 +1605,44 @@ begin
  P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
 end;
 
+procedure TLarGridPivot.GridExportExcelClick(Sender:TObject);
+var D:TSaveDialog;
+begin
+ D:=TSaveDialog.Create(nil);
+ try
+  D.Title:='Exportar pivot a Excel';
+  D.Filter:='Libro XML de Excel (*.xml)|*.xml';
+  D.DefaultExt:='xml';
+  D.FileName:='Pivot.xml';
+  if D.Execute then ExportToExcel(D.FileName);
+ finally D.Free; end;
+end;
+
+procedure TLarGridPivot.GridExportCSVClick(Sender:TObject);
+var D:TSaveDialog;
+begin
+ D:=TSaveDialog.Create(nil);
+ try
+  D.Title:='Exportar pivot a CSV';
+  D.Filter:='Archivo CSV (*.csv)|*.csv';
+  D.DefaultExt:='csv';
+  D.FileName:='Pivot.csv';
+  if D.Execute then ExportToCSV(D.FileName);
+ finally D.Free; end;
+end;
+
+procedure TLarGridPivot.ShowGridMenu(X,Y:Integer);
+var M:TMenuItem; P:TPoint;
+ procedure AddItem(const ACaption:string;AHandler:TNotifyEvent);
+ begin M:=TMenuItem.Create(FGridMenu); M.Caption:=ACaption; M.OnClick:=AHandler; FGridMenu.Items.Add(M); end;
+begin
+ FGridMenu.Items.Clear;
+ AddItem('Exportar a Excel...',GridExportExcelClick);
+ AddItem('Exportar a CSV...',GridExportCSVClick);
+ P:=ClientToScreen(Point(X,Y));
+ FGridMenu.Popup(P.X,P.Y);
+end;
+
 procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
 var HT:TLarPivotHitTest;
 begin
@@ -1614,6 +1657,7 @@ begin
     if HT.Level<0 then HT.Level:=0;
     ShowHierarchyMenu(X,Y,HT); Exit;
    end;
+   ShowGridMenu(X,Y); Exit;
   end;
   if (Button=mbLeft) and (HT.Kind=pvekExpandButton) and (HT.RowKey<>'') then begin
    { ViewInfo places an actionable +/- only on the group header. }
