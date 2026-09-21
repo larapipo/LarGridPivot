@@ -837,7 +837,7 @@ end;
 procedure TLarGridPivot.ShowFieldFilter(AField:TLarPivotField);
 var
  Fil:TLarPivotFilter; Values:TStringList; Frm:TForm; P:TPanel;
- CL:TCheckListBox; BtnOK,BtnCancel:TButton; I,MaxTextW:Integer; AllSelected:Boolean;
+ CL:TCheckListBox; BtnOK,BtnCancel:TButton; I,MaxTextW,Step:Integer; AllSelected:Boolean; Selected:TDictionary<string,Byte>; S:string;
 begin
  if AField=nil then Exit;
  Fil:=FEngine.Filters.Ensure(AField.FieldName);
@@ -854,9 +854,15 @@ begin
     descriptions should not be forced into the old fixed 300px window. }
   Frm.Canvas.Font.Assign(Font);
   MaxTextW:=180;
-  for I:=0 to Values.Count-1 do
-   if Frm.Canvas.TextWidth(Values[I])>MaxTextW then
-    MaxTextW:=Frm.Canvas.TextWidth(Values[I]);
+  { Measuring every string with GDI made high-cardinality filters visibly slow.
+    Sample the list; width is still bounded by the work area. }
+  Step:=1;
+  if Values.Count>250 then Step:=(Values.Count div 250)+1;
+  I:=0;
+  while I<Values.Count do begin
+   MaxTextW:=Max(MaxTextW,Frm.Canvas.TextWidth(Values[I]));
+   Inc(I,Step);
+  end;
   Frm.Width:=MaxTextW+72;
   if Frm.Width<300 then Frm.Width:=300;
   if Frm.Width>Screen.WorkAreaWidth-40 then Frm.Width:=Screen.WorkAreaWidth-40;
@@ -870,22 +876,31 @@ begin
   CL.Font.Color:=ThemeTextColor; CL.ItemHeight:=22;
   { Populate large filter lists in one Windows control update. Adding thousands
     of article descriptions one-by-one with redraw enabled is extremely costly. }
-  CL.Items.BeginUpdate;
+  Selected:=TDictionary<string,Byte>.Create;
   try
-   CL.Items.Add('(Mostrar todos)');
-   AllSelected:=not Fil.Enabled;
-   for I:=0 to Values.Count-1 do begin
-    CL.Items.Add(Values[I]);
-    CL.Checked[I+1]:=AllSelected or (Fil.Values.IndexOf(Values[I])>=0);
-   end;
+   if Fil.Enabled then
+    for I:=0 to Fil.Values.Count-1 do
+     Selected.AddOrSetValue(UpperCase(Fil.Values[I]),0);
+   CL.Items.BeginUpdate;
+   try
+    CL.Items.Add('(Mostrar todos)');
+    AllSelected:=not Fil.Enabled;
+    for I:=0 to Values.Count-1 do begin
+     S:=Values[I];
+     CL.Items.Add(S);
+     CL.Checked[I+1]:=AllSelected or Selected.ContainsKey(UpperCase(S));
+    end;
    if Fil.Enabled then begin
     AllSelected:=True;
     for I:=1 to CL.Items.Count-1 do
      if not CL.Checked[I] then begin AllSelected:=False; Break; end;
    end;
    CL.Checked[0]:=AllSelected;
+   finally
+    CL.Items.EndUpdate;
+   end;
   finally
-   CL.Items.EndUpdate;
+   Selected.Free;
   end;
   CL.OnClickCheck:=FilterChecklistClickCheck;
 
