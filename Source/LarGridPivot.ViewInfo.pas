@@ -31,6 +31,7 @@ type
     FRowHeight: Integer;
     FRowHeaderWidth: Integer;
     FHeaderLevels: Integer;
+    FContentBottom:Integer;
     procedure AddHeaderNode(ANode: TLarPivotHeaderNode; AColumnFields: TList<TLarPivotField>);
   public
     constructor Create(ALayout: TLarPivotLayoutEngine);
@@ -39,7 +40,8 @@ type
     procedure BuildHeaders(ARowFields, AColumnFields, ADataFields: TList<TLarPivotField>;
       AHeaderTop, AHeaderHeight, ARowHeaderWidth: Integer);
     procedure BuildBody(ARowFields, ADataFields: TList<TLarPivotField>; ARows: TList<string>;
-      AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean; ACollapsedGroups:TStrings);
+      AHeaderLevels: Integer; AShowRowTotals, AShowColumnTotals, AShowGrandTotal: Boolean; ACollapsedGroups:TStrings;
+      AViewTop, AViewBottom:Integer);
     function HitTest(AX, AY: Integer): TLarPivotHitTest;
     function FieldAtResizeEdge(AX, AY, ATolerance: Integer): TLarPivotField;
     property Items: TObjectList<TLarPivotViewItem> read FItems;
@@ -47,6 +49,7 @@ type
     property HeaderHeight: Integer read FHeaderHeight;
     property RowHeight: Integer read FRowHeight write FRowHeight;
     property RowHeaderWidth: Integer read FRowHeaderWidth;
+    property ContentBottom:Integer read FContentBottom;
   end;
 
 implementation
@@ -152,7 +155,8 @@ begin
 end;
 
 procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
- ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings);
+ ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings;
+ AViewTop,AViewBottom:Integer);
 var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
  PrefixCache,PartCache:TDictionary<string,string>;
  function KeyPart(const AKey:string;ALevel:Integer):string;
@@ -180,6 +184,8 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
   end;
   PrefixCache.AddOrSetValue(CacheKey,Result);
  end;
+ function RowVisible(AY:Integer):Boolean;
+ begin Result:=(AY+FRowHeight>=AViewTop) and (AY<=AViewBottom); end;
  function GroupID(const AKey:string;ALevel:Integer):string;
  begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
  function IsCollapsed(const AKey:string;ALevel:Integer):Boolean;
@@ -201,6 +207,7 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
  procedure AddSubtotal(const AKey:string;ALevel:Integer;var AY:Integer);
  var J,LX:Integer; It:TLarPivotViewItem; Col:TLarPivotVisualColumn; Prefix,Cap:string;
  begin
+  if not RowVisible(AY) then begin Inc(AY,FRowHeight); Exit; end;
   Prefix:=PrefixKey(AKey,ALevel);
   Cap:=KeyPart(AKey,ALevel)+' Total';
   It:=TLarPivotViewItem.Create; It.Kind:=pvekTotalCell; It.RowKey:=Prefix;
@@ -239,6 +246,7 @@ begin
      ancestor columns so collapsing a child never makes its parent disappear. }
    Lvl:=CLvl;
    if GroupStarts(Row,Lvl) then begin
+     if not RowVisible(Y) then begin Inc(Y,FRowHeight); Continue; end;
      X:=0;
      for I:=0 to Lvl do begin
       Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
@@ -259,6 +267,7 @@ begin
     end;
    Continue;
   end;
+  if RowVisible(Y) then begin
   X:=0;
   for I:=0 to ARowFields.Count-1 do begin
    Item:=TLarPivotViewItem.Create; Item.Kind:=pvekRowValue; Item.Field:=ARowFields[I];
@@ -288,12 +297,14 @@ begin
     Item.Bounds:=Rect(X,Y,X+ADataFields[I].Width,Y+FRowHeight); FItems.Add(Item); Inc(X,ADataFields[I].Width);
    end;
   end;
+  end; { visible detail row }
   Inc(Y,FRowHeight);
   { Close deepest groups first, like a conventional pivot hierarchy. }
   for Lvl:=ARowFields.Count-2 downto 0 do
    if ARowFields[Lvl].ShowSubTotal and GroupEnds(Row,Lvl) then AddSubtotal(ARows[Row],Lvl,Y);
  end;
 
+ FContentBottom:=Y;
  if AShowColumnTotals then begin
   Item:=TLarPivotViewItem.Create; Item.Kind:=pvekTotalCell; Item.RowKey:=LAR_PIVOT_TOTAL_KEY;
   Item.Caption:='TOTAL GENERAL'; Item.Bounds:=Rect(0,Y,FRowHeaderWidth,Y+FRowHeight); FItems.Add(Item);
@@ -311,6 +322,7 @@ begin
    end;
   end;
  end;
+ if AShowColumnTotals then FContentBottom:=Y+FRowHeight;
  finally
   PartCache.Free;
   PrefixCache.Free;
