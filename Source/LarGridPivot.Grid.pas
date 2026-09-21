@@ -410,8 +410,13 @@ begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSour
  ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
 procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
 procedure TLarGridPivot.Rebuild;
-var P:ILarPivotDataProvider;
-begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
+var P:ILarPivotDataProvider; OldCursor:TCursor;
+begin
+ if (FUpdating>0) or FRebuilding then Exit;
+ OldCursor:=Screen.Cursor; Screen.Cursor:=crHourGlass;
+ Application.ProcessMessages;
+ FRebuilding:=True;
+ try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
  if FFields.Count=0 then BuildFieldsFromDataSet;
  { Snapshot the dataset once. Subsequent filter/layout rebuilds operate only
    on memory and never walk the application's live dataset again. }
@@ -422,7 +427,7 @@ begin if (FUpdating>0) or FRebuilding then Exit; FRebuilding:=True; try if (FDat
  P:=FSnapshot;
  FEngine.Build(P);
  P:=nil;
- FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; end; end;
+ FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; Screen.Cursor:=OldCursor; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
@@ -766,7 +771,18 @@ begin
   psoAscending:AField.SortOrder:=psoDescending;
  else AField.SortOrder:=psoNone;
  end;
- Rebuild;
+ { Sorting changes only the order of already aggregated keys. Do not rescan the
+   snapshot or rebuild result cells just to change presentation order. }
+ Screen.Cursor:=crHourGlass;
+ try
+  Application.ProcessMessages;
+  FEngine.Resort;
+  FViewDirty:=True;
+  FScrollDirty:=True;
+  Invalidate;
+ finally
+  Screen.Cursor:=crDefault;
+ end;
 end;
 
 procedure TLarGridPivot.FilterChecklistClickCheck(Sender:TObject);
