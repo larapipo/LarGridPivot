@@ -86,6 +86,7 @@ type
     procedure SetFieldPanelFontSize(const Value:Integer);
     procedure SetFieldAreaSplitPercent(const Value:Integer);
     procedure WMEraseBkgnd(var Message:TWMEraseBkgnd); message WM_ERASEBKGND;
+    procedure WMSetCursor(var Message:TWMSetCursor); message WM_SETCURSOR;
     function SuggestedFieldWidth(AField:TField; const ACaption:string):Integer;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
@@ -216,6 +217,11 @@ begin
  if FBusyDepth=0 then begin
   if FBusySavedCursor=crHourGlass then FBusySavedCursor:=crDefault;
   Screen.Cursor:=FBusySavedCursor;
+  if Cursor=crHourGlass then Cursor:=crDefault;
+  if HandleAllocated then begin
+   SetCursor(LoadCursor(0,IDC_ARROW));
+   PostMessage(Handle,WM_SETCURSOR,Handle,MakeLParam(HTCLIENT,WM_MOUSEMOVE));
+  end;
  end;
 end;
 
@@ -298,6 +304,15 @@ var R:TRect;
 begin
  if not FShowFieldPanel then Exit(0);
  R:=AreaRect(paRow); Result:=R.Bottom;
+end;
+
+procedure TLarGridPivot.WMSetCursor(var Message:TWMSetCursor);
+begin
+ { Screen.Cursor is global, but VCL controls also resolve their own Cursor on
+   WM_SETCURSOR. Once a long operation has ended, never let this control keep
+   displaying a stale hourglass. }
+ if (FBusyDepth=0) and (Cursor=crHourGlass) then Cursor:=crDefault;
+ inherited;
 end;
 
 procedure TLarGridPivot.WMEraseBkgnd(var Message:TWMEraseBkgnd);
