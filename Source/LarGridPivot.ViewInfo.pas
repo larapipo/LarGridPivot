@@ -47,6 +47,7 @@ type
     property Items: TObjectList<TLarPivotViewItem> read FItems;
     property HeaderTop: Integer read FHeaderTop;
     property HeaderHeight: Integer read FHeaderHeight;
+    property HeaderLevels: Integer read FHeaderLevels;
     property RowHeight: Integer read FRowHeight write FRowHeight;
     property RowHeaderWidth: Integer read FRowHeaderWidth;
     property ContentBottom:Integer read FContentBottom;
