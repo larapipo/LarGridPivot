@@ -439,7 +439,7 @@ begin
 end;
 
 procedure TLarGridPivot.WMVScroll(var Message:TWMVScroll);
-var SI:TScrollInfo; P:Integer;
+var SI:TScrollInfo; P:Integer; R:TRect;
 begin
  FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_VERT,SI); P:=SI.nPos;
  case Message.ScrollCode of
@@ -450,11 +450,14 @@ begin
  if P<SI.nMin then P:=SI.nMin;
  if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
  if P<0 then P:=0;
- if P<>FVScrollPos then begin FVScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,P,True); Invalidate; end;
+ if P<>FVScrollPos then begin
+  FVScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,P,True);
+  R:=Rect(0,ResultTop,ClientWidth,ClientHeight); InvalidateRect(Handle,@R,False);
+ end;
 end;
 
 procedure TLarGridPivot.WMMouseWheel(var Message:TWMMouseWheel);
-var SI:TScrollInfo; MaxPos:Integer;
+var SI:TScrollInfo; MaxPos:Integer; R:TRect;
 begin
  FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL;
  GetScrollInfo(Handle,SB_VERT,SI);
@@ -463,7 +466,8 @@ begin
  MaxPos:=SI.nMax-Integer(SI.nPage)+1; if MaxPos<0 then MaxPos:=0;
  if FVScrollPos<0 then FVScrollPos:=0;
  if FVScrollPos>MaxPos then FVScrollPos:=MaxPos;
- FViewDirty:=True; SetScrollPos(Handle,SB_VERT,FVScrollPos,True); Invalidate;
+ FViewDirty:=True; SetScrollPos(Handle,SB_VERT,FVScrollPos,True);
+ R:=Rect(0,ResultTop,ClientWidth,ClientHeight); InvalidateRect(Handle,@R,False);
  Message.Result:=1;
 end;
 
