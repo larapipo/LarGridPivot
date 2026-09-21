@@ -3,7 +3,7 @@ unit Demo.Main;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes, System.IOUtils,
+  Winapi.Windows, System.SysUtils, System.Classes, System.Types, System.IOUtils,
   Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Graphics, Vcl.Themes,
   Data.DB, Datasnap.DBClient,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
