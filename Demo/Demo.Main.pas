@@ -279,15 +279,14 @@ begin
 end;
 
 procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
-var H:TStyleServicesHandle; FN:string;
+var FN:string;
 begin
  if FStyleCombo.ItemIndex<0 then Exit;
  FN:=FStyleFiles[FStyleCombo.ItemIndex];
  try
   if FN='' then TStyleManager.SetStyle('Windows')
   else begin
-   H:=TStyleManager.LoadFromFile(FN);
-   TStyleManager.SetStyle(H);
+   TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
   end;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
