@@ -234,6 +234,8 @@ begin
      FPivot.RefreshFields;
      ConfigurarPivot;
     finally
+     { ConfigurarPivot has its own balanced Begin/EndUpdate. This outer batch
+       absorbs DataLink notifications from Open and performs the final build. }
      FPivot.EndUpdate;
     end;
     FStatus.Caption:=Format('%d registros cargados desde Firebird',[FQuery.RecordCount]);
