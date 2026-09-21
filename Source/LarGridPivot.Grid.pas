@@ -1556,7 +1556,7 @@ begin
   A:=FDragTargetArea; N:=FDragTargetIndex;
   if FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
    FDragTargetArea:=AreaFromPoint(X,Y);
-   FDragTargetIndex:=DropIndexAtPoint(FDragTargetArea,X);
+   FDragTargetIndex:=DropIndexAtPoint(FDragTargetArea,X,Y);
    Cursor:=crHandPoint;
   end else begin
    FDragTargetArea:=paNone; FDragTargetIndex:=-1; Cursor:=crDefault;
