@@ -22,6 +22,7 @@ type
     FBtnSave, FBtnLoad, FBtnRowTotals, FBtnColumnTotals, FBtnFields: TButton;
     FLayout:string;
     FStyleCombo:TComboBox;
+    FStyleFiles:TStringList;
     FBtnGestion:TButton;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
@@ -42,6 +43,7 @@ type
     procedure OpenGestionDemo(Sender:TObject);
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var FrmLarGridPivotDemo: TFrmLarGridPivotDemo;
@@ -64,21 +66,22 @@ constructor TFrmLarGridPivotDemo.Create(AOwner: TComponent);
     B:=TButton.Create(Self); B.Parent:=FTop; B.Left:=ALeft; B.Top:=ATop;
     B.Width:=105; B.Height:=27; B.Caption:=ACaption; B.OnClick:=AClick;
   end;
-var StyleName, BDSPath, PublicPath:string;
+var BDSPath, PublicPath:string;
   procedure LoadStylesFromFolder(const AFolder:string);
-  var Files:TStringDynArray; FileName:string;
+  var Files:TStringDynArray; FileName, DisplayName:string; I:Integer;
   begin
     if (AFolder='') or not TDirectory.Exists(AFolder) then Exit;
     try
       Files:=TDirectory.GetFiles(AFolder,'*.vsf',TSearchOption.soAllDirectories);
-      for FileName in Files do
-        try
-          TStyleManager.LoadFromFile(FileName);
-        except
-          { Ignore an individual incompatible/duplicate style and continue. }
-        end;
+      for FileName in Files do begin
+        DisplayName:=ChangeFileExt(ExtractFileName(FileName),'');
+        if FStyleCombo.Items.IndexOf(DisplayName)>=0 then Continue;
+        I:=FStyleCombo.Items.Add(DisplayName);
+        while FStyleFiles.Count<=I do FStyleFiles.Add('');
+        FStyleFiles[I]:=FileName;
+      end;
     except
-      { A missing/inaccessible optional style folder must not stop the demo. }
+      { An optional style folder must never prevent the demo from starting. }
     end;
   end;
 begin
@@ -138,26 +141,22 @@ begin
   MakeButton(FBtnFields,448,6,'Mostrar campos',ToggleFields);
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
-  { The component itself never requires a particular style. The demo loads
-    installed .vsf files only so the selector can exercise real VCL Styles. }
+  FStyleFiles:=TStringList.Create;
+  FStyleCombo.Items.Add('Windows'); FStyleFiles.Add('');
+  { Enumerate the actual .vsf files instead of relying on StyleNames. StyleNames
+    only reports styles already registered in this executable. }
   LoadStylesFromFolder(TPath.Combine(ExtractFilePath(ParamStr(0)),'Styles'));
+  BDSPath:=GetEnvironmentVariable('BDSCOMMONDIR');
+  if BDSPath<>'' then LoadStylesFromFolder(TPath.Combine(BDSPath,'Styles'));
   BDSPath:=GetEnvironmentVariable('BDS');
-  if BDSPath<>'' then begin
-    LoadStylesFromFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
-    LoadStylesFromFolder(TPath.Combine(BDSPath,'Styles'));
-  end;
-  { BDS is normally an IDE/build environment variable and may not exist in
-    the launched demo. Delphi 12 Athens default install path fallback. }
+  if BDSPath<>'' then LoadStylesFromFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
   BDSPath:=GetEnvironmentVariable('ProgramFiles(x86)');
   if BDSPath<>'' then
     LoadStylesFromFolder(TPath.Combine(BDSPath,'Embarcadero\Studio\23.0\Redist\styles\vcl'));
   PublicPath:=GetEnvironmentVariable('PUBLIC');
   if PublicPath<>'' then
     LoadStylesFromFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
-  for StyleName in TStyleManager.StyleNames do FStyleCombo.Items.Add(StyleName);
-  { Only styles linked into this EXE are returned by StyleNames. Do not
-    auto-activate an arbitrary first entry when the active style is absent. }
-  FStyleCombo.ItemIndex:=FStyleCombo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
+  FStyleCombo.ItemIndex:=0;
   FStyleCombo.OnChange:=ChangeVclStyle;
   MakeButton(FBtnGestion,745,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
 
@@ -280,13 +279,27 @@ begin
 end;
 
 procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
+var H:TStyleServicesHandle; FN:string;
 begin
- if (FStyleCombo.ItemIndex>=0) and
-    (TStyleManager.ActiveStyle.Name<>FStyleCombo.Items[FStyleCombo.ItemIndex]) then begin
-  if not TStyleManager.TrySetStyle(FStyleCombo.Items[FStyleCombo.ItemIndex]) then Exit;
+ if FStyleCombo.ItemIndex<0 then Exit;
+ FN:=FStyleFiles[FStyleCombo.ItemIndex];
+ try
+  if FN='' then TStyleManager.SetStyle('Windows')
+  else begin
+   H:=TStyleManager.LoadFromFile(FN);
+   TStyleManager.SetStyle(H);
+  end;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
+ except
+  on E:Exception do Application.ShowException(E);
  end;
+end;
+
+destructor TFrmLarGridPivotDemo.Destroy;
+begin
+ FStyleFiles.Free;
+ inherited;
 end;
 
 procedure TFrmLarGridPivotDemo.ToggleFields(Sender:TObject);
