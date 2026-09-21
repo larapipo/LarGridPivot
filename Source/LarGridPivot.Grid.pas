@@ -93,6 +93,7 @@ type
     procedure FilterChecklistClickCheck(Sender:TObject);
     procedure PopulateFilterValues(AField: TLarPivotField; AValues: TStrings);
     procedure BuildFilterValueCache;
+    procedure BuildFilterValueCacheFromSnapshot;
     procedure ToggleFieldSort(AField:TLarPivotField; AKeepExisting:Boolean=False);
     function AreaFields(AArea: TLarPivotArea): TList<TLarPivotField>;
     function AreaCaption(AArea: TLarPivotArea): string;
@@ -455,7 +456,7 @@ begin
    on memory and never walk the application's live dataset again. }
  if FSnapshot=nil then begin
   FSnapshot:=TLarMemoryPivotProvider.Create(FDataSource.DataSet);
-  BuildFilterValueCache;
+  BuildFilterValueCacheFromSnapshot;
  end;
  P:=FSnapshot;
  FEngine.Build(P);
@@ -695,6 +696,45 @@ begin
  if not FieldChipRect(F,R) then Exit;
  B:=Rect(R.Right-32,R.Top,R.Right-16,R.Bottom);
  if PtInRect(B,Point(AX,AY)) then Result:=F;
+end;
+
+procedure TLarGridPivot.BuildFilterValueCacheFromSnapshot;
+var I,J:Integer; L:TStringList; Lists:TObjectList<TStringList>; V:Variant;
+ S,CacheKey,Cached:string;
+begin
+ FFilterValueCache.Clear;
+ if FSnapshot=nil then Exit;
+ Lists:=TObjectList<TStringList>.Create(True);
+ try
+  for I:=0 to FFields.Count-1 do begin
+   L:=TStringList.Create;
+   L.Sorted:=False; L.Duplicates:=dupAccept;
+   Lists.Add(L);
+  end;
+  if FSnapshot.First then
+   while not FSnapshot.EOF do begin
+    for I:=0 to FFields.Count-1 do begin
+     J:=FSnapshot.FieldIndexOf(FFields[I].FieldName);
+     V:=FSnapshot.GetValueByIndex(J);
+     if VarIsNull(V) or VarIsEmpty(V) then S:='(null)' else S:=VarToStr(V);
+     Lists[I].Add(S);
+    end;
+    FSnapshot.Next;
+   end;
+  for I:=0 to FFields.Count-1 do begin
+   L:=Lists[I]; L.Sort;
+   J:=L.Count-1;
+   while J>0 do begin
+    if SameText(L[J],L[J-1]) then L.Delete(J);
+    Dec(J);
+   end;
+   CacheKey:=UpperCase(FFields[I].FieldName);
+   Cached:=StringReplace(L.Text,sLineBreak,#30,[rfReplaceAll]);
+   FFilterValueCache.Values[CacheKey]:=Cached;
+  end;
+ finally
+  Lists.Free;
+ end;
 end;
 
 procedure TLarGridPivot.BuildFilterValueCache;
