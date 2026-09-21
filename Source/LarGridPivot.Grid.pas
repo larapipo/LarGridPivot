@@ -3,7 +3,7 @@ unit LarGridPivot.Grid;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
+  Winapi.Windows, System.SysUtils, System.Classes, System.Variants, System.Zip, System.IOUtils,
   System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
@@ -1234,8 +1234,9 @@ begin
 end;
 
 procedure TLarGridPivot.ExportToExcel(const AFileName:string);
-var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
- Cell:TLarPivotResultCell; V:Variant;
+var Zip:TZipFile; RFs:TList<TLarPivotField>; Row,D,I,ColIndex:Integer;
+ Sheet,Line,S,FileName:string; Cell:TLarPivotResultCell; V:Variant;
+ MS:TMemoryStream; B:TBytes;
  function X(const A:string):string;
  begin
   Result:=StringReplace(A,'&','&amp;',[rfReplaceAll]);
@@ -1243,39 +1244,99 @@ var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
   Result:=StringReplace(Result,'>','&gt;',[rfReplaceAll]);
   Result:=StringReplace(Result,'"','&quot;',[rfReplaceAll]);
  end;
- procedure AddCell(var ALine:string;const AValue:string);
- begin ALine:=ALine+'<Cell><Data ss:Type="String">'+X(AValue)+'</Data></Cell>'; end;
+ function ColName(AIndex:Integer):string;
+ var N:Integer;
+ begin
+  Result:=''; N:=AIndex+1;
+  while N>0 do begin
+   Result:=Chr(Ord('A')+((N-1) mod 26))+Result;
+   N:=(N-1) div 26;
+  end;
+ end;
+ function TextCell(ACol,ARow:Integer;const AValue:string):string;
+ begin
+  Result:='<c r="'+ColName(ACol)+IntToStr(ARow)+'" t="inlineStr"><is><t xml:space="preserve">'+X(AValue)+'</t></is></c>';
+ end;
+ function NumberCell(ACol,ARow:Integer;const AValue:Variant):string;
+ var FS:TFormatSettings; N:Double;
+ begin
+  N:=AValue; FS:=TFormatSettings.Create; FS.DecimalSeparator:='.';
+  Result:='<c r="'+ColName(ACol)+IntToStr(ARow)+'"><v>'+FloatToStr(N,FS)+'</v></c>';
+ end;
+ procedure AddZipText(const AName,AContent:string);
+ begin
+  B:=TEncoding.UTF8.GetBytes(AContent);
+  MS:=TMemoryStream.Create;
+  try
+   if Length(B)>0 then MS.WriteBuffer(B[0],Length(B));
+   MS.Position:=0; Zip.Add(MS,AName);
+  finally MS.Free; end;
+ end;
 begin
- { SpreadsheetML is an Excel-native workbook format and requires no Excel/COM
-   installation. Excel opens it directly; CSV remains available for interchange. }
  BuildViewInfo;
- RFs:=AxisFields(paRow); SL:=TStringList.Create;
+ FileName:=ChangeFileExt(AFileName,'.xlsx');
+ RFs:=AxisFields(paRow);
+ Zip:=TZipFile.Create;
  try
-  SL.Add('<?xml version="1.0" encoding="UTF-8"?>');
-  SL.Add('<?mso-application progid="Excel.Sheet"?>');
-  SL.Add('<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">');
-  SL.Add('<Worksheet ss:Name="Pivot"><Table>');
-  Line:='<Row>';
-  for I:=0 to RFs.Count-1 do AddCell(Line,RFs[I].Caption);
+  Zip.Open(FileName,zmWrite);
+  AddZipText('[Content_Types].xml',
+   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+   '<Default Extension="xml" ContentType="application/xml"/>'+
+   '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+   '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+   '</Types>');
+  AddZipText('_rels/.rels',
+   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'+
+   '</Relationships>');
+  AddZipText('xl/workbook.xml',
+   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+   '<sheets><sheet name="Pivot" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  AddZipText('xl/_rels/workbook.xml.rels',
+   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'+
+   '</Relationships>');
+
+  Sheet:='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+   '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  Line:='<row r="1">'; ColIndex:=0;
+  for I:=0 to RFs.Count-1 do begin
+   Line:=Line+TextCell(ColIndex,1,RFs[I].Caption); Inc(ColIndex);
+  end;
   for D:=0 to FLayoutEngine.Columns.Count-1 do begin
    S:=FLayoutEngine.Columns[D].ColumnKey;
    if FLayoutEngine.Columns[D].DataField<>nil then S:=S+' '+FLayoutEngine.Columns[D].DataField.Caption;
-   AddCell(Line,S);
+   Line:=Line+TextCell(ColIndex,1,S); Inc(ColIndex);
   end;
-  SL.Add(Line+'</Row>');
+  Sheet:=Sheet+Line+'</row>';
   for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-   Line:='<Row>';
-   for I:=0 to RFs.Count-1 do AddCell(Line,KeyPart(FEngine.Model.RowKeys[Row],I));
+   Line:='<row r="'+IntToStr(Row+2)+'">'; ColIndex:=0;
+   for I:=0 to RFs.Count-1 do begin
+    Line:=Line+TextCell(ColIndex,Row+2,KeyPart(FEngine.Model.RowKeys[Row],I)); Inc(ColIndex);
+   end;
    for D:=0 to FLayoutEngine.Columns.Count-1 do begin
     Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName);
     if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null;
-    AddCell(Line,FormatCellValue(V,FLayoutEngine.Columns[D].DataField));
+    if VarIsNull(V) or VarIsEmpty(V) then
+     Line:=Line+TextCell(ColIndex,Row+2,'')
+    else if VarIsNumeric(V) then
+     Line:=Line+NumberCell(ColIndex,Row+2,V)
+    else
+     Line:=Line+TextCell(ColIndex,Row+2,VarToStr(V));
+    Inc(ColIndex);
    end;
-   SL.Add(Line+'</Row>');
+   Sheet:=Sheet+Line+'</row>';
   end;
-  SL.Add('</Table></Worksheet></Workbook>');
-  SL.SaveToFile(AFileName,TEncoding.UTF8);
- finally SL.Free; RFs.Free; end;
+  Sheet:=Sheet+'</sheetData></worksheet>';
+  AddZipText('xl/worksheets/sheet1.xml',Sheet);
+ finally
+  Zip.Free; RFs.Free;
+ end;
 end;
 
 procedure TLarGridPivot.Paint;
@@ -1615,9 +1676,9 @@ begin
  D:=TSaveDialog.Create(nil);
  try
   D.Title:='Exportar pivot a Excel';
-  D.Filter:='Libro XML de Excel (*.xml)|*.xml';
-  D.DefaultExt:='xml';
-  D.FileName:='Pivot.xml';
+  D.Filter:='Libro de Excel (*.xlsx)|*.xlsx';
+  D.DefaultExt:='xlsx';
+  D.FileName:='Pivot.xlsx';
   if D.Execute then ExportToExcel(D.FileName);
  finally D.Free; end;
 end;
