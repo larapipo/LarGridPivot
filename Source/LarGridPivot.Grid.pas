@@ -64,6 +64,10 @@ type
     procedure FieldFilterClick(Sender:TObject);
     procedure GridExportExcelClick(Sender:TObject);
     procedure GridExportCSVClick(Sender:TObject);
+    procedure GridToggleRowTotalsClick(Sender:TObject);
+    procedure GridToggleColumnTotalsClick(Sender:TObject);
+    procedure GridToggleGrandTotalClick(Sender:TObject);
+    procedure AddTotalsMenuItems(AMenu:TPopupMenu);
     procedure ShowGridMenu(X,Y:Integer);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
     function GroupID(const ARowKey:string; ALevel:Integer):string;
@@ -1554,11 +1558,24 @@ begin
   end;
   X:=RowHeaderTotal;
   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
-  if FShowRowTotals then
-   for D:=0 to DFs.Count-1 do begin
-    S:='TOTAL'; if DFs.Count>1 then S:=S+' '+DFs[D].Caption;
-    DrawCell(Rect(X,Y,X+DFs[D].Width,Y+HeaderLevels*FHeaderHeight),S,taCenter,True,True); Inc(X,DFs[D].Width);
+  { Row-total columns use the same multi-level header geometry as the pivot:
+    one spanning "Totales" title and the data-field captions below it. }
+  if FShowRowTotals then begin
+   if DFs.Count>0 then begin
+    D:=0;
+    for Lvl:=0 to DFs.Count-1 do Inc(D,DFs[Lvl].Width);
+    if HeaderLevels>1 then
+     DrawCell(Rect(X,Y,X+D,Y+(HeaderLevels-1)*FHeaderHeight),'Totales',taCenter,True);
    end;
+   for D:=0 to DFs.Count-1 do begin
+    if HeaderLevels>1 then
+     R:=Rect(X,Y+(HeaderLevels-1)*FHeaderHeight,X+DFs[D].Width,Y+HeaderLevels*FHeaderHeight)
+    else
+     R:=Rect(X,Y,X+DFs[D].Width,Y+FHeaderHeight);
+    DrawCell(R,DFs[D].Caption,taCenter,True);
+    Inc(X,DFs[D].Width);
+   end;
+  end;
 
   if RFs.Count=0 then
    for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
@@ -1746,6 +1763,7 @@ begin
   AddItem('-',nil);
   AddItem('Mostrar / ocultar subtotal',HierarchyToggleSubtotalClick);
  end;
+ AddTotalsMenuItems(FHierarchyMenu);
  AddItem('-',nil);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
@@ -1778,12 +1796,38 @@ begin
  finally D.Free; end;
 end;
 
+procedure TLarGridPivot.GridToggleRowTotalsClick(Sender:TObject);
+begin ShowRowTotals:=not ShowRowTotals; end;
+
+procedure TLarGridPivot.GridToggleColumnTotalsClick(Sender:TObject);
+begin ShowColumnTotals:=not ShowColumnTotals; end;
+
+procedure TLarGridPivot.GridToggleGrandTotalClick(Sender:TObject);
+begin ShowGrandTotal:=not ShowGrandTotal; end;
+
+procedure TLarGridPivot.AddTotalsMenuItems(AMenu:TPopupMenu);
+ procedure AddItem(const ACaption:string; AHandler:TNotifyEvent; AChecked:Boolean);
+ var MI:TMenuItem;
+ begin
+  MI:=TMenuItem.Create(AMenu); MI.Caption:=ACaption; MI.OnClick:=AHandler;
+  MI.AutoCheck:=False; MI.Checked:=AChecked; AMenu.Items.Add(MI);
+ end;
+var Sep:TMenuItem;
+begin
+ Sep:=TMenuItem.Create(AMenu); Sep.Caption:='-'; AMenu.Items.Add(Sep);
+ AddItem('Mostrar totales en filas',GridToggleRowTotalsClick,FShowRowTotals);
+ AddItem('Mostrar totales en columnas',GridToggleColumnTotalsClick,FShowColumnTotals);
+ AddItem('Mostrar total general',GridToggleGrandTotalClick,FShowGrandTotal);
+end;
+
 procedure TLarGridPivot.ShowGridMenu(X,Y:Integer);
 var M:TMenuItem; P:TPoint;
  procedure AddItem(const ACaption:string;AHandler:TNotifyEvent);
  begin M:=TMenuItem.Create(FGridMenu); M.Caption:=ACaption; M.OnClick:=AHandler; FGridMenu.Items.Add(M); end;
 begin
  FGridMenu.Items.Clear;
+ AddTotalsMenuItems(FGridMenu);
+ AddItem('-',nil);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y));
