@@ -1162,12 +1162,18 @@ begin
    case VI.Kind of
     pvekFieldHeader:
      begin
-      S:=VI.Caption;
+      { Never use a Unicode glyph for sort direction: projects saved/compiled
+        with a legacy source codepage rendered it as "â–²". Draw the marker. }
+      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
       if (VI.Field<>nil) and (VI.Field.SortOrder<>psoNone) then begin
-       if VI.Field.SortOrder=psoAscending then S:=S+'  ▲'
-       else S:=S+'  ▼';
+       R:=VI.Bounds;
+       Canvas.Brush.Color:=ThemeHeaderTextColor;
+       Canvas.Pen.Color:=ThemeHeaderTextColor;
+       if VI.Field.SortOrder=psoAscending then
+        Canvas.Polygon([Point(R.Right-14,R.Top+18),Point(R.Right-9,R.Top+11),Point(R.Right-4,R.Top+18)])
+       else
+        Canvas.Polygon([Point(R.Right-14,R.Top+11),Point(R.Right-9,R.Top+18),Point(R.Right-4,R.Top+11)]);
       end;
-      DrawCell(VI.Bounds,S,taCenter,True);
      end;
     pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
@@ -1427,14 +1433,23 @@ begin
 end;
 
 procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
-var A:TLarPivotArea; N:Integer; Hot:TLarPivotField;
+var A:TLarPivotArea; N:Integer; Hot:TLarPivotField; R:TRect;
 begin
  inherited;
  Hot:=nil;
  if FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
   Hot:=FieldAtPoint(X,Y);
-  if Hot<>FHotFilterField then begin FHotFilterField:=Hot; Invalidate; end;
- end else if FHotFilterField<>nil then begin FHotFilterField:=nil; Invalidate; end;
+  if Hot<>FHotFilterField then begin
+   { Hover affects only the old/new chip. Invalidating the whole pivot made
+     the complete result area repaint whenever the mouse crossed a label. }
+   if FieldChipRect(FHotFilterField,R) then InvalidateRect(Handle,@R,False);
+   FHotFilterField:=Hot;
+   if FieldChipRect(FHotFilterField,R) then InvalidateRect(Handle,@R,False);
+  end;
+ end else if FHotFilterField<>nil then begin
+  if FieldChipRect(FHotFilterField,R) then InvalidateRect(Handle,@R,False);
+  FHotFilterField:=nil;
+ end;
  if Assigned(FResizingField) then begin
   { Do not rebuild the complete ViewInfo on every mouse pixel.  Large pivots
     can contain hundreds of thousands of visual cells.  The new width is kept
