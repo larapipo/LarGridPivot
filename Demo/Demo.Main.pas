@@ -153,6 +153,12 @@ begin
   BDSPath:=GetEnvironmentVariable('ProgramFiles(x86)');
   if BDSPath<>'' then
     LoadStylesFromFolder(TPath.Combine(BDSPath,'Embarcadero\Studio\23.0\Redist\styles\vcl'));
+  { This repository is commonly installed below Studio\23.0\Librerias.
+    Derive the RAD Studio root from the running EXE as well; unlike BDS this
+    remains available when the application is launched outside the IDE. }
+  BDSPath:=ExpandFileName(TPath.Combine(ExtractFilePath(ParamStr(0)),'..\..\..\..\..'));
+  LoadStylesFromFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
+  LoadStylesFromFolder(TPath.Combine(BDSPath,'Styles'));
   PublicPath:=GetEnvironmentVariable('PUBLIC');
   if PublicPath<>'' then
     LoadStylesFromFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
