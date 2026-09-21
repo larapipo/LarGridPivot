@@ -42,6 +42,9 @@ type
     FViewDirty:Boolean;
     FScrollDirty:Boolean;
     FFilterValueCache:TStringList;
+    FAutoFieldWidth:Boolean;
+    FMinAutoFieldWidth:Integer;
+    FMaxAutoFieldWidth:Integer;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -76,6 +79,7 @@ type
     function AvailableBandHeight:Integer;
     procedure SetShowFieldPanel(const Value:Boolean);
     procedure SetFieldPanelFontSize(const Value:Integer);
+    function SuggestedFieldWidth(AField:TField; const ACaption:string):Integer;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
     function AreaFromPoint(AX, AY: Integer): TLarPivotArea;
@@ -148,6 +152,9 @@ type
     property ShowGrandTotal: Boolean read FShowGrandTotal write SetShowGrandTotal default True;
     property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
     property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
+    property AutoFieldWidth:Boolean read FAutoFieldWidth write FAutoFieldWidth default True;
+    property MinAutoFieldWidth:Integer read FMinAutoFieldWidth write FMinAutoFieldWidth default 70;
+    property MaxAutoFieldWidth:Integer read FMaxAutoFieldWidth write FMaxAutoFieldWidth default 320;
     property Theme:TLarPivotTheme read FTheme write SetTheme default ptVclStyle;
     property AutoSaveLayout:Boolean read FAutoSaveLayout write FAutoSaveLayout default True;
     property AutoSaveKey:string read FAutoSaveKey write FAutoSaveKey;
@@ -166,7 +173,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
- FShowFieldPanel:=True; FFieldPanelFontSize:=8; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
@@ -399,13 +406,38 @@ begin if Value=FShowColumnTotals then Exit; FShowColumnTotals:=Value; FViewDirty
 procedure TLarGridPivot.SetShowGrandTotal(const Value:Boolean);
 begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 
+function TLarGridPivot.SuggestedFieldWidth(AField:TField;const ACaption:string):Integer;
+var CharWidth,ContentWidth,CaptionWidth,N:Integer;
+begin
+ Canvas.Font.Assign(Font);
+ CaptionWidth:=Canvas.TextWidth(ACaption)+30;
+ CharWidth:=Canvas.TextWidth('0');
+ if CharWidth<6 then CharWidth:=6;
+ N:=AField.DisplayWidth;
+ if N<=0 then N:=AField.Size;
+ if N<=0 then N:=10;
+ ContentWidth:=N*CharWidth+16;
+ case AField.DataType of
+  ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc:ContentWidth:=Max(ContentWidth,90);
+  ftFloat,ftCurrency,ftBCD,ftFMTBcd,ftSingle,ftExtended:ContentWidth:=Max(ContentWidth,110);
+  ftDate:ContentWidth:=Max(ContentWidth,90);
+  ftTime:ContentWidth:=Max(ContentWidth,80);
+  ftDateTime,ftTimeStamp,ftTimeStampOffset:ContentWidth:=Max(ContentWidth,135);
+  ftBoolean:ContentWidth:=Max(ContentWidth,70);
+ end;
+ Result:=Max(ContentWidth,CaptionWidth);
+ if Result<FMinAutoFieldWidth then Result:=FMinAutoFieldWidth;
+ if Result>FMaxAutoFieldWidth then Result:=FMaxAutoFieldWidth;
+end;
+
 procedure TLarGridPivot.BuildFieldsFromDataSet;
 var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField;
 begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSource.DataSet; if not DS.Active then Exit;
  FFields.BeginUpdate; try FFields.Clear; for I:=0 to DS.FieldCount-1 do begin DF:=DS.Fields[I]; PF:=FFields.Add; PF.FieldName:=DF.FieldName;
  { The user-facing label always starts from the dataset field caption. FieldName
    remains only the binding key, so applications can expose friendly captions. }
- if Trim(DF.DisplayLabel)<>'' then PF.Caption:=DF.DisplayLabel else PF.Caption:=DF.FieldName; PF.Width:=100;
+ if Trim(DF.DisplayLabel)<>'' then PF.Caption:=DF.DisplayLabel else PF.Caption:=DF.FieldName;
+ if FAutoFieldWidth then PF.Width:=SuggestedFieldWidth(DF,PF.Caption) else PF.Width:=100;
  case DF.DataType of ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc,ftFloat,ftCurrency,ftBCD,ftFMTBcd,ftSingle,ftExtended:PF.Alignment:=pvaRight;
  ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
 procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
