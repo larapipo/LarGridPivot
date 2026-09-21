@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants,
-  System.Generics.Collections, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Winapi.Messages, Data.DB,
+  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -1075,7 +1075,16 @@ begin
       (VI.Bounds.Top>VisibleContent.Bottom) then
      Continue;
    case VI.Kind of
-    pvekFieldHeader,pvekColumnValue:
+    pvekFieldHeader:
+     begin
+      S:=VI.Caption;
+      if (VI.Field<>nil) and (VI.Field.SortOrder<>psoNone) then begin
+       if VI.Field.SortOrder=psoAscending then S:=S+'  ▲'
+       else S:=S+'  ▼';
+      end;
+      DrawCell(VI.Bounds,S,taCenter,True);
+     end;
+    pvekColumnValue:
      DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     pvekExpandButton:
      begin
