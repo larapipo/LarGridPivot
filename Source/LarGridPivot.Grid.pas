@@ -92,6 +92,7 @@ type
     procedure DrawFieldAreas;
     function AreaFromPoint(AX, AY: Integer): TLarPivotArea;
     function AreaRect(AArea:TLarPivotArea):TRect;
+    function WorkAreaRows(AArea:TLarPivotArea; AWidth:Integer):Integer;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
     function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
@@ -675,16 +676,40 @@ begin
    end;
 end;
 
+function TLarGridPivot.WorkAreaRows(AArea:TLarPivotArea;AWidth:Integer):Integer;
+var L:TList<TLarPivotField>; I,X,W,Usable:Integer; S:string;
+begin
+ Result:=1;
+ if AWidth<=80 then Exit;
+ L:=AreaFields(AArea);
+ try
+  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+  X:=72; Usable:=AWidth-6;
+  for I:=0 to L.Count-1 do begin
+   S:=L[I].Caption; if S='' then S:=L[I].FieldName;
+   W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
+   if (X+W>Usable) and (X>72) then begin Inc(Result); X:=6; end;
+   Inc(X,W+4);
+  end;
+ finally
+  L.Free;
+ end;
+end;
+
 function TLarGridPivot.AreaRect(AArea:TLarPivotArea):TRect;
-var AvH,WorkTop,SplitX,LineH:Integer;
+var AvH,WorkTop,SplitX,LineH,DataRows,ColumnRows,TopRows,RowRows:Integer;
 begin
  if not FShowFieldPanel then Exit(Rect(0,0,0,0));
  AvH:=AvailableBandHeight; WorkTop:=AvH; SplitX:=(ClientWidth*FFieldAreaSplitPercent) div 100; LineH:=24;
+ DataRows:=WorkAreaRows(paData,SplitX);
+ ColumnRows:=WorkAreaRows(paColumn,ClientWidth-SplitX);
+ TopRows:=Max(DataRows,ColumnRows);
+ RowRows:=WorkAreaRows(paRow,ClientWidth);
  case AArea of
   paNone: Result:=Rect(0,0,ClientWidth,AvH);
-  paData: Result:=Rect(0,WorkTop,SplitX,WorkTop+LineH);
-  paColumn: Result:=Rect(SplitX,WorkTop,ClientWidth,WorkTop+LineH);
-  paRow: Result:=Rect(0,WorkTop+LineH,ClientWidth,WorkTop+LineH*2);
+  paData: Result:=Rect(0,WorkTop,SplitX,WorkTop+TopRows*LineH);
+  paColumn: Result:=Rect(SplitX,WorkTop,ClientWidth,WorkTop+TopRows*LineH);
+  paRow: Result:=Rect(0,WorkTop+TopRows*LineH,ClientWidth,WorkTop+(TopRows+RowRows)*LineH);
  else Result:=Rect(0,0,0,0);
  end;
 end;
