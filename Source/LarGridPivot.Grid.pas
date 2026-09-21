@@ -351,7 +351,7 @@ begin
  if P<SI.nMin then P:=SI.nMin;
  if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
  if P<0 then P:=0;
- if P<>FHScrollPos then begin FHScrollPos:=P; SetScrollPos(Handle,SB_HORZ,P,True); Invalidate; end;
+ if P<>FHScrollPos then begin FHScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_HORZ,P,True); Invalidate; end;
 end;
 
 procedure TLarGridPivot.WMVScroll(var Message:TWMVScroll);
@@ -522,7 +522,9 @@ begin
   FViewInfo.BuildHeaders(RFs,CFs,DFs,EffectiveFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
   FViewInfo.BuildBody(RFs,DFs,FEngine.Model.RowKeys,HeaderLevels,
     FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FCollapsedGroups,
+    FHScrollPos,
     EffectiveFieldAreaHeight+FVScrollPos,
+    FHScrollPos+ClientWidth+FRowHeight,
     FVScrollPos+ClientHeight+FRowHeight);
  finally
   CFs.Free; RFs.Free; DFs.Free;
