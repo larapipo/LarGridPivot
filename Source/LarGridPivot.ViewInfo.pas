@@ -118,10 +118,9 @@ begin
   Item:=TLarPivotViewItem.Create;
   Item.Kind:=pvekFieldHeader; Item.Field:=ARowFields[I]; Item.Level:=I;
   Item.Caption:=ARowFields[I].Caption; if Item.Caption='' then Item.Caption:=ARowFields[I].FieldName;
-  { Row-axis captions stay compact like a normal result row and remain
-    aligned with the lowest header band. Do not stretch them over the complete
-    column hierarchy. }
-  Item.Bounds:=Rect(X,FHeaderTop+Levels*FHeaderHeight-FRowHeight,
+  { Row-axis captions occupy only the last header band, as in the
+    original compact layout. HeaderHeight defaults to RowHeight in the grid. }
+  Item.Bounds:=Rect(X,FHeaderTop+(Levels-1)*FHeaderHeight,
     X+ARowFields[I].Width,FHeaderTop+Levels*FHeaderHeight);
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
