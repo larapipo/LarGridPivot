@@ -1234,8 +1234,8 @@ begin
 end;
 
 procedure TLarGridPivot.ExportToExcel(const AFileName:string);
-var Zip:TZipFile; RFs:TList<TLarPivotField>; Row,D,I,ColIndex:Integer;
- Sheet,Line,S,FileName:string; Cell:TLarPivotResultCell; V:Variant;
+var Zip:TZipFile; RFs,CFs:TList<TLarPivotField>; Row,D,I,ColIndex,HeaderRows,DataRow,Level,StartCol,EndCol:Integer;
+ Sheet,Line,S,FileName,Merges:string; Cell:TLarPivotResultCell; V:Variant;
  MS:TMemoryStream; B:TBytes;
  function X(const A:string):string;
  begin
@@ -1275,7 +1275,7 @@ var Zip:TZipFile; RFs:TList<TLarPivotField>; Row,D,I,ColIndex:Integer;
 begin
  BuildViewInfo;
  FileName:=ChangeFileExt(AFileName,'.xlsx');
- RFs:=AxisFields(paRow);
+ RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  Zip:=TZipFile.Create;
  try
   Zip.Open(FileName,zmWrite);
@@ -1302,40 +1302,85 @@ begin
    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'+
    '</Relationships>');
 
+  { Build the worksheet from the pivot layout, preserving the visible
+    column hierarchy instead of flattening ColumnKey into one caption. }
+  HeaderRows:=CFs.Count;
+  if FLayoutEngine.Columns.Count>0 then Inc(HeaderRows); { data-field band }
+  if HeaderRows=0 then HeaderRows:=1;
   Sheet:='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
-  Line:='<row r="1">'; ColIndex:=0;
-  for I:=0 to RFs.Count-1 do begin
-   Line:=Line+TextCell(ColIndex,1,RFs[I].Caption); Inc(ColIndex);
+  Merges:='';
+
+  { Row fields span the complete pivot header. }
+  for Level:=0 to HeaderRows-1 do begin
+   Line:='<row r="'+IntToStr(Level+1)+'">';
+   if Level=0 then
+    for I:=0 to RFs.Count-1 do begin
+     Line:=Line+TextCell(I,1,RFs[I].Caption);
+     if HeaderRows>1 then
+      Merges:=Merges+'<mergeCell ref="'+ColName(I)+'1:'+ColName(I)+IntToStr(HeaderRows)+'"/>';
+    end;
+
+   { One real Excel header row for each column hierarchy level. }
+   if Level<CFs.Count then begin
+    D:=0;
+    while D<FLayoutEngine.Columns.Count do begin
+     S:=KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level);
+     StartCol:=RFs.Count+D;
+     EndCol:=D;
+     while (EndCol+1<FLayoutEngine.Columns.Count) and
+       (KeyPart(FLayoutEngine.Columns[EndCol+1].ColumnKey,Level)=S) do Inc(EndCol);
+     { Do not merge across a change in any parent level. }
+     if Level>0 then
+      while (EndCol>D) and
+       (KeyPart(FLayoutEngine.Columns[EndCol].ColumnKey,Level-1)<>
+        KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level-1)) do Dec(EndCol);
+     Line:=Line+TextCell(StartCol,Level+1,S);
+     if EndCol>D then
+      Merges:=Merges+'<mergeCell ref="'+ColName(StartCol)+IntToStr(Level+1)+':'+
+        ColName(RFs.Count+EndCol)+IntToStr(Level+1)+'"/>';
+     D:=EndCol+1;
+    end;
+   end else begin
+    { Lowest band contains the actual measure/data fields. }
+    for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+     S:='';
+     if FLayoutEngine.Columns[D].DataField<>nil then begin
+      S:=FLayoutEngine.Columns[D].DataField.Caption;
+      if S='' then S:=FLayoutEngine.Columns[D].DataField.FieldName;
+     end;
+     Line:=Line+TextCell(RFs.Count+D,Level+1,S);
+    end;
+   end;
+   Sheet:=Sheet+Line+'</row>';
   end;
-  for D:=0 to FLayoutEngine.Columns.Count-1 do begin
-   S:=FLayoutEngine.Columns[D].ColumnKey;
-   if FLayoutEngine.Columns[D].DataField<>nil then S:=S+' '+FLayoutEngine.Columns[D].DataField.Caption;
-   Line:=Line+TextCell(ColIndex,1,S); Inc(ColIndex);
-  end;
-  Sheet:=Sheet+Line+'</row>';
+
+  DataRow:=HeaderRows+1;
   for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
-   Line:='<row r="'+IntToStr(Row+2)+'">'; ColIndex:=0;
+   Line:='<row r="'+IntToStr(DataRow)+'">'; ColIndex:=0;
    for I:=0 to RFs.Count-1 do begin
-    Line:=Line+TextCell(ColIndex,Row+2,KeyPart(FEngine.Model.RowKeys[Row],I)); Inc(ColIndex);
+    Line:=Line+TextCell(ColIndex,DataRow,KeyPart(FEngine.Model.RowKeys[Row],I)); Inc(ColIndex);
    end;
    for D:=0 to FLayoutEngine.Columns.Count-1 do begin
     Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName);
     if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null;
     if VarIsNull(V) or VarIsEmpty(V) then
-     Line:=Line+TextCell(ColIndex,Row+2,'')
+     Line:=Line+TextCell(ColIndex,DataRow,'')
     else if VarIsNumeric(V) then
-     Line:=Line+NumberCell(ColIndex,Row+2,V)
+     Line:=Line+NumberCell(ColIndex,DataRow,V)
     else
-     Line:=Line+TextCell(ColIndex,Row+2,VarToStr(V));
+     Line:=Line+TextCell(ColIndex,DataRow,FormatCellValue(V,FLayoutEngine.Columns[D].DataField));
     Inc(ColIndex);
    end;
-   Sheet:=Sheet+Line+'</row>';
+   Sheet:=Sheet+Line+'</row>'; Inc(DataRow);
   end;
-  Sheet:=Sheet+'</sheetData></worksheet>';
+  Sheet:=Sheet+'</sheetData>';
+  if Merges<>'' then
+   Sheet:=Sheet+'<mergeCells count="'+IntToStr((Length(Merges)-Length(StringReplace(Merges,'<mergeCell','',[rfReplaceAll]))) div Length('<mergeCell'))+'">'+Merges+'</mergeCells>';
+  Sheet:=Sheet+'</worksheet>';
   AddZipText('xl/worksheets/sheet1.xml',Sheet);
  finally
-  Zip.Free; RFs.Free;
+  Zip.Free; CFs.Free; RFs.Free;
  end;
 end;
 
