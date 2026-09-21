@@ -736,7 +736,12 @@ begin
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
-   if (A=paNone) and (X+W>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
+   if (X+W>AR.Right-6) and
+      (((A=paNone) and (X>AR.Left+6)) or ((A<>paNone) and (X>AR.Left+72))) then
+   begin
+    X:=AR.Left+6;
+    Inc(Y,24);
+   end;
    R:=Rect(X,Y,X+W,Y+20);
    if L[I]=AField then Exit(True);
    X:=R.Right+4;
@@ -756,16 +761,26 @@ begin
 end;
 
 function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer):Integer;
-var L:TList<TLarPivotField>; I,X,ChipW:Integer; S:string;
+var L:TList<TLarPivotField>; I,X,Y,ChipW:Integer; S:string; AR:TRect;
 begin
- Result:=0; X:=AreaRect(AArea).Left+6; if AArea<>paNone then X:=AreaRect(AArea).Left+72; L:=AreaFields(AArea);
+ Result:=0; AR:=AreaRect(AArea); X:=AR.Left+6; Y:=AR.Top+3;
+ if AArea<>paNone then X:=AR.Left+72;
+ L:=AreaFields(AArea);
  try
   Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
   for I:=0 to L.Count-1 do begin
    if L[I]=FDragField then Continue;
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
-   if AX < X+(ChipW div 2) then Exit(Result);
+   if (X+ChipW>AR.Right-6) and
+      (((AArea=paNone) and (X>AR.Left+6)) or ((AArea<>paNone) and (X>AR.Left+72))) then
+   begin
+    X:=AR.Left+6;
+    Inc(Y,24);
+   end;
+   { X remains the primary insertion discriminator; wrapped lines preserve the
+     same field order used by drawing and hit testing. }
+   if AX<X+(ChipW div 2) then Exit(Result);
    Inc(Result); Inc(X,ChipW+4);
   end;
  finally L.Free; end;
@@ -1083,7 +1098,12 @@ begin
    for J:=0 to Count-1 do begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
     ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
-    if (A=paNone) and (X+ChipW>AR.Right-6) and (X>AR.Left+6) then begin X:=AR.Left+6; Inc(Y,24); end;
+    if (X+ChipW>AR.Right-6) and
+       (((A=paNone) and (X>AR.Left+6)) or ((A<>paNone) and (X>AR.Left+72))) then
+    begin
+     X:=AR.Left+6;
+     Inc(Y,24);
+    end;
     if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
     if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
