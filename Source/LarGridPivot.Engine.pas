@@ -26,6 +26,7 @@ type
     constructor Create(AFields: TLarPivotFields);
     destructor Destroy; override;
     procedure Build(const AProvider: ILarPivotDataProvider);
+    procedure Resort;
     property Model: TLarPivotModel read FModel;
     property Filters: TLarPivotFilters read FFilters;
   end;
@@ -155,6 +156,20 @@ begin
    Result:=Result+#29; Inc(I); Inc(P); Continue;
   end;
   Result:=Result+ARowKey[P]; Inc(P);
+ end;
+end;
+
+procedure TLarPivotEngine.Resort;
+var RowFields,ColumnFields:TList<TLarPivotField>;
+begin
+ RowFields:=FieldsForArea(paRow);
+ ColumnFields:=FieldsForArea(paColumn);
+ try
+  SortKeys(FModel.RowKeys,RowFields);
+  SortKeys(FModel.ColumnKeys,ColumnFields);
+ finally
+  ColumnFields.Free;
+  RowFields.Free;
  end;
 end;
 
