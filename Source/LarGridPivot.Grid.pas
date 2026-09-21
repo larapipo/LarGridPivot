@@ -148,6 +148,8 @@ type
     procedure GetViewNames(AList:TStrings);
     procedure SaveViewsToFile(const AFileName:string);
     procedure LoadViewsFromFile(const AFileName:string);
+    procedure ExportToCSV(const AFileName:string);
+    procedure ExportToExcel(const AFileName:string);
     property Engine: TLarPivotEngine read FEngine;
     function HitTestAt(X, Y: Integer): TLarPivotHitTest;
   published
@@ -1188,6 +1190,82 @@ begin Result:=TList<TLarPivotField>.Create; for I:=0 to FFields.Count-1 do if FF
  for I:=0 to Result.Count-2 do for J:=I+1 to Result.Count-1 do if Result[I].AreaIndex>Result[J].AreaIndex then begin T:=Result[I];Result[I]:=Result[J];Result[J]:=T;end; end;
 function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin case AField.Alignment of pvaLeft:Result:=taLeftJustify;pvaCenter:Result:=taCenter;pvaRight:Result:=taRightJustify;else Result:=taLeftJustify;end; end;
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
+
+procedure TLarGridPivot.ExportToCSV(const AFileName:string);
+var SL:TStringList; RFs,DFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
+ Cell:TLarPivotResultCell; V:Variant;
+ function Q(const A:string):string;
+ begin Result:='"'+StringReplace(A,'"','""',[rfReplaceAll])+'"'; end;
+begin
+ RFs:=AxisFields(paRow); DFs:=DataFields; SL:=TStringList.Create;
+ try
+  Line:='';
+  for I:=0 to RFs.Count-1 do begin if Line<>'' then Line:=Line+';'; Line:=Line+Q(RFs[I].Caption); end;
+  for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+   if Line<>'' then Line:=Line+';';
+   S:=FLayoutEngine.Columns[D].ColumnKey;
+   if FLayoutEngine.Columns[D].DataField<>nil then S:=S+' '+FLayoutEngine.Columns[D].DataField.Caption;
+   Line:=Line+Q(S);
+  end;
+  SL.Add(Line);
+  for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
+   Line:='';
+   for I:=0 to RFs.Count-1 do begin if Line<>'' then Line:=Line+';'; Line:=Line+Q(KeyPart(FEngine.Model.RowKeys[Row],I)); end;
+   for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+    Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName);
+    if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null;
+    S:=FormatCellValue(V,FLayoutEngine.Columns[D].DataField);
+    if Line<>'' then Line:=Line+';'; Line:=Line+Q(S);
+   end;
+   SL.Add(Line);
+  end;
+  SL.SaveToFile(AFileName,TEncoding.UTF8);
+ finally SL.Free; DFs.Free; RFs.Free; end;
+end;
+
+procedure TLarGridPivot.ExportToExcel(const AFileName:string);
+var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
+ Cell:TLarPivotResultCell; V:Variant;
+ function X(const A:string):string;
+ begin
+  Result:=StringReplace(A,'&','&amp;',[rfReplaceAll]);
+  Result:=StringReplace(Result,'<','&lt;',[rfReplaceAll]);
+  Result:=StringReplace(Result,'>','&gt;',[rfReplaceAll]);
+  Result:=StringReplace(Result,'"','&quot;',[rfReplaceAll]);
+ end;
+ procedure AddCell(var ALine:string;const AValue:string);
+ begin ALine:=ALine+'<Cell><Data ss:Type="String">'+X(AValue)+'</Data></Cell>'; end;
+begin
+ { SpreadsheetML is an Excel-native workbook format and requires no Excel/COM
+   installation. Excel opens it directly; CSV remains available for interchange. }
+ RFs:=AxisFields(paRow); SL:=TStringList.Create;
+ try
+  SL.Add('<?xml version="1.0" encoding="UTF-8"?>');
+  SL.Add('<?mso-application progid="Excel.Sheet"?>');
+  SL.Add('<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">');
+  SL.Add('<Worksheet ss:Name="Pivot"><Table>');
+  Line:='<Row>';
+  for I:=0 to RFs.Count-1 do AddCell(Line,RFs[I].Caption);
+  for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+   S:=FLayoutEngine.Columns[D].ColumnKey;
+   if FLayoutEngine.Columns[D].DataField<>nil then S:=S+' '+FLayoutEngine.Columns[D].DataField.Caption;
+   AddCell(Line,S);
+  end;
+  SL.Add(Line+'</Row>');
+  for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
+   Line:='<Row>';
+   for I:=0 to RFs.Count-1 do AddCell(Line,KeyPart(FEngine.Model.RowKeys[Row],I));
+   for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+    Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName);
+    if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null;
+    AddCell(Line,FormatCellValue(V,FLayoutEngine.Columns[D].DataField));
+   end;
+   SL.Add(Line+'</Row>');
+  end;
+  SL.Add('</Table></Worksheet></Workbook>');
+  SL.SaveToFile(AFileName,TEncoding.UTF8);
+ finally SL.Free; RFs.Free; end;
+end;
 
 procedure TLarGridPivot.Paint;
 var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
