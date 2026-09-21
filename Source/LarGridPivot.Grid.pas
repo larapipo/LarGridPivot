@@ -318,11 +318,12 @@ begin
   if HeaderLevels>0 then Inc(HeaderLevels);
   if DFs.Count>1 then Inc(HeaderLevels);
   if HeaderLevels=0 then HeaderLevels:=1;
-  H:=ResultTop+HeaderLevels*FHeaderHeight;
-  for VI in FViewInfo.Items do begin
+  H:=FViewInfo.ContentBottom;
+  if H<ResultTop+HeaderLevels*FHeaderHeight then
+   H:=ResultTop+HeaderLevels*FHeaderHeight;
+  { Body items are viewport-virtualized; width still comes from layout above. }
+  for VI in FViewInfo.Items do
    if VI.Bounds.Right>W then W:=VI.Bounds.Right;
-   if VI.Bounds.Bottom>H then H:=VI.Bounds.Bottom;
-  end;
   FContentWidth:=W; FContentHeight:=H;
  finally CFs.Free; RFs.Free; DFs.Free; end;
 
@@ -365,7 +366,7 @@ begin
  if P<SI.nMin then P:=SI.nMin;
  if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
  if P<0 then P:=0;
- if P<>FVScrollPos then begin FVScrollPos:=P; SetScrollPos(Handle,SB_VERT,P,True); Invalidate; end;
+ if P<>FVScrollPos then begin FVScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,P,True); Invalidate; end;
 end;
 
 procedure TLarGridPivot.WMMouseWheel(var Message:TWMMouseWheel);
@@ -378,7 +379,7 @@ begin
  MaxPos:=SI.nMax-Integer(SI.nPage)+1; if MaxPos<0 then MaxPos:=0;
  if FVScrollPos<0 then FVScrollPos:=0;
  if FVScrollPos>MaxPos then FVScrollPos:=MaxPos;
- SetScrollPos(Handle,SB_VERT,FVScrollPos,True); Invalidate;
+ FViewDirty:=True; SetScrollPos(Handle,SB_VERT,FVScrollPos,True); Invalidate;
  Message.Result:=1;
 end;
 
@@ -520,7 +521,9 @@ begin
   FViewInfo.RowHeight:=FRowHeight;
   FViewInfo.BuildHeaders(RFs,CFs,DFs,EffectiveFieldAreaHeight,FHeaderHeight,RowHeaderTotal);
   FViewInfo.BuildBody(RFs,DFs,FEngine.Model.RowKeys,HeaderLevels,
-    FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FCollapsedGroups);
+    FShowRowTotals,FShowColumnTotals,FShowGrandTotal,FCollapsedGroups,
+    EffectiveFieldAreaHeight+FVScrollPos,
+    FVScrollPos+ClientHeight+FRowHeight);
  finally
   CFs.Free; RFs.Free; DFs.Free;
  end;
