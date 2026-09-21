@@ -161,7 +161,7 @@ type
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
     property DataSource: TDataSource read FDataSource write SetDataSource;
     property Fields: TLarPivotFields read FFields write SetFields;
-    property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight default 32;
+    property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight default 24;
     property RowHeight: Integer read FRowHeight write SetRowHeight default 24;
     property RowHeaderWidth: Integer read FRowHeaderWidth write SetRowHeaderWidth default 180;
     property ShowRowTotals: Boolean read FShowRowTotals write SetShowRowTotals default True;
@@ -189,7 +189,7 @@ procedure TLarPivotDataLink.ActiveChanged; begin inherited; if Assigned(FOwner) 
 procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner) then FOwner.DataChanged(Self); end;
 
 constructor TLarGridPivot.Create(AOwner:TComponent);
-begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=24; FRowHeaderWidth:=180;
+begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=24; FRowHeight:=24; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
@@ -473,10 +473,10 @@ end;
 
 procedure TLarGridPivot.SetHeaderHeight(const Value:Integer);
 var N:Integer;
-begin N:=Value; if N<16 then N:=16; if N=FHeaderHeight then Exit; FHeaderHeight:=N; Invalidate; end;
+begin N:=Value; if N<16 then N:=16; if N=FHeaderHeight then Exit; FHeaderHeight:=N; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 procedure TLarGridPivot.SetRowHeight(const Value:Integer);
 var N:Integer;
-begin N:=Value; if N<16 then N:=16; if N=FRowHeight then Exit; FRowHeight:=N; Invalidate; end;
+begin N:=Value; if N<16 then N:=16; if N=FRowHeight then Exit; FRowHeight:=N; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
 procedure TLarGridPivot.SetRowHeaderWidth(const Value:Integer);
 var N:Integer;
 begin N:=Value; if N<40 then N:=40; if N=FRowHeaderWidth then Exit; FRowHeaderWidth:=N; Invalidate; end;
