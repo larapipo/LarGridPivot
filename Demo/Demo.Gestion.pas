@@ -225,9 +225,17 @@ begin
     FQuery.ParamByName('suc').AsInteger:=-1;
     FQuery.ParamByName('mes').AsInteger:=StrToIntDef(FMes.Text,0);
     FQuery.ParamByName('Tipo_Fecha').AsString:='V';
-    FQuery.Open;
-    FPivot.RefreshFields;
-    ConfigurarPivot;
+    { Configure the pivot while the dataset is closed. Opening the query fires
+      DataLink notifications; letting those build a default pivot first caused
+      an expensive snapshot/build that was immediately discarded below. }
+    FPivot.BeginUpdate;
+    try
+     FQuery.Open;
+     FPivot.RefreshFields;
+     ConfigurarPivot;
+    finally
+     FPivot.EndUpdate;
+    end;
     FStatus.Caption:=Format('%d registros cargados desde Firebird',[FQuery.RecordCount]);
   except
     on E:Exception do begin
