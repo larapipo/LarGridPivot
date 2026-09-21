@@ -1421,6 +1421,33 @@ begin
    end;
 
   RestoreDC(Canvas.Handle,-1);
+
+  { Frozen result header: body scrolls vertically, header is repainted at its
+    fixed screen Y while retaining horizontal synchronization. }
+  SaveDC(Canvas.Handle);
+  IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,
+    EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight);
+  SetViewportOrgEx(Canvas.Handle,-FHScrollPos,0,nil);
+  for VI in FViewInfo.Items do
+   if (VI.Kind in [pvekFieldHeader,pvekColumnValue]) and
+      (VI.Bounds.Top<EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight) then
+   begin
+    case VI.Kind of
+     pvekFieldHeader:
+      begin
+       DrawCell(VI.Bounds,VI.Caption,taCenter,True);
+       if (VI.Field<>nil) and (VI.Field.SortOrder<>psoNone) then begin
+        R:=VI.Bounds; Canvas.Brush.Color:=ThemeHeaderTextColor; Canvas.Pen.Color:=ThemeHeaderTextColor;
+        if VI.Field.SortOrder=psoAscending then
+         Canvas.Polygon([Point(R.Right-14,R.Top+18),Point(R.Right-9,R.Top+11),Point(R.Right-4,R.Top+18)])
+        else
+         Canvas.Polygon([Point(R.Right-14,R.Top+11),Point(R.Right-9,R.Top+18),Point(R.Right-4,R.Top+11)]);
+       end;
+      end;
+     pvekColumnValue: DrawCell(VI.Bounds,VI.Caption,taCenter,True);
+    end;
+   end;
+  RestoreDC(Canvas.Handle,-1);
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
 
