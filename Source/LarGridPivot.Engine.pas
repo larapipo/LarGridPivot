@@ -18,7 +18,7 @@ type
     function EncodeKeyPart(const S: string): string;
     function CompareKeys(const A, B: string; AFields: TList<TLarPivotField>): Integer;
     procedure SortKeys(AKeys: TList<string>; AFields: TList<TLarPivotField>);
-    function RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
+    function RecordAcceptedIndexed(const AProvider: ILarPivotDataProvider; const AFilterIndexes:TArray<Integer>; const AActiveFilters:TArray<TLarPivotFilter>): Boolean;
     procedure AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
     procedure AddValueRaw(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
     function RowPrefix(const ARowKey:string; ALevel:Integer):string;
@@ -116,19 +116,14 @@ begin
   begin Result:=CompareKeys(L,R,AFields); end));
 end;
 
-function TLarPivotEngine.RecordAccepted(const AProvider: ILarPivotDataProvider): Boolean;
-var I:Integer; F:TLarPivotField; Filter:TLarPivotFilter;
+function TLarPivotEngine.RecordAcceptedIndexed(const AProvider:ILarPivotDataProvider;
+ const AFilterIndexes:TArray<Integer>;const AActiveFilters:TArray<TLarPivotFilter>):Boolean;
+var I:Integer;
 begin
-  Result:=True;
-  { A filter belongs to the field, not to the filter area.  A row/column/data
-    field remains filterable exactly like a TcxPivotGrid field. }
-  for I:=0 to FFields.Count-1 do begin
-    F:=FFields[I];
-    if not F.Visible then Continue;
-    Filter:=FFilters.Find(F.FieldName);
-    if (Filter<>nil) and Filter.Enabled and
-       not Filter.Accepts(AProvider.GetValue(F.FieldName)) then Exit(False);
-  end;
+ Result:=True;
+ for I:=0 to High(AActiveFilters) do
+  if not AActiveFilters[I].Accepts(AProvider.GetValueByIndex(AFilterIndexes[I])) then
+   Exit(False);
 end;
 
 procedure TLarPivotEngine.AddValue(const ARowKey, AColKey: string; AField: TLarPivotField; const AValue: Variant);
@@ -174,7 +169,7 @@ begin
 end;
 
 procedure TLarPivotEngine.Build(const AProvider: ILarPivotDataProvider);
-var RowKey, ColKey, PrefixKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; V: Variant; Lvl,I:Integer; RowIdx,ColIdx,DataIdx:TArray<Integer>;
+var RowKey, ColKey, PrefixKey: string; DataFields,RowFields,ColumnFields: TList<TLarPivotField>; F: TLarPivotField; Filter:TLarPivotFilter; V: Variant; Lvl,I,FilterCount:Integer; RowIdx,ColIdx,DataIdx,FilterIdx:TArray<Integer>; ActiveFilters:TArray<TLarPivotFilter>;
 begin
   if AProvider = nil then raise EArgumentNilException.Create('AProvider');
   FModel.Clear;
@@ -187,10 +182,26 @@ begin
     for I:=0 to ColumnFields.Count-1 do ColIdx[I]:=AProvider.FieldIndexOf(ColumnFields[I].FieldName);
     SetLength(DataIdx,DataFields.Count);
     for I:=0 to DataFields.Count-1 do DataIdx[I]:=AProvider.FieldIndexOf(DataFields[I].FieldName);
+    { Resolve active filters once per build. High-cardinality filters such as
+      article descriptions must not search fields/filters for every record. }
+    FilterCount:=0;
+    SetLength(FilterIdx,FFields.Count);
+    SetLength(ActiveFilters,FFields.Count);
+    for I:=0 to FFields.Count-1 do
+     if FFields[I].Visible then begin
+      Filter:=FFilters.Find(FFields[I].FieldName);
+      if (Filter<>nil) and Filter.Enabled and (Filter.Values.Count>0) then begin
+       FilterIdx[FilterCount]:=AProvider.FieldIndexOf(FFields[I].FieldName);
+       ActiveFilters[FilterCount]:=Filter;
+       Inc(FilterCount);
+      end;
+     end;
+    SetLength(FilterIdx,FilterCount);
+    SetLength(ActiveFilters,FilterCount);
     if not AProvider.First then Exit;
     while not AProvider.EOF do
     begin
-      if RecordAccepted(AProvider) then
+      if RecordAcceptedIndexed(AProvider,FilterIdx,ActiveFilters) then
       begin
         begin
          RowKey:='';
