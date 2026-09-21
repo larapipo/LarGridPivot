@@ -1655,11 +1655,19 @@ begin
   ShowFieldMenu(X,Y,FieldAtPoint(X,Y)); Exit;
  end;
  if Y>=EffectiveFieldAreaHeight then begin
-  BuildViewInfo; HT:=FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos);
+  BuildViewInfo;
+  { Headers are frozen vertically, so their hit-test Y is screen-relative.
+    Body rows use content-relative Y. }
+  if Y<EffectiveFieldAreaHeight+(FViewInfo.HeaderLevels*FHeaderHeight) then
+   HT:=FViewInfo.HitTest(X+FHScrollPos,Y)
+  else
+   HT:=FViewInfo.HitTest(X+FHScrollPos,Y+FVScrollPos);
   if Button=mbRight then begin
+   { Export must always be reachable from the result area. Hierarchy actions
+     remain available as additional entries when a grouped row was clicked. }
    if HT.Kind in [pvekExpandButton,pvekRowValue,pvekTotalCell] then begin
-    if HT.Level<0 then HT.Level:=0;
-    ShowHierarchyMenu(X,Y,HT); Exit;
+    FHierarchyHit:=HT;
+    ShowGridMenu(X,Y); Exit;
    end;
    ShowGridMenu(X,Y); Exit;
   end;
