@@ -1309,7 +1309,12 @@ begin
   BuildViewInfo;
   UpdateScrollBars;
   SaveDC(Canvas.Handle);
-  IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,ClientHeight);
+  { The scrolling body starts below the frozen result header.  Clipping it at
+    the field-area edge allowed rows to paint through the header before the
+    header was repainted, producing the visible overlap while scrolling. }
+  IntersectClipRect(Canvas.Handle,0,
+    EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight,
+    ClientWidth,ClientHeight);
   SetViewportOrgEx(Canvas.Handle,-FHScrollPos,-FVScrollPos,nil);
   Y:=EffectiveFieldAreaHeight+FVScrollPos;
   { ViewInfo can contain hundreds of thousands of cells, but only a tiny
