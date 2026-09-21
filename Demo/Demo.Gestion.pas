@@ -3,8 +3,8 @@ unit Demo.Gestion;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.DateUtils,
-  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls, Vcl.Themes,
+  System.SysUtils, System.Classes, System.Types, System.IOUtils, System.DateUtils,
+  Vcl.Forms, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls, Vcl.Themes, Vcl.Styles,
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
   FireDAC.Phys, FireDAC.Phys.Intf, FireDAC.Phys.FB, FireDAC.Phys.FBDef,
@@ -26,6 +26,7 @@ type
     FBtnGuardarVista:TButton;
     FBtnBorrarVista:TButton;
     FEstilo:TComboBox;
+    FStyleFiles:TStringList;
     FVistas:TComboBox;
     FStatus:TLabel;
     procedure AbrirDatos(Sender:TObject);
@@ -40,6 +41,7 @@ type
     procedure ConfigurarPivot;
   public
     constructor Create(AOwner:TComponent); override;
+    destructor Destroy; override;
     procedure UseConnection(AConnection:TFDConnection);
     property Connection:TFDConnection read FConnection;
   end;
@@ -82,6 +84,7 @@ begin
   FBtnAbrir.Height:=27; FBtnAbrir.Caption:='Abrir ventas';
   FBtnAbrir.OnClick:=AbrirDatos;
 
+  FStyleFiles:=TStringList.Create;
   FEstilo:=TComboBox.Create(Self); FEstilo.Parent:=FTop;
   FEstilo.Left:=260; FEstilo.Top:=8; FEstilo.Width:=150; FEstilo.Style:=csDropDownList;
   CargarEstilosVcl;
@@ -118,23 +121,59 @@ begin
   ActualizarVistas;
 end;
 
+destructor TFrmLarGridPivotGestionDemo.Destroy;
+begin
+ FStyleFiles.Free;
+ inherited;
+end;
+
 procedure TFrmLarGridPivotGestionDemo.CargarEstilosVcl;
-var S:string;
+var BDSPath,PublicPath:string;
+ procedure AddFolder(const AFolder:string);
+ var Files:TStringDynArray; FN,N:string; I:Integer;
+ begin
+  if (AFolder='') or not TDirectory.Exists(AFolder) then Exit;
+  try
+   Files:=TDirectory.GetFiles(AFolder,'*.vsf',TSearchOption.soAllDirectories);
+   for FN in Files do begin
+    N:=ChangeFileExt(ExtractFileName(FN),'');
+    if FEstilo.Items.IndexOf(N)>=0 then Continue;
+    I:=FEstilo.Items.Add(N);
+    while FStyleFiles.Count<=I do FStyleFiles.Add('');
+    FStyleFiles[I]:=FN;
+   end;
+  except
+  end;
+ end;
 begin
  FEstilo.Items.BeginUpdate;
  try
-  FEstilo.Items.Clear;
-  for S in TStyleManager.StyleNames do FEstilo.Items.Add(S);
-  FEstilo.ItemIndex:=FEstilo.Items.IndexOf(TStyleManager.ActiveStyle.Name);
-  if (FEstilo.ItemIndex<0) and (FEstilo.Items.Count>0) then FEstilo.ItemIndex:=0;
+  FEstilo.Items.Clear; FStyleFiles.Clear;
+  FEstilo.Items.Add('Windows'); FStyleFiles.Add('');
+  AddFolder(TPath.Combine(ExtractFilePath(ParamStr(0)),'Styles'));
+  BDSPath:=GetEnvironmentVariable('BDSCOMMONDIR');
+  if BDSPath<>'' then AddFolder(TPath.Combine(BDSPath,'Styles'));
+  BDSPath:=GetEnvironmentVariable('BDS');
+  if BDSPath<>'' then AddFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
+  BDSPath:=GetEnvironmentVariable('ProgramFiles(x86)');
+  if BDSPath<>'' then AddFolder(TPath.Combine(BDSPath,'Embarcadero\Studio\23.0\Redist\styles\vcl'));
+  PublicPath:=GetEnvironmentVariable('PUBLIC');
+  if PublicPath<>'' then AddFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
+  FEstilo.ItemIndex:=0;
  finally FEstilo.Items.EndUpdate; end;
 end;
 
 procedure TFrmLarGridPivotGestionDemo.CambiarEstilo(Sender:TObject);
+var H:TStyleServicesHandle; FN:string;
 begin
  if FEstilo.ItemIndex<0 then Exit;
+ FN:=FStyleFiles[FEstilo.ItemIndex];
  try
-  TStyleManager.TrySetStyle(FEstilo.Items[FEstilo.ItemIndex]);
+  if FN='' then TStyleManager.SetStyle('Windows')
+  else begin
+   H:=TStyleManager.LoadFromFile(FN);
+   TStyleManager.SetStyle(H);
+  end;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
  except
