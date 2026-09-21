@@ -1729,6 +1729,9 @@ begin
   AddItem('-',nil);
   AddItem('Mostrar / ocultar subtotal',HierarchyToggleSubtotalClick);
  end;
+ AddItem('-',nil);
+ AddItem('Exportar a Excel...',GridExportExcelClick);
+ AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
 end;
 
@@ -1789,8 +1792,8 @@ begin
    { Export must always be reachable from the result area. Hierarchy actions
      remain available as additional entries when a grouped row was clicked. }
    if HT.Kind in [pvekExpandButton,pvekRowValue,pvekTotalCell] then begin
-    FHierarchyHit:=HT;
-    ShowGridMenu(X,Y); Exit;
+    if HT.Level<0 then HT.Level:=0;
+    ShowHierarchyMenu(X,Y,HT); Exit;
    end;
    ShowGridMenu(X,Y); Exit;
   end;
