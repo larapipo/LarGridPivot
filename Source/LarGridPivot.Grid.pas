@@ -94,7 +94,7 @@ type
     function AreaRect(AArea:TLarPivotArea):TRect;
     function WorkAreaRows(AArea:TLarPivotArea; AWidth:Integer):Integer;
     function FieldAtPoint(AX, AY: Integer): TLarPivotField;
-    function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer): Integer;
+    function DropIndexAtPoint(AArea: TLarPivotArea; AX: Integer; AY:Integer): Integer;
     function FilterButtonAtPoint(AX, AY: Integer): TLarPivotField;
     function SortButtonAtPoint(AX, AY: Integer): TLarPivotField;
     function FieldChipRect(AField:TLarPivotField; out R:TRect):Boolean;
@@ -760,7 +760,7 @@ begin
  finally L.Free; end;
 end;
 
-function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer):Integer;
+function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer;AY:Integer):Integer;
 var L:TList<TLarPivotField>; I,X,Y,ChipW:Integer; S:string; AR:TRect;
 begin
  Result:=0; AR:=AreaRect(AArea); X:=AR.Left+6; Y:=AR.Top+3;
@@ -780,7 +780,8 @@ begin
    end;
    { X remains the primary insertion discriminator; wrapped lines preserve the
      same field order used by drawing and hit testing. }
-   if AX<X+(ChipW div 2) then Exit(Result);
+   if (AY<Y+24) and (AX<X+(ChipW div 2)) then Exit(Result);
+   if AY<Y then Exit(Result);
    Inc(Result); Inc(X,ChipW+4);
   end;
  finally L.Free; end;
@@ -1576,7 +1577,7 @@ begin
  F:=FDragField;
  try
   if Assigned(F) and FDraggingField and FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
-   A:=AreaFromPoint(X,Y); N:=DropIndexAtPoint(A,X);
+   A:=AreaFromPoint(X,Y); N:=DropIndexAtPoint(A,X,Y);
    MoveField(F.FieldName,A,N);
   end
   else if Assigned(F) and not FDraggingField and FieldChipRect(F,R) and
