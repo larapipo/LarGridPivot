@@ -43,9 +43,13 @@ type
     FViewDirty:Boolean;
     FScrollDirty:Boolean;
     FFilterValueCache:TStringList;
+    FBusyDepth:Integer;
+    FBusySavedCursor:TCursor;
     FAutoFieldWidth:Boolean;
     FMinAutoFieldWidth:Integer;
     FMaxAutoFieldWidth:Integer;
+    procedure BeginBusy;
+    procedure EndBusy;
     procedure HierarchyExpandClick(Sender:TObject);
     procedure HierarchyCollapseClick(Sender:TObject);
     procedure HierarchyExpandAllClick(Sender:TObject);
@@ -182,13 +186,39 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
- FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
+ FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+procedure TLarGridPivot.BeginBusy;
+begin
+ if FBusyDepth=0 then begin
+  FBusySavedCursor:=Screen.Cursor;
+  { Never preserve a stale hourglass from a previous operation. }
+  if FBusySavedCursor=crHourGlass then FBusySavedCursor:=crDefault;
+  Screen.Cursor:=crHourGlass;
+  Application.ProcessMessages;
+ end;
+ Inc(FBusyDepth);
+end;
+
+procedure TLarGridPivot.EndBusy;
+begin
+ if FBusyDepth<=0 then begin
+  FBusyDepth:=0;
+  Screen.Cursor:=crDefault;
+  Exit;
+ end;
+ Dec(FBusyDepth);
+ if FBusyDepth=0 then begin
+  if FBusySavedCursor=crHourGlass then FBusySavedCursor:=crDefault;
+  Screen.Cursor:=FBusySavedCursor;
+ end;
+end;
+
 procedure TLarGridPivot.BeginUpdate; begin Inc(FUpdating); end;
 procedure TLarGridPivot.EndUpdate; begin if FUpdating>0 then Dec(FUpdating); if FUpdating=0 then Rebuild; end;
 function TLarGridPivot.AutoLayoutFileName:string;
@@ -466,11 +496,10 @@ begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSour
  ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
 procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
 procedure TLarGridPivot.Rebuild;
-var P:ILarPivotDataProvider; OldCursor:TCursor;
+var P:ILarPivotDataProvider;
 begin
  if (FUpdating>0) or FRebuilding then Exit;
- OldCursor:=Screen.Cursor; Screen.Cursor:=crHourGlass;
- Application.ProcessMessages;
+ BeginBusy;
  FRebuilding:=True;
  try if (FDataSource=nil) or (FDataSource.DataSet=nil) or not FDataSource.DataSet.Active then begin FEngine.Model.Clear; FViewInfo.Clear; FLayoutEngine.Clear; Invalidate; Exit; end;
  if FFields.Count=0 then BuildFieldsFromDataSet;
@@ -483,7 +512,7 @@ begin
  P:=FSnapshot;
  FEngine.Build(P);
  P:=nil;
- FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; Screen.Cursor:=OldCursor; end; end;
+ FViewDirty:=True; FScrollDirty:=True; Invalidate; finally FRebuilding:=False; EndBusy; end; end;
 function TLarGridPivot.FieldByName(const AFieldName:string):TLarPivotField; begin Result:=FFields.FindField(AFieldName); if Result=nil then raise EDatabaseError.CreateFmt('Campo Pivot no encontrado: %s',[AFieldName]); end;
 
 procedure TLarGridPivot.NormalizeAreaIndexes(AArea: TLarPivotArea);
@@ -875,15 +904,14 @@ begin
  end;
  { Sorting changes only the order of already aggregated keys. Do not rescan the
    snapshot or rebuild result cells just to change presentation order. }
- Screen.Cursor:=crHourGlass;
+ BeginBusy;
  try
-  Application.ProcessMessages;
   FEngine.Resort;
   FViewDirty:=True;
   FScrollDirty:=True;
   Invalidate;
  finally
-  Screen.Cursor:=crDefault;
+  EndBusy;
  end;
 end;
 
