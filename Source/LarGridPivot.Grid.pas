@@ -836,18 +836,25 @@ begin
   CL:=TCheckListBox.Create(Frm); CL.Parent:=Frm; CL.Align:=alClient;
   CL.BorderStyle:=bsNone; CL.Font.Assign(Font); CL.Color:=ThemeCellColor;
   CL.Font.Color:=ThemeTextColor; CL.ItemHeight:=22;
-  CL.Items.Add('(Mostrar todos)');
-  AllSelected:=not Fil.Enabled;
-  for I:=0 to Values.Count-1 do begin
-   CL.Items.Add(Values[I]);
-   CL.Checked[I+1]:=AllSelected or (Fil.Values.IndexOf(Values[I])>=0);
+  { Populate large filter lists in one Windows control update. Adding thousands
+    of article descriptions one-by-one with redraw enabled is extremely costly. }
+  CL.Items.BeginUpdate;
+  try
+   CL.Items.Add('(Mostrar todos)');
+   AllSelected:=not Fil.Enabled;
+   for I:=0 to Values.Count-1 do begin
+    CL.Items.Add(Values[I]);
+    CL.Checked[I+1]:=AllSelected or (Fil.Values.IndexOf(Values[I])>=0);
+   end;
+   if Fil.Enabled then begin
+    AllSelected:=True;
+    for I:=1 to CL.Items.Count-1 do
+     if not CL.Checked[I] then begin AllSelected:=False; Break; end;
+   end;
+   CL.Checked[0]:=AllSelected;
+  finally
+   CL.Items.EndUpdate;
   end;
-  if Fil.Enabled then begin
-   AllSelected:=True;
-   for I:=1 to CL.Items.Count-1 do
-    if not CL.Checked[I] then begin AllSelected:=False; Break; end;
-  end;
-  CL.Checked[0]:=AllSelected;
   CL.OnClickCheck:=FilterChecklistClickCheck;
 
   P:=TPanel.Create(Frm); P.Parent:=Frm; P.Align:=alBottom; P.Height:=42;
