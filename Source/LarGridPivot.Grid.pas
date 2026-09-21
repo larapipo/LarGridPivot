@@ -485,11 +485,29 @@ procedure TLarGridPivot.SetRowHeaderWidth(const Value:Integer);
 var N:Integer;
 begin N:=Value; if N<40 then N:=40; if N=FRowHeaderWidth then Exit; FRowHeaderWidth:=N; Invalidate; end;
 procedure TLarGridPivot.SetShowRowTotals(const Value:Boolean);
-begin if Value=FShowRowTotals then Exit; FShowRowTotals:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
+begin
+ if Value=FShowRowTotals then Exit;
+ FShowRowTotals:=Value;
+ RefreshViewOnly;
+ UpdateScrollBars;
+ Update;
+end;
 procedure TLarGridPivot.SetShowColumnTotals(const Value:Boolean);
-begin if Value=FShowColumnTotals then Exit; FShowColumnTotals:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
+begin
+ if Value=FShowColumnTotals then Exit;
+ FShowColumnTotals:=Value;
+ RefreshViewOnly;
+ UpdateScrollBars;
+ Update;
+end;
 procedure TLarGridPivot.SetShowGrandTotal(const Value:Boolean);
-begin if Value=FShowGrandTotal then Exit; FShowGrandTotal:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
+begin
+ if Value=FShowGrandTotal then Exit;
+ FShowGrandTotal:=Value;
+ RefreshViewOnly;
+ UpdateScrollBars;
+ Update;
+end;
 
 function TLarGridPivot.SuggestedFieldWidth(AField:TField;const ACaption:string):Integer;
 var CharWidth,ContentWidth,CaptionWidth,N:Integer;
@@ -1558,24 +1576,9 @@ begin
   end;
   X:=RowHeaderTotal;
   for VC in FLayoutEngine.Columns do if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
-  { Row-total columns use the same multi-level header geometry as the pivot:
-    one spanning "Totales" title and the data-field captions below it. }
-  if FShowRowTotals then begin
-   if DFs.Count>0 then begin
-    D:=0;
-    for Lvl:=0 to DFs.Count-1 do Inc(D,DFs[Lvl].Width);
-    if HeaderLevels>1 then
-     DrawCell(Rect(X,Y,X+D,Y+(HeaderLevels-1)*FHeaderHeight),'Totales',taCenter,True);
-   end;
-   for D:=0 to DFs.Count-1 do begin
-    if HeaderLevels>1 then
-     R:=Rect(X,Y+(HeaderLevels-1)*FHeaderHeight,X+DFs[D].Width,Y+HeaderLevels*FHeaderHeight)
-    else
-     R:=Rect(X,Y,X+DFs[D].Width,Y+FHeaderHeight);
-    DrawCell(R,DFs[D].Caption,taCenter,True);
-    Inc(X,DFs[D].Width);
-   end;
-  end;
+  { Row-total headers are frozen and are painted in the frozen-header pass
+    below. Painting them in the scrolling-body pass made them disappear when
+    that pass was clipped or subsequently covered by the frozen header. }
 
   if RFs.Count=0 then
    for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
@@ -1620,6 +1623,32 @@ begin
      pvekColumnValue: DrawCell(VI.Bounds,VI.Caption,taCenter,True);
     end;
    end;
+  { Paint the total-column header in the same frozen pass as the month/data
+    headers. This keeps "Totales" / data captions visible after scrolling and
+    after toggling totals. }
+  if FShowRowTotals then begin
+   X:=RowHeaderTotal;
+   for VC in FLayoutEngine.Columns do
+    if VC.Left+VC.Width>X then X:=VC.Left+VC.Width;
+   if DFs.Count>0 then begin
+    D:=0;
+    for Lvl:=0 to DFs.Count-1 do Inc(D,DFs[Lvl].Width);
+    if HeaderLevels>1 then
+     DrawCell(Rect(X,EffectiveFieldAreaHeight,X+D,
+       EffectiveFieldAreaHeight+(HeaderLevels-1)*FHeaderHeight),
+       'Totales',taCenter,True);
+   end;
+   for D:=0 to DFs.Count-1 do begin
+    if HeaderLevels>1 then
+     R:=Rect(X,EffectiveFieldAreaHeight+(HeaderLevels-1)*FHeaderHeight,
+       X+DFs[D].Width,EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight)
+    else
+     R:=Rect(X,EffectiveFieldAreaHeight,X+DFs[D].Width,
+       EffectiveFieldAreaHeight+FHeaderHeight);
+    DrawCell(R,DFs[D].Caption,taCenter,True);
+    Inc(X,DFs[D].Width);
+   end;
+  end;
   RestoreDC(Canvas.Handle,-1);
  finally CFs.Free; RFs.Free; DFs.Free; end;
 end;
