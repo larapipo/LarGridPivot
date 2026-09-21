@@ -158,7 +158,7 @@ procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotFiel
  ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings;
  AViewLeft,AViewTop,AViewRight,AViewBottom:Integer);
 var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
- PrefixCache,PartCache:TDictionary<string,string>;
+ PrefixCache,PartCache:TDictionary<string,string>; CollapsedSet:TDictionary<string,Byte>;
  function KeyPart(const AKey:string;ALevel:Integer):string;
  var P,N,J:Integer; CacheKey:string;
  begin
@@ -191,7 +191,7 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
  function GroupID(const AKey:string;ALevel:Integer):string;
  begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
  function IsCollapsed(const AKey:string;ALevel:Integer):Boolean;
- begin Result:=(ACollapsedGroups<>nil) and (ACollapsedGroups.IndexOf(GroupID(AKey,ALevel))>=0); end;
+ begin Result:=CollapsedSet.ContainsKey(GroupID(AKey,ALevel)); end;
  function CollapsedLevel(const AKey:string):Integer;
  var K:Integer;
  begin
@@ -236,7 +236,11 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
 begin
  PrefixCache:=TDictionary<string,string>.Create;
  PartCache:=TDictionary<string,string>.Create;
+ CollapsedSet:=TDictionary<string,Byte>.Create;
  try
+ if ACollapsedGroups<>nil then
+  for I:=0 to ACollapsedGroups.Count-1 do
+   CollapsedSet.AddOrSetValue(ACollapsedGroups[I],0);
  RightEdge:=FRowHeaderWidth;
  for VC in FLayout.Columns do
   if VC.Left+VC.Width>RightEdge then RightEdge:=VC.Left+VC.Width;
@@ -331,6 +335,7 @@ begin
  end;
  if AShowColumnTotals then FContentBottom:=Y+FRowHeight;
  finally
+  CollapsedSet.Free;
   PartCache.Free;
   PrefixCache.Free;
  end;
