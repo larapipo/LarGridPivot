@@ -1,0 +1,32 @@
+name: Run cell selection patch
+on:
+  push:
+    branches: [feature/cell-selection-copy]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[selection-applied]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/cell-selection-copy
+      - name: Apply embedded patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('.github/workflows/apply-cell-selection.yml').read_text()
+          block=text.split('        run: |\n',1)[1].split('      - name: Commit result',1)[0]
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in block.splitlines())
+          exec(compile(code,'apply-cell-selection','exec'))
+          PY
+      - name: Commit result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Source/LarGridPivot.Grid.pas
+          git commit -m "Add native cell selection and clipboard copy [selection-applied]"
+          git push origin HEAD:feature/cell-selection-copy
