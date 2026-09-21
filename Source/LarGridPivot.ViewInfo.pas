@@ -73,7 +73,7 @@ begin
  inherited Create;
  FLayout:=ALayout;
  FItems:=TObjectList<TLarPivotViewItem>.Create(True);
- FRowHeight:=28;
+ FRowHeight:=24;
 end;
 
 destructor TLarPivotViewInfo.Destroy;
