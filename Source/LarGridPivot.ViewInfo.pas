@@ -154,24 +154,31 @@ end;
 procedure TLarPivotViewInfo.BuildBody(ARowFields,ADataFields:TList<TLarPivotField>;
  ARows:TList<string>;AHeaderLevels:Integer;AShowRowTotals,AShowColumnTotals,AShowGrandTotal:Boolean; ACollapsedGroups:TStrings);
 var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVisualColumn;
+ PrefixCache,PartCache:TDictionary<string,string>;
  function KeyPart(const AKey:string;ALevel:Integer):string;
- var P,N,J:Integer;
+ var P,N,J:Integer; CacheKey:string;
  begin
+  CacheKey:=IntToStr(ALevel)+'|'+AKey;
+  if PartCache.TryGetValue(CacheKey,Result) then Exit;
   Result:=''; P:=1; N:=0;
   for J:=1 to Length(AKey)+1 do
    if (J>Length(AKey)) or (AKey[J]=#29) then begin
-    if N=ALevel then begin Result:=Copy(AKey,P,J-P); Exit; end;
+    if N=ALevel then begin Result:=Copy(AKey,P,J-P); Break; end;
     Inc(N); P:=J+1;
    end;
+  PartCache.AddOrSetValue(CacheKey,Result);
  end;
  function PrefixKey(const AKey:string;ALevel:Integer):string;
- var J:Integer;
+ var J:Integer; CacheKey:string;
  begin
+  CacheKey:=IntToStr(ALevel)+'|'+AKey;
+  if PrefixCache.TryGetValue(CacheKey,Result) then Exit;
   Result:='';
   for J:=0 to ALevel do begin
    if J>0 then Result:=Result+#29;
    Result:=Result+KeyPart(AKey,J);
   end;
+  PrefixCache.AddOrSetValue(CacheKey,Result);
  end;
  function GroupID(const AKey:string;ALevel:Integer):string;
  begin Result:=IntToStr(ALevel)+'|'+PrefixKey(AKey,ALevel); end;
@@ -217,6 +224,9 @@ var Row,I,Lvl,X,Y,RightEdge,CLvl:Integer; Item:TLarPivotViewItem; VC:TLarPivotVi
   Inc(AY,FRowHeight);
  end;
 begin
+ PrefixCache:=TDictionary<string,string>.Create;
+ PartCache:=TDictionary<string,string>.Create;
+ try
  RightEdge:=FRowHeaderWidth;
  for VC in FLayout.Columns do
   if VC.Left+VC.Width>RightEdge then RightEdge:=VC.Left+VC.Width;
@@ -300,6 +310,10 @@ begin
     Item.Bounds:=Rect(X,Y,X+ADataFields[I].Width,Y+FRowHeight); FItems.Add(Item); Inc(X,ADataFields[I].Width);
    end;
   end;
+ end;
+ finally
+  PartCache.Free;
+  PrefixCache.Free;
  end;
 end;
 
