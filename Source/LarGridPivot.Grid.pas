@@ -1235,7 +1235,7 @@ end;
 
 procedure TLarGridPivot.ExportToExcel(const AFileName:string);
 var Zip:TZipFile; RFs,CFs:TList<TLarPivotField>; Row,D,I,ColIndex,HeaderRows,DataRow,Level,StartCol,EndCol:Integer;
- Sheet,Line,S,FileName,Merges:string; Cell:TLarPivotResultCell; V:Variant;
+ Sheet,Line,S,FileName,Merges:string; MergeCount:Integer; Cell:TLarPivotResultCell; V:Variant;
  MS:TMemoryStream; B:TBytes;
  function X(const A:string):string;
  begin
@@ -1309,7 +1309,7 @@ begin
   if HeaderRows=0 then HeaderRows:=1;
   Sheet:='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
-  Merges:='';
+  Merges:=''; MergeCount:=0;
 
   { Row fields span the complete pivot header. }
   for Level:=0 to HeaderRows-1 do begin
@@ -1318,7 +1318,7 @@ begin
     for I:=0 to RFs.Count-1 do begin
      Line:=Line+TextCell(I,1,RFs[I].Caption);
      if HeaderRows>1 then
-      Merges:=Merges+'<mergeCell ref="'+ColName(I)+'1:'+ColName(I)+IntToStr(HeaderRows)+'"/>';
+      begin Merges:=Merges+'<mergeCell ref="'+ColName(I)+'1:'+ColName(I)+IntToStr(HeaderRows)+'"/>'; Inc(MergeCount); end;
     end;
 
    { One real Excel header row for each column hierarchy level. }
@@ -1337,8 +1337,10 @@ begin
         KeyPart(FLayoutEngine.Columns[D].ColumnKey,Level-1)) do Dec(EndCol);
      Line:=Line+TextCell(StartCol,Level+1,S);
      if EndCol>D then
-      Merges:=Merges+'<mergeCell ref="'+ColName(StartCol)+IntToStr(Level+1)+':'+
-        ColName(RFs.Count+EndCol)+IntToStr(Level+1)+'"/>';
+      begin
+       Merges:=Merges+'<mergeCell ref="'+ColName(StartCol)+IntToStr(Level+1)+':'+
+        ColName(RFs.Count+EndCol)+IntToStr(Level+1)+'"/>'; Inc(MergeCount);
+      end;
      D:=EndCol+1;
     end;
    end else begin
@@ -1376,7 +1378,7 @@ begin
   end;
   Sheet:=Sheet+'</sheetData>';
   if Merges<>'' then
-   Sheet:=Sheet+'<mergeCells count="'+IntToStr((Length(Merges)-Length(StringReplace(Merges,'<mergeCell','',[rfReplaceAll]))) div Length('<mergeCell'))+'">'+Merges+'</mergeCells>';
+   Sheet:=Sheet+'<mergeCells count="'+IntToStr(MergeCount)+'">'+Merges+'</mergeCells>';
   Sheet:=Sheet+'</worksheet>';
   AddZipText('xl/worksheets/sheet1.xml',Sheet);
  finally
