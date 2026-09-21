@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants, System.Zip, System.IOUtils,
-  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Winapi.Messages, Data.DB,
+  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Vcl.Clipbrd, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -49,6 +49,22 @@ type
     FAutoFieldWidth:Boolean;
     FMinAutoFieldWidth:Integer;
     FMaxAutoFieldWidth:Integer;
+    FAllowCellSelection:Boolean;
+    FAllowMultiSelect:Boolean;
+    FAllowCopyToClipboard:Boolean;
+    FSelectedCells:TStringList;
+    FSelectionAnchor:string;
+    FSelectingCells:Boolean;
+    FSelectionStart:TPoint;
+    FSelectionRect:TRect;
+    function SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
+    function CellSelectionKey(AItem:TLarPivotViewItem):string;
+    function IsCellSelected(AItem:TLarPivotViewItem):Boolean;
+    procedure SelectCell(AItem:TLarPivotViewItem; AAdd:Boolean);
+    procedure SelectCellsInRect(const ARect:TRect; AAdd:Boolean);
+    procedure ClearCellSelection;
+    function CellText(AItem:TLarPivotViewItem):string;
+    procedure CopySelectionToClipboard;
     procedure BeginBusy;
     procedure EndBusy;
     procedure HierarchyExpandClick(Sender:TObject);
@@ -138,6 +154,7 @@ type
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure KeyDown(var Key:Word; Shift:TShiftState); override;
   public
     constructor Create(AOwner: TComponent); override; destructor Destroy; override;
     procedure BeginUpdate; procedure EndUpdate; procedure RefreshFields; procedure Rebuild;
@@ -160,6 +177,8 @@ type
     procedure ExportToExcel(const AFileName:string);
     property Engine: TLarPivotEngine read FEngine;
     function HitTestAt(X, Y: Integer): TLarPivotHitTest;
+    procedure ClearSelection;
+    procedure CopyToClipboard;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
@@ -177,6 +196,9 @@ type
     property AutoFieldWidth:Boolean read FAutoFieldWidth write FAutoFieldWidth default True;
     property MinAutoFieldWidth:Integer read FMinAutoFieldWidth write FMinAutoFieldWidth default 70;
     property MaxAutoFieldWidth:Integer read FMaxAutoFieldWidth write FMaxAutoFieldWidth default 320;
+    property AllowCellSelection:Boolean read FAllowCellSelection write FAllowCellSelection default True;
+    property AllowMultiSelect:Boolean read FAllowMultiSelect write FAllowMultiSelect default True;
+    property AllowCopyToClipboard:Boolean read FAllowCopyToClipboard write FAllowCopyToClipboard default True;
     property Theme:TLarPivotTheme read FTheme write SetTheme default ptVclStyle;
     property AutoSaveLayout:Boolean read FAutoSaveLayout write FAutoSaveLayout default True;
     property AutoSaveKey:string read FAutoSaveKey write FAutoSaveKey;
@@ -199,13 +221,104 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
+ FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; TabStop:=True;
+ FSelectedCells:=TStringList.Create; FSelectedCells.Sorted:=True; FSelectedCells.Duplicates:=dupIgnore; FSelectionAnchor:=''; FSelectingCells:=False;
  FHierarchyMenu:=TPopupMenu.Create(Self);
  FFieldMenu:=TPopupMenu.Create(Self);
  FGridMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FSelectedCells.Free; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+function TLarGridPivot.CellSelectionKey(AItem:TLarPivotViewItem):string;
+begin
+ if AItem=nil then Exit('');
+ Result:=IntToStr(Ord(AItem.Kind))+'|'+AItem.RowKey+'|'+AItem.ColumnKey+'|'+IntToStr(AItem.Level)+'|'+IntToStr(AItem.DataIndex);
+ if AItem.Field<>nil then Result:=Result+'|'+AItem.Field.FieldName;
+end;
+
+function TLarGridPivot.IsCellSelected(AItem:TLarPivotViewItem):Boolean;
+begin Result:=(AItem<>nil) and (FSelectedCells.IndexOf(CellSelectionKey(AItem))>=0); end;
+
+function TLarGridPivot.SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
+var VI:TLarPivotViewItem; CX,CY:Integer;
+begin
+ Result:=nil; BuildViewInfo;
+ CX:=AX+FHScrollPos; CY:=AY+FVScrollPos;
+ for VI in FViewInfo.Items do
+  if (VI.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) and VI.Contains(CX,CY) then Exit(VI);
+end;
+
+procedure TLarGridPivot.ClearCellSelection;
+begin FSelectedCells.Clear; FSelectionAnchor:=''; Invalidate; end;
+procedure TLarGridPivot.ClearSelection;
+begin ClearCellSelection; end;
+
+procedure TLarGridPivot.SelectCell(AItem:TLarPivotViewItem;AAdd:Boolean);
+var K:string; I:Integer;
+begin
+ if AItem=nil then Exit; K:=CellSelectionKey(AItem);
+ if not AAdd then FSelectedCells.Clear;
+ I:=FSelectedCells.IndexOf(K);
+ if AAdd and (I>=0) then FSelectedCells.Delete(I) else FSelectedCells.Add(K);
+ FSelectionAnchor:=K; Invalidate;
+end;
+
+procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
+var VI:TLarPivotViewItem; R:TRect;
+begin
+ if not AAdd then FSelectedCells.Clear;
+ for VI in FViewInfo.Items do
+  if VI.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+   R:=VI.Bounds;
+   if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
+    FSelectedCells.Add(CellSelectionKey(VI));
+  end;
+ Invalidate;
+end;
+
+function TLarGridPivot.CellText(AItem:TLarPivotViewItem):string;
+var C:TLarPivotResultCell; V:Variant;
+begin
+ Result:=''; if (AItem=nil) then Exit;
+ if AItem.Field=nil then Exit(AItem.Caption);
+ C:=FEngine.Model.FindCell(AItem.RowKey,AItem.ColumnKey,AItem.Field.FieldName);
+ if C=nil then Exit;
+ V:=C.Accumulator.Value(AItem.Field.SummaryType);
+ Result:=FormatCellValue(V,AItem.Field);
+end;
+
+procedure TLarGridPivot.CopySelectionToClipboard;
+var L:TList<TLarPivotViewItem>; VI,T:TLarPivotViewItem; I,J:Integer; S,Line:string; LastTop:Integer;
+begin
+ if not FAllowCopyToClipboard or (FSelectedCells.Count=0) then Exit;
+ BuildViewInfo; L:=TList<TLarPivotViewItem>.Create;
+ try
+  for VI in FViewInfo.Items do if IsCellSelected(VI) then L.Add(VI);
+  for I:=0 to L.Count-2 do for J:=I+1 to L.Count-1 do
+   if (L[I].Bounds.Top>L[J].Bounds.Top) or ((L[I].Bounds.Top=L[J].Bounds.Top) and (L[I].Bounds.Left>L[J].Bounds.Left)) then begin T:=L[I]; L[I]:=L[J]; L[J]:=T; end;
+  S:=''; Line:=''; LastTop:=-MaxInt;
+  for VI in L do begin
+   if (LastTop<>-MaxInt) and (VI.Bounds.Top<>LastTop) then begin
+    if S<>'' then S:=S+sLineBreak; S:=S+Line; Line:='';
+   end;
+   if Line<>'' then Line:=Line+#9;
+   Line:=Line+CellText(VI); LastTop:=VI.Bounds.Top;
+  end;
+  if Line<>'' then begin if S<>'' then S:=S+sLineBreak; S:=S+Line; end;
+  Clipboard.AsText:=S;
+ finally L.Free; end;
+end;
+
+procedure TLarGridPivot.CopyToClipboard;
+begin CopySelectionToClipboard; end;
+
+procedure TLarGridPivot.KeyDown(var Key:Word;Shift:TShiftState);
+begin
+ if FAllowCopyToClipboard and (ssCtrl in Shift) and ((Key=Ord('C')) or (Key=VK_INSERT)) then begin CopySelectionToClipboard; Key:=0; Exit; end;
+ inherited;
+end;
+
 procedure TLarGridPivot.BeginBusy;
 begin
  if FBusyDepth=0 then begin
@@ -1586,6 +1699,20 @@ begin
     DrawCell(Rect(0,Y,RowHeaderTotal,Y+FRowHeight),'',taLeftJustify);
    end;
 
+  { Draw selection last in body coordinates so totals keep their colors while
+    the selected cells receive a clear focus frame. }
+  if FAllowCellSelection and (FSelectedCells.Count>0) then begin
+   Canvas.Brush.Style:=bsClear;
+   Canvas.Pen.Color:=StyleServices.GetSystemColor(clHighlight);
+   Canvas.Pen.Width:=2;
+   for VI in FViewInfo.Items do
+    if IsCellSelected(VI) and
+       (VI.Bounds.Right>=VisibleContent.Left) and (VI.Bounds.Left<=VisibleContent.Right) and
+       (VI.Bounds.Bottom>=VisibleContent.Top) and (VI.Bounds.Top<=VisibleContent.Bottom) then begin
+      R:=VI.Bounds; InflateRect(R,-1,-1); Canvas.Rectangle(R);
+    end;
+   Canvas.Pen.Width:=1; Canvas.Brush.Style:=bsSolid;
+  end;
   RestoreDC(Canvas.Handle,-1);
 
   { Frozen result header: body scrolls vertically, header is repainted at its
@@ -1864,7 +1991,7 @@ begin
 end;
 
 procedure TLarGridPivot.MouseDown(Button:TMouseButton;Shift:TShiftState;X,Y:Integer);
-var HT:TLarPivotHitTest;
+var HT:TLarPivotHitTest; VI:TLarPivotViewItem;
 begin
  inherited;
  if FShowFieldPanel and (Y<EffectiveFieldAreaHeight) and (Button=mbRight) then begin
@@ -1891,6 +2018,19 @@ begin
    { ViewInfo places an actionable +/- only on the group header. }
    ToggleGroup(HT.RowKey,HT.Level); Exit;
   end;
+  if (Button=mbLeft) and FAllowCellSelection and
+     (HT.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) then begin
+   SetFocus;
+   VI:=SelectableItemAt(X,Y);
+   if VI<>nil then begin
+    SelectCell(VI,FAllowMultiSelect and (ssCtrl in Shift));
+    FSelectingCells:=FAllowMultiSelect;
+    FSelectionStart:=Point(X+FHScrollPos,Y+FVScrollPos);
+    FSelectionRect:=Rect(FSelectionStart.X,FSelectionStart.Y,FSelectionStart.X+1,FSelectionStart.Y+1);
+    MouseCapture:=FSelectingCells;
+   end;
+   Exit;
+  end;
  end;
  if Button<>mbLeft then Exit;
  FFilterButtonField:=FilterButtonAtPoint(X,Y);
@@ -1909,6 +2049,11 @@ procedure TLarGridPivot.MouseMove(Shift:TShiftState;X,Y:Integer);
 var A:TLarPivotArea; N:Integer; Hot:TLarPivotField; R:TRect;
 begin
  inherited;
+ if FSelectingCells then begin
+  FSelectionRect:=Rect(Min(FSelectionStart.X,X+FHScrollPos),Min(FSelectionStart.Y,Y+FVScrollPos),
+    Max(FSelectionStart.X,X+FHScrollPos)+1,Max(FSelectionStart.Y,Y+FVScrollPos)+1);
+  SelectCellsInRect(FSelectionRect,ssCtrl in Shift); Exit;
+ end;
  Hot:=nil;
  if FShowFieldPanel and (Y>=0) and (Y<EffectiveFieldAreaHeight) then begin
   Hot:=FieldAtPoint(X,Y);
@@ -1954,6 +2099,7 @@ var A:TLarPivotArea; N:Integer; F:TLarPivotField; R:TRect;
 begin
  inherited;
  if Button<>mbLeft then Exit;
+ if FSelectingCells then begin FSelectingCells:=False; MouseCapture:=False; SelectCellsInRect(FSelectionRect,ssCtrl in Shift); Exit; end;
  if Assigned(FResizingField) then begin
   FResizingField:=nil; MouseCapture:=False; Cursor:=crDefault;
   RefreshViewOnly; Exit;
