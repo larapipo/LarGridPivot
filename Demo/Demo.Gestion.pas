@@ -157,6 +157,9 @@ begin
   if BDSPath<>'' then AddFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
   BDSPath:=GetEnvironmentVariable('ProgramFiles(x86)');
   if BDSPath<>'' then AddFolder(TPath.Combine(BDSPath,'Embarcadero\Studio\23.0\Redist\styles\vcl'));
+  BDSPath:=ExpandFileName(TPath.Combine(ExtractFilePath(ParamStr(0)),'..\..\..\..\..'));
+  AddFolder(TPath.Combine(BDSPath,'Redist\styles\vcl'));
+  AddFolder(TPath.Combine(BDSPath,'Styles'));
   PublicPath:=GetEnvironmentVariable('PUBLIC');
   if PublicPath<>'' then AddFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
   FEstilo.ItemIndex:=0;
