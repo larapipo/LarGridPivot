@@ -1192,12 +1192,13 @@ function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
 
 procedure TLarGridPivot.ExportToCSV(const AFileName:string);
-var SL:TStringList; RFs,DFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
+var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
  Cell:TLarPivotResultCell; V:Variant;
  function Q(const A:string):string;
  begin Result:='"'+StringReplace(A,'"','""',[rfReplaceAll])+'"'; end;
 begin
- RFs:=AxisFields(paRow); DFs:=DataFields; SL:=TStringList.Create;
+ BuildViewInfo;
+ RFs:=AxisFields(paRow); SL:=TStringList.Create;
  try
   Line:='';
   for I:=0 to RFs.Count-1 do begin if Line<>'' then Line:=Line+';'; Line:=Line+Q(RFs[I].Caption); end;
@@ -1220,7 +1221,7 @@ begin
    SL.Add(Line);
   end;
   SL.SaveToFile(AFileName,TEncoding.UTF8);
- finally SL.Free; DFs.Free; RFs.Free; end;
+ finally SL.Free; RFs.Free; end;
 end;
 
 procedure TLarGridPivot.ExportToExcel(const AFileName:string);
@@ -1238,6 +1239,7 @@ var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
 begin
  { SpreadsheetML is an Excel-native workbook format and requires no Excel/COM
    installation. Excel opens it directly; CSV remains available for interchange. }
+ BuildViewInfo;
  RFs:=AxisFields(paRow); SL:=TStringList.Create;
  try
   SL.Add('<?xml version="1.0" encoding="UTF-8"?>');
