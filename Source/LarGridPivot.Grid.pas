@@ -1574,18 +1574,16 @@ begin
   IntersectClipRect(Canvas.Handle,0,EffectiveFieldAreaHeight,ClientWidth,
     EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight);
   SetViewportOrgEx(Canvas.Handle,-FHScrollPos,0,nil);
-  { Paint the empty upper-left header bands inside the frozen-header pass.
-    Painting them before the scrolling body was ineffective because the body
-    pass immediately painted over them. }
-  if (RFs.Count>0) and (HeaderLevels>1) then
-   for Lvl:=0 to RFs.Count-1 do begin
-    X:=0;
-    for D:=0 to Lvl-1 do Inc(X,RFs[D].Width);
-    for D:=0 to HeaderLevels-2 do
-     DrawCell(Rect(X,EffectiveFieldAreaHeight+D*FHeaderHeight,
-       X+RFs[Lvl].Width,EffectiveFieldAreaHeight+(D+1)*FHeaderHeight),
-       '',taCenter,True);
-   end;
+  { The upper-left corner above the row-field captions is intentionally
+    empty. Keep the header height/geometry unchanged, but paint this band as
+    plain background so it does not look like additional header cells. }
+  if (RFs.Count>0) and (HeaderLevels>1) then begin
+   R:=Rect(FHScrollPos,EffectiveFieldAreaHeight,
+     FHScrollPos+RowHeaderTotal,
+     EffectiveFieldAreaHeight+(HeaderLevels-1)*FHeaderHeight);
+   Canvas.Brush.Color:=ThemeCellColor;
+   Canvas.FillRect(R);
+  end;
   for VI in FViewInfo.Items do
    if (VI.Kind in [pvekFieldHeader,pvekColumnValue]) and
       (VI.Bounds.Top<EffectiveFieldAreaHeight+HeaderLevels*FHeaderHeight) then
