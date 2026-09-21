@@ -926,6 +926,10 @@ var S:string; I:Integer;
 begin
  S:=GroupID(ARowKey,ALevel); I:=FCollapsedGroups.IndexOf(S);
  if I>=0 then FCollapsedGroups.Delete(I) else FCollapsedGroups.Add(S);
+ { Expansion changes only the hierarchy projection. The aggregate model stays
+   valid, but cached ViewInfo must be rebuilt once for the new visible rows. }
+ FViewDirty:=True;
+ FScrollDirty:=True;
  Invalidate;
 end;
 
