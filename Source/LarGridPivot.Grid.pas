@@ -1101,7 +1101,7 @@ begin
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
   Canvas.Brush.Color:=ThemePanelColor; Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
-  Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=$00606060;
+  Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=ThemeHeaderTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
   L:=AreaFields(A);
@@ -1118,9 +1118,15 @@ begin
     end;
     if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
-    if F=FDragField then Canvas.Brush.Color:=$00E8F2FF else Canvas.Brush.Color:=clWhite;
-    Canvas.Pen.Color:=$00B8B8B8; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
-    Canvas.Font.Color:=ThemeTextColor;
+    if F=FDragField then begin
+     if FTheme=ptVclStyle then Canvas.Brush.Color:=StyleServices.GetSystemColor(clHighlight)
+     else Canvas.Brush.Color:=$00E8F2FF;
+    end else Canvas.Brush.Color:=ThemeChipColor;
+    Canvas.Pen.Color:=ThemeGridColor; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
+    if (F=FDragField) and (FTheme=ptVclStyle) then
+     Canvas.Font.Color:=StyleServices.GetSystemColor(clHighlightText)
+    else
+     Canvas.Font.Color:=ThemeHeaderTextColor;
     { Subtle sort marker at the left of the field caption. }
     if F.SortOrder<>psoNone then begin
      Canvas.Pen.Color:=ThemeTextColor;
@@ -1430,7 +1436,7 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
  function TextFor(const AR,AC:string;F:TLarPivotField):string;
  begin Cell:=FEngine.Model.FindCell(AR,AC,F.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(F.SummaryType) else V:=Null; Result:=FormatCellValue(V,F); end;
 begin
- Canvas.Brush.Color:=ThemeCellColor; Canvas.FillRect(ClientRect); DrawFieldAreas;
+ Canvas.Brush.Color:=ThemeCellColor; Canvas.FillRect(Canvas.ClipRect); DrawFieldAreas;
  DFs:=DataFields; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   if DFs.Count=0 then begin FViewInfo.Clear; FLayoutEngine.Clear; Exit; end;
