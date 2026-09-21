@@ -19,6 +19,7 @@ type
     FFieldAreaHeight: Integer;
     FShowFieldPanel:Boolean;
     FFieldPanelFontSize:Integer;
+    FFieldAreaSplitPercent:Integer;
     FTheme:TLarPivotTheme;
     FDragField: TLarPivotField;
     FDragStart: TPoint;
@@ -79,6 +80,8 @@ type
     function AvailableBandHeight:Integer;
     procedure SetShowFieldPanel(const Value:Boolean);
     procedure SetFieldPanelFontSize(const Value:Integer);
+    procedure SetFieldAreaSplitPercent(const Value:Integer);
+    procedure WMEraseBkgnd(var Message:TWMEraseBkgnd); message WM_ERASEBKGND;
     function SuggestedFieldWidth(AField:TField; const ACaption:string):Integer;
     function ResizeFieldAtPoint(AX, AY: Integer): TLarPivotField;
     procedure DrawFieldAreas;
@@ -154,6 +157,7 @@ type
     property ShowGrandTotal: Boolean read FShowGrandTotal write SetShowGrandTotal default True;
     property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
     property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
+    property FieldAreaSplitPercent:Integer read FFieldAreaSplitPercent write SetFieldAreaSplitPercent default 27;
     property AutoFieldWidth:Boolean read FAutoFieldWidth write FAutoFieldWidth default True;
     property MinAutoFieldWidth:Integer read FMinAutoFieldWidth write FMinAutoFieldWidth default 70;
     property MaxAutoFieldWidth:Integer read FMaxAutoFieldWidth write FMaxAutoFieldWidth default 320;
@@ -175,7 +179,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=32; FRowHeight:=28; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
- FShowFieldPanel:=True; FFieldPanelFontSize:=8; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FViewDirty:=True; FScrollDirty:=True;
@@ -264,6 +268,24 @@ var R:TRect;
 begin
  if not FShowFieldPanel then Exit(0);
  R:=AreaRect(paRow); Result:=R.Bottom;
+end;
+
+procedure TLarGridPivot.WMEraseBkgnd(var Message:TWMEraseBkgnd);
+begin
+ { Paint owns the complete client background. Suppressing WM_ERASEBKGND avoids
+   the erase/paint cycle that caused visible flashing while hovering chips. }
+ Message.Result:=1;
+end;
+
+procedure TLarGridPivot.SetFieldAreaSplitPercent(const Value:Integer);
+var N:Integer;
+begin
+ N:=Value;
+ if N<15 then N:=15;
+ if N>85 then N:=85;
+ if FFieldAreaSplitPercent=N then Exit;
+ FFieldAreaSplitPercent:=N;
+ FViewDirty:=True; FScrollDirty:=True; Invalidate;
 end;
 
 procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
@@ -610,14 +632,14 @@ begin
 end;
 
 function TLarGridPivot.AreaRect(AArea:TLarPivotArea):TRect;
-var AvH,WorkTop,HalfW,LineH:Integer;
+var AvH,WorkTop,SplitX,LineH:Integer;
 begin
  if not FShowFieldPanel then Exit(Rect(0,0,0,0));
- AvH:=AvailableBandHeight; WorkTop:=AvH; HalfW:=ClientWidth div 2; LineH:=24;
+ AvH:=AvailableBandHeight; WorkTop:=AvH; SplitX:=(ClientWidth*FFieldAreaSplitPercent) div 100; LineH:=24;
  case AArea of
   paNone: Result:=Rect(0,0,ClientWidth,AvH);
-  paData: Result:=Rect(0,WorkTop,HalfW,WorkTop+LineH);
-  paColumn: Result:=Rect(HalfW,WorkTop,ClientWidth,WorkTop+LineH);
+  paData: Result:=Rect(0,WorkTop,SplitX,WorkTop+LineH);
+  paColumn: Result:=Rect(SplitX,WorkTop,ClientWidth,WorkTop+LineH);
   paRow: Result:=Rect(0,WorkTop+LineH,ClientWidth,WorkTop+LineH*2);
  else Result:=Rect(0,0,0,0);
  end;
