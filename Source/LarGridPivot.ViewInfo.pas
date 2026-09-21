@@ -118,7 +118,9 @@ begin
   Item:=TLarPivotViewItem.Create;
   Item.Kind:=pvekFieldHeader; Item.Field:=ARowFields[I]; Item.Level:=I;
   Item.Caption:=ARowFields[I].Caption; if Item.Caption='' then Item.Caption:=ARowFields[I].FieldName;
-  Item.Bounds:=Rect(X,FHeaderTop+(Levels-1)*FHeaderHeight,X+ARowFields[I].Width,FHeaderTop+Levels*FHeaderHeight);
+  { Row-axis captions occupy the complete frozen header, matching the
+    visual height of the column hierarchy (MES / ABRIL / Venta-Costo). }
+  Item.Bounds:=Rect(X,FHeaderTop,X+ARowFields[I].Width,FHeaderTop+Levels*FHeaderHeight);
   FItems.Add(Item); Inc(X,ARowFields[I].Width);
  end;
 
