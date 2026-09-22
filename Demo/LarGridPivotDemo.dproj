@@ -57,17 +57,6 @@
         <DelphiCompile Include="$(MainSource)"><MainSource>MainSource</MainSource></DelphiCompile>
         <DCCReference Include="Demo.Main.pas"><Form>FrmLarGridPivotDemo</Form></DCCReference>
         <DCCReference Include="Demo.Gestion.pas"><Form>FrmLarGridPivotGestionDemo</Form></DCCReference>
-        <DCCReference Include="..\Source\LarGridPivot.Types.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Fields.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Filters.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Model.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.DataProvider.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Engine.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.LayoutEngine.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.ViewInfo.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Layout.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.PrintConfig.pas"/>
-        <DCCReference Include="..\Source\LarGridPivot.Grid.pas"/>
         <BuildConfiguration Include="Base"><Key>Base</Key></BuildConfiguration>
         <BuildConfiguration Include="Release"><Key>Cfg_1</Key><CfgParent>Base</CfgParent></BuildConfiguration>
         <BuildConfiguration Include="Debug"><Key>Cfg_2</Key><CfgParent>Base</CfgParent></BuildConfiguration>
