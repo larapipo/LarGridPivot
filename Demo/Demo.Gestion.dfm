@@ -70,6 +70,7 @@ object FrmLarGridPivotGestionDemo: TFrmLarGridPivotGestionDemo
       Top = 8
       Width = 150
       Height = 21
+      Style = csDropDownList
       TabOrder = 5
       OnChange = CargarVista
     end
