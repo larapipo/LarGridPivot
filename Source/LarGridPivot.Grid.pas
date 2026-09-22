@@ -267,7 +267,7 @@ constructor TLarPivotPrintPreviewForm.CreatePreview(AOwner:TComponent; APivot:TL
 begin
  inherited CreateNew(AOwner);
  FPivot:=APivot; FPage:=1; FZoom:=0.75;
- Caption:='Vista previa de impresión'; Position:=poScreenCenter; Width:=1000; Height:=760;
+ Caption:='Vista previa de impresi'+#243+'n'; Position:=poScreenCenter; Width:=1000; Height:=760;
  Color:=clBtnFace; DoubleBuffered:=True;
  FTopPanel:=TPanel.Create(Self); FTopPanel.Parent:=Self; FTopPanel.Align:=alTop; FTopPanel.Height:=44; FTopPanel.BevelOuter:=bvNone;
  FPrev:=TButton.Create(Self); FPrev.Parent:=FTopPanel; FPrev.SetBounds(8,8,80,28); FPrev.Caption:='< Anterior'; FPrev.OnClick:=PrevClick;
@@ -285,7 +285,7 @@ end;
 
 procedure TLarPivotPrintPreviewForm.UpdateState;
 begin
- FInfo.Caption:='Página '+IntToStr(FPage)+' de '+IntToStr(FPageCount);
+ FInfo.Caption:='P'+#225+'gina '+IntToStr(FPage)+' de '+IntToStr(FPageCount);
  FPrev.Enabled:=FPage>1; FNext.Enabled:=FPage<FPageCount; FPaint.Invalidate;
 end;
 procedure TLarPivotPrintPreviewForm.PrevClick(Sender:TObject); begin if FPage>1 then begin Dec(FPage); UpdateState; end; end;
@@ -1451,16 +1451,37 @@ end;
 procedure TLarGridPivot.DrawFieldAreas;
 const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
 var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; Fil:TLarPivotFilter; S:string; L:TList<TLarPivotField>;
+ Details:TThemedElementDetails; AreaTextColor:TColor; UseStyledPanel:Boolean;
 begin
  if not FShowFieldPanel then Exit;
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+ UseStyledPanel:=StyleServices.Enabled and (not StyleServices.IsSystemStyle);
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
   Canvas.Brush.Style:=bsSolid;
-  Canvas.Brush.Color:=FieldAreaBackgroundColor;
-  Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
+  if UseStyledPanel then begin
+   { Paint the same themed surface a real VCL TPanel uses.  Picking a single
+     palette color is not enough for dark .vsf styles: some styles use a
+     themed bitmap/gradient for panels and expose a light fallback color. }
+   Details:=StyleServices.GetElementDetails(tpPanelBackground);
+   StyleServices.DrawElement(Canvas.Handle,Details,AR);
+   AreaTextColor:=ThemeHeaderTextColor;
+   StyleServices.GetElementColor(Details,ecTextColor,AreaTextColor);
+   Canvas.Brush.Style:=bsClear;
+   Canvas.Pen.Color:=ThemeGridColor;
+   Canvas.Rectangle(AR);
+   Canvas.Brush.Style:=bsSolid;
+  end else begin
+   Canvas.Brush.Color:=FieldAreaBackgroundColor;
+   Canvas.FillRect(AR);
+   Canvas.Brush.Style:=bsClear;
+   Canvas.Pen.Color:=ThemeGridColor;
+   Canvas.Rectangle(AR);
+   Canvas.Brush.Style:=bsSolid;
+   AreaTextColor:=FieldAreaTextColor;
+  end;
   Canvas.Font.Style:=[fsBold];
-  Canvas.Font.Color:=FieldAreaTextColor;
+  Canvas.Font.Color:=AreaTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
   L:=AreaFields(A);
@@ -1667,7 +1688,7 @@ begin
   end;
   if CurBand<HPage then BandStart:=FLayoutEngine.Columns.Count;
   Y:=TopM; ACanvas.Font.Size:=11; ACanvas.Font.Style:=[fsBold]; if FPrintTitle<>'' then S:=FPrintTitle else S:='Pivot'; ACanvas.TextOut(LeftM,Y,S);
-  if FPrintShowPageNumbers then begin S:='Página '+IntToStr(APageNo)+' de '+IntToStr(PrintPageCount(AWidth,AHeight,ACanvas)); ACanvas.TextOut(RightM-ACanvas.TextWidth(S),Y,S); end;
+  if FPrintShowPageNumbers then begin S:='P'+#225+'gina '+IntToStr(APageNo)+' de '+IntToStr(PrintPageCount(AWidth,AHeight,ACanvas)); ACanvas.TextOut(RightM-ACanvas.TextWidth(S),Y,S); end;
   Inc(Y,LineH+4); ACanvas.Font.Size:=8;
   X:=LeftM;
   for I:=0 to RFs.Count-1 do begin
@@ -2275,8 +2296,8 @@ begin
  AddItem('-',nil);
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
- AddItem('Vista previa de impresión...',GridPrintPreviewClick);
- AddItem('Configurar impresión...',GridPageSetupClick);
+ AddItem('Vista previa de impresi'+#243+'n...',GridPrintPreviewClick);
+ AddItem('Configurar impresi'+#243+'n...',GridPageSetupClick);
  AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
@@ -2306,13 +2327,13 @@ var F:TForm; CPaper:TComboBox; ELeft,ERight,ETop,EBottom:TEdit; CFit:TCheckBox; 
 begin
  F:=TForm.CreateNew(Self);
  try
-  F.Caption:='Configurar impresión'; F.Position:=poScreenCenter; F.Width:=430; F.Height:=420; F.BorderStyle:=bsDialog;
-  L:=TLabel.Create(F); L.Parent:=F; L.SetBounds(16,18,120,20); L.Caption:='Tamaño de papel:';
+  F.Caption:='Configurar impresi'+#243+'n'; F.Position:=poScreenCenter; F.Width:=430; F.Height:=420; F.BorderStyle:=bsDialog;
+  L:=TLabel.Create(F); L.Parent:=F; L.SetBounds(16,18,120,20); L.Caption:='Tama'+#241+'o de papel:';
   CPaper:=TComboBox.Create(F); CPaper.Parent:=F; CPaper.Style:=csDropDownList; CPaper.SetBounds(150,14,230,24); CPaper.Items.Add('Predeterminado'); CPaper.Items.Add('A4'); CPaper.Items.Add('Carta'); CPaper.Items.Add('A5'); CPaper.Items.Add('Legal'); CPaper.ItemIndex:=Ord(FPrintOptions.PaperSize);
   Y:=56;
   for I:=0 to 3 do begin L:=TLabel.Create(F); L.Parent:=F; L.Left:=16; L.Top:=Y+4; case I of 0:L.Caption:='Margen izquierdo (mm):'; 1:L.Caption:='Margen derecho (mm):'; 2:L.Caption:='Margen superior (mm):'; 3:L.Caption:='Margen inferior (mm):'; end; case I of 0:begin ELeft:=TEdit.Create(F); ELeft.Parent:=F; ELeft.Text:=IntToStr(FPrintOptions.MarginLeftMM); ELeft.SetBounds(200,Y,70,24); end; 1:begin ERight:=TEdit.Create(F); ERight.Parent:=F; ERight.Text:=IntToStr(FPrintOptions.MarginRightMM); ERight.SetBounds(200,Y,70,24); end; 2:begin ETop:=TEdit.Create(F); ETop.Parent:=F; ETop.Text:=IntToStr(FPrintOptions.MarginTopMM); ETop.SetBounds(200,Y,70,24); end; 3:begin EBottom:=TEdit.Create(F); EBottom.Parent:=F; EBottom.Text:=IntToStr(FPrintOptions.MarginBottomMM); EBottom.SetBounds(200,Y,70,24); end; end; Inc(Y,34); end;
-  CFit:=TCheckBox.Create(F); CFit.Parent:=F; CFit.SetBounds(16,Y+4,280,24); CFit.Caption:='Ajustar columnas al ancho de página'; CFit.Checked:=FPrintOptions.FitToPageWidth; Inc(Y,38);
-  L:=TLabel.Create(F); L.Parent:=F; L.SetBounds(16,Y,360,20); L.Caption:='Anchos de impresión (0 = ancho del grid):'; Inc(Y,24);
+  CFit:=TCheckBox.Create(F); CFit.Parent:=F; CFit.SetBounds(16,Y+4,280,24); CFit.Caption:='Ajustar columnas al ancho de p'+#225+'gina'; CFit.Checked:=FPrintOptions.FitToPageWidth; Inc(Y,38);
+  L:=TLabel.Create(F); L.Parent:=F; L.SetBounds(16,Y,360,20); L.Caption:='Anchos de impresi'+#243+'n (0 = ancho del grid):'; Inc(Y,24);
   for I:=0 to FFields.Count-1 do if FFields[I].Area in [paRow,paData] then begin PCol:=FPrintOptions.Columns.Ensure(FFields[I].FieldName); L:=TLabel.Create(F); L.Parent:=F; L.SetBounds(20,Y+4,180,20); L.Caption:=FFields[I].Caption; with TEdit.Create(F) do begin Parent:=F; Name:='PrintWidth'+IntToStr(I); Tag:=I; Text:=IntToStr(PCol.Width); SetBounds(210,Y,70,24); end; Inc(Y,28); if Y>315 then Break; end;
   BOK:=TButton.Create(F); BOK.Parent:=F; BOK.Caption:='Aceptar'; BOK.ModalResult:=mrOk; BOK.Default:=True; BOK.SetBounds(210,345,80,28); BCancel:=TButton.Create(F); BCancel.Parent:=F; BCancel.Caption:='Cancelar'; BCancel.ModalResult:=mrCancel; BCancel.SetBounds(300,345,80,28);
   if F.ShowModal=mrOk then begin FPrintOptions.PaperSize:=TLarPivotPaperSize(CPaper.ItemIndex); FPrintOptions.MarginLeftMM:=StrToIntDef(ELeft.Text,12); FPrintOptions.MarginRightMM:=StrToIntDef(ERight.Text,12); FPrintOptions.MarginTopMM:=StrToIntDef(ETop.Text,12); FPrintOptions.MarginBottomMM:=StrToIntDef(EBottom.Text,12); FPrintOptions.FitToPageWidth:=CFit.Checked; for I:=0 to F.ComponentCount-1 do if (F.Components[I] is TEdit) and (F.Components[I].Tag>=0) and (Pos('PrintWidth',F.Components[I].Name)=1) then begin PCol:=FPrintOptions.Columns.Ensure(FFields[F.Components[I].Tag].FieldName); PCol.Width:=StrToIntDef(TEdit(F.Components[I]).Text,0); end; end;
@@ -2379,8 +2400,8 @@ begin
  AddItem('-',nil);
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
- AddItem('Vista previa de impresión...',GridPrintPreviewClick);
- AddItem('Configurar impresión...',GridPageSetupClick);
+ AddItem('Vista previa de impresi'+#243+'n...',GridPrintPreviewClick);
+ AddItem('Configurar impresi'+#243+'n...',GridPageSetupClick);
  AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
