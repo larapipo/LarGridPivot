@@ -362,19 +362,56 @@ procedure TLarGridPivot.ClearSelection;
 begin ClearCellSelection; end;
 
 procedure TLarGridPivot.SelectCell(AItem:TLarPivotViewItem;AAdd:Boolean);
-var K:string; I:Integer; R:TRect;
+var
+ K:string;
+ I:Integer;
+ VI:TLarPivotViewItem;
+ R:TRect;
+ OldSelection:TStringList;
+ Changed:Boolean;
 begin
- if AItem=nil then Exit; K:=CellSelectionKey(AItem);
- if not AAdd then FSelectedCells.Clear;
- I:=FSelectedCells.IndexOf(K);
- if AAdd and (I>=0) then FSelectedCells.Delete(I) else FSelectedCells.Add(K);
- FSelectionAnchor:=K;
- if HandleAllocated then begin
-  R:=AItem.Bounds;
-  OffsetRect(R,-FHScrollPos,-FVScrollPos);
-  if AItem.Kind=pvekRowValue then OffsetRect(R,FHScrollPos,0);
-  InvalidateRect(Handle,@R,False);
- end else Invalidate;
+ if AItem=nil then Exit;
+
+ OldSelection:=TStringList.Create;
+ try
+  OldSelection.Sorted:=True;
+  OldSelection.Duplicates:=dupIgnore;
+  OldSelection.Assign(FSelectedCells);
+
+  K:=CellSelectionKey(AItem);
+  if not AAdd then
+   FSelectedCells.Clear;
+
+  I:=FSelectedCells.IndexOf(K);
+  if AAdd and (I>=0) then
+   FSelectedCells.Delete(I)
+  else
+   FSelectedCells.Add(K);
+
+  FSelectionAnchor:=K;
+
+  { Repaint every cell whose selected state changed.  Previously only the new
+    cell was invalidated, so the old cell remained visually highlighted until
+    a scroll/full repaint even though it was already removed from the actual
+    selection list. }
+  if HandleAllocated then begin
+   for VI in FViewInfo.Items do
+    if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+     K:=CellSelectionKey(VI);
+     Changed:=(OldSelection.IndexOf(K)>=0)<>(FSelectedCells.IndexOf(K)>=0);
+     if Changed then begin
+      R:=VI.Bounds;
+      OffsetRect(R,-FHScrollPos,-FVScrollPos);
+      if VI.Kind=pvekRowValue then
+       OffsetRect(R,FHScrollPos,0);
+      InvalidateRect(Handle,@R,False);
+     end;
+    end;
+  end else
+   Invalidate;
+ finally
+  OldSelection.Free;
+ end;
 end;
 
 procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
