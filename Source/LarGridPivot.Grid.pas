@@ -283,22 +283,38 @@ begin
 end;
 
 procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
-var VI:TLarPivotViewItem; R,PaintR:TRect;
+var VI:TLarPivotViewItem; R,PaintR:TRect; OldSelection:TStringList; K:string; Changed:Boolean;
 begin
- FSelectedCells.Clear;
- if AAdd then FSelectedCells.Assign(FSelectionBase);
- for VI in FViewInfo.Items do
-  if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
-   R:=VI.Bounds;
-   { Row hierarchy is frozen horizontally; compare it in screen-X coordinates. }
-   if VI.Kind=pvekRowValue then OffsetRect(R,FHScrollPos,0);
-   if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
-    FSelectedCells.Add(CellSelectionKey(VI));
-  end;
- if HandleAllocated then begin
-  PaintR:=Rect(0,EffectiveFieldAreaHeight+(FViewInfo.HeaderLevels*FHeaderHeight),ClientWidth,ClientHeight);
-  InvalidateRect(Handle,@PaintR,False);
- end else Invalidate;
+ OldSelection:=TStringList.Create;
+ try
+  OldSelection.Sorted:=True; OldSelection.Duplicates:=dupIgnore;
+  OldSelection.Assign(FSelectedCells);
+  FSelectedCells.Clear;
+  if AAdd then FSelectedCells.Assign(FSelectionBase);
+  for VI in FViewInfo.Items do
+   if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+    R:=VI.Bounds;
+    if VI.Kind=pvekRowValue then OffsetRect(R,FHScrollPos,0);
+    if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
+     FSelectedCells.Add(CellSelectionKey(VI));
+   end;
+  { Repaint only cells whose selected state actually changed. }
+  if HandleAllocated then begin
+   for VI in FViewInfo.Items do
+    if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+     K:=CellSelectionKey(VI);
+     Changed:=(OldSelection.IndexOf(K)>=0)<>(FSelectedCells.IndexOf(K)>=0);
+     if Changed then begin
+      PaintR:=VI.Bounds;
+      OffsetRect(PaintR,-FHScrollPos,-FVScrollPos);
+      if VI.Kind=pvekRowValue then OffsetRect(PaintR,FHScrollPos,0);
+      InvalidateRect(Handle,@PaintR,False);
+     end;
+    end;
+  end else Invalidate;
+ finally
+  OldSelection.Free;
+ end;
 end;
 
 function TLarGridPivot.CellText(AItem:TLarPivotViewItem):string;
@@ -626,8 +642,15 @@ procedure TLarGridPivot.SetShowRowTotals(const Value:Boolean);
 begin
  if Value=FShowRowTotals then Exit;
  FShowRowTotals:=Value;
- RefreshViewOnly;
+ { Rebuild geometry first, then clamp horizontal position to the new content width. }
+ FViewDirty:=True;
+ FScrollDirty:=True;
+ BuildViewInfo;
  UpdateScrollBars;
+ FHScrollPos:=GetScrollPos(Handle,SB_HORZ);
+ FViewDirty:=True;
+ BuildViewInfo;
+ Invalidate;
  Update;
 end;
 procedure TLarGridPivot.SetShowColumnTotals(const Value:Boolean);
