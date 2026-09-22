@@ -62,9 +62,6 @@ type
     FPrintTitle:string;
     FPrintLandscape:Boolean;
     FPrintShowPageNumbers:Boolean;
-    FPrintTitle:string;
-    FPrintLandscape:Boolean;
-    FPrintShowPageNumbers:Boolean;
     function SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
     function CellSelectionKey(AItem:TLarPivotViewItem):string;
     function IsCellSelected(AItem:TLarPivotViewItem):Boolean;
@@ -87,7 +84,6 @@ type
     procedure FieldSortNoneClick(Sender:TObject);
     procedure FieldFilterClick(Sender:TObject);
     procedure GridCopyClick(Sender:TObject);
-    procedure GridPrintClick(Sender:TObject);
     procedure GridPrintClick(Sender:TObject);
     procedure GridExportExcelClick(Sender:TObject);
     procedure GridExportCSVClick(Sender:TObject);
@@ -193,8 +189,6 @@ type
     procedure CopyToClipboard;
     procedure PrintPivot;
     function PrintPivotDialog:Boolean;
-    procedure PrintPivot;
-    function PrintPivotDialog:Boolean;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
@@ -216,9 +210,6 @@ type
     property AllowCellSelection:Boolean read FAllowCellSelection write FAllowCellSelection default True;
     property AllowMultiSelect:Boolean read FAllowMultiSelect write FAllowMultiSelect default True;
     property AllowCopyToClipboard:Boolean read FAllowCopyToClipboard write FAllowCopyToClipboard default True;
-    property PrintTitle:string read FPrintTitle write FPrintTitle;
-    property PrintLandscape:Boolean read FPrintLandscape write FPrintLandscape default True;
-    property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;
     property PrintTitle:string read FPrintTitle write FPrintTitle;
     property PrintLandscape:Boolean read FPrintLandscape write FPrintLandscape default True;
     property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;
