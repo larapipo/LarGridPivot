@@ -604,7 +604,12 @@ begin if FTheme=Value then Exit; FTheme:=Value; Invalidate; end;
 
 function TLarGridPivot.ThemeHeaderColor:TColor;
 begin
- if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnFace) else
+ if FTheme=ptVclStyle then begin
+  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
+   Result:=StyleServices.GetStyleColor(scPanel)
+  else
+   Result:=StyleServices.GetSystemColor(clBtnFace);
+ end else
  case FTheme of ptClassicBlue:Result:=$00F2E3D5; ptLight:Result:=$00F5F5F5;
  ptSilver:Result:=$00E8E8E8; ptOffice:Result:=$00F0E6D6; ptDark:Result:=$00383838;
  else Result:=clBtnFace; end;
@@ -613,11 +618,23 @@ function TLarGridPivot.ThemeTotalColor:TColor;
 begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlight)
  else if FTheme=ptDark then Result:=$00505050 else Result:=$00E6D4BE; end;
 function TLarGridPivot.ThemeGridColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnShadow)
- else if FTheme=ptDark then Result:=$00606060 else Result:=$00C8C8C8; end;
+begin
+ if FTheme=ptVclStyle then begin
+  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
+   Result:=StyleServices.GetStyleColor(scBorder)
+  else
+   Result:=StyleServices.GetSystemColor(clBtnShadow);
+ end else if FTheme=ptDark then Result:=$00606060 else Result:=$00C8C8C8;
+end;
 function TLarGridPivot.ThemePanelColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindow)
- else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite; end;
+begin
+ if FTheme=ptVclStyle then begin
+  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
+   Result:=StyleServices.GetStyleColor(scWindow)
+  else
+   Result:=StyleServices.GetSystemColor(clWindow);
+ end else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite;
+end;
 function TLarGridPivot.ThemeTextColor:TColor;
 begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindowText)
  else if FTheme=ptDark then Result:=$00E8E8E8 else Result:=clWindowText; end;
@@ -628,20 +645,25 @@ function TLarGridPivot.ThemeTotalTextColor:TColor;
 begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlightText)
  else Result:=ThemeTextColor; end;
 function TLarGridPivot.ThemeCellColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindow)
- else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite; end;
+begin
+ if FTheme=ptVclStyle then begin
+  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
+   Result:=StyleServices.GetStyleColor(scWindow)
+  else
+   Result:=StyleServices.GetSystemColor(clWindow);
+ end else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite;
+end;
 function TLarGridPivot.ThemeChipColor:TColor;
 begin Result:=ThemeHeaderColor; end;
 
 function TLarGridPivot.FieldAreaBackgroundColor:TColor;
 begin
- { Use the same styled window background that already paints the pivot body.
-   This is deliberately not scPanel/clBtnFace: several styles can expose a
-   light panel/button color even while the actual pivot window background is
-   dark.  Matching clWindow guarantees the configuration bands follow the
-   visible result area for Carbon and other dark VCL styles. }
+ { Custom-painted controls should use the VCL Style palette directly.
+   GetSystemColor can legitimately map to the Windows system palette even
+   while a custom .vsf style is active.  scWindow is the style-defined window
+   surface and therefore follows dark styles such as Carbon reliably. }
  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
-  Result:=StyleServices.GetSystemColor(clWindow)
+  Result:=StyleServices.GetStyleColor(scWindow)
  else if FTheme=ptVclStyle then
   Result:=StyleServices.GetSystemColor(clWindow)
  else
