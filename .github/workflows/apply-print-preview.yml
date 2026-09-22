@@ -1,21 +1,8 @@
-name: Apply print preview
+name: Apply print preview (disabled)
 on:
-  push:
-    branches: [feature-print-preview]
-permissions:
-  contents: write
+  workflow_dispatch:
 jobs:
-  patch:
-    if: "!contains(github.event.head_commit.message, '[preview-applied]')"
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: feature-print-preview
-      - run: python apply_print_preview.py
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Source/LarGridPivot.Grid.pas
-          git commit -m "Add native print preview [preview-applied]"
-          git push origin HEAD:feature-print-preview
+      - run: echo disabled
