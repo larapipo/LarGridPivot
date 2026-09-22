@@ -164,7 +164,7 @@ begin
     LoadStylesFromFolder(TPath.Combine(PublicPath,'Documents\Embarcadero\Studio\23.0\Styles'));
   FStyleCombo.ItemIndex:=0;
   FStyleCombo.OnChange:=ChangeVclStyle;
-  MakeButton(FBtnGestion,745,6,'Conectar Gestión',OpenGestionDemo); FBtnGestion.Width:=130;
+  MakeButton(FBtnGestion,745,6,'Conectar Gesti'+#243+'n',OpenGestionDemo); FBtnGestion.Width:=130;
 
   FAreaPanel:=TPanel.Create(Self); FAreaPanel.Parent:=Self; FAreaPanel.Align:=alTop;
   FAreaPanel.Height:=0; FAreaPanel.Visible:=False; FAreaPanel.BevelOuter:=bvNone;
