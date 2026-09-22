@@ -1,5 +1,17 @@
 from pathlib import Path
 p=Path('Source/LarGridPivot.Grid.pas')
 s=p.read_text(encoding='utf-8')
-# Integration is applied by this helper. Marker update triggers the branch workflow.
-exec(Path('apply_print_options_body.py').read_text(encoding='utf-8')) if Path('apply_print_options_body.py').exists() else None
+s=s.replace('LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;','LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo, LarGridPivot.PrintConfig;')
+s=s.replace('    FPrintShowPageNumbers:Boolean;','    FPrintShowPageNumbers:Boolean;\n    FPrintOptions:TLarPivotPrintOptions;')
+s=s.replace('    procedure PrintPreview;','    procedure PrintPreview;\n    procedure SetPrintColumnWidth(const AFieldName:string; AWidth:Integer);')
+s=s.replace('    property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;','    property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;\n    property PrintOptions:TLarPivotPrintOptions read FPrintOptions;')
+s=s.replace("FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; FPrintTitle:=''; FPrintLandscape:=True; FPrintShowPageNumbers:=True; TabStop:=True;", "FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; FPrintTitle:=''; FPrintLandscape:=True; FPrintShowPageNumbers:=True; FPrintOptions:=TLarPivotPrintOptions.Create(Self); TabStop:=True;")
+s=s.replace('destructor TLarGridPivot.Destroy; begin SaveAutoLayout;', 'destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FPrintOptions.Free;')
+s=s.replace('procedure TLarGridPivot.PrintPreview;\nvar F:TLarPivotPrintPreviewForm;', 'procedure TLarGridPivot.SetPrintColumnWidth(const AFieldName:string; AWidth:Integer);\nbegin FPrintOptions.Columns.Ensure(AFieldName).Width:=Max(0,AWidth); end;\n\nprocedure TLarGridPivot.PrintPreview;\nvar F:TLarPivotPrintPreviewForm;')
+s=s.replace('TopM:=Round(AHeight*0.04); BottomM:=AHeight-TopM;', 'TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0)); BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));')
+s=s.replace('LeftM:=Round(AWidth*0.04); RightM:=AWidth-LeftM; TopM:=Round(AHeight*0.04); BottomM:=AHeight-TopM;', 'LeftM:=Round(AWidth*(FPrintOptions.MarginLeftMM/210.0)); RightM:=AWidth-Round(AWidth*(FPrintOptions.MarginRightMM/210.0)); TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0)); BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));')
+s=s.replace('if TotalW>0 then Scale:=Min(1.0,AvailW/TotalW) else Scale:=1.0;', 'if FPrintOptions.FitToPageWidth and (TotalW>0) then Scale:=Min(1.0,AvailW/TotalW) else Scale:=1.0;')
+# apply custom widths wherever print renderer derives widths
+s=s.replace('W:=Round(RFs[I].Width*Scale);', "W:=0; if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width; if W<=0 then W:=RFs[I].Width; W:=Round(W*Scale);")
+s=s.replace('W:=Round(FLayoutEngine.Columns[D].Width*Scale);', "W:=0; if (FLayoutEngine.Columns[D].DataField<>nil) and (FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName)<>nil) then W:=FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName).Width; if W<=0 then W:=FLayoutEngine.Columns[D].Width; W:=Round(W*Scale);")
+p.write_text(s,encoding='utf-8')
