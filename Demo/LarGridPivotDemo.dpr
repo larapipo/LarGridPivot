@@ -5,7 +5,6 @@ uses
   Demo.Main in 'Demo.Main.pas' {FrmLarGridPivotDemo},
   Demo.Gestion in 'Demo.Gestion.pas' {FrmLarGridPivotGestionDemo};
 
-{$R *.res}
 
 begin
   Application.Initialize;
