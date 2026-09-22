@@ -1451,35 +1451,31 @@ end;
 procedure TLarGridPivot.DrawFieldAreas;
 const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
 var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; Fil:TLarPivotFilter; S:string; L:TList<TLarPivotField>;
- Details:TThemedElementDetails; AreaTextColor:TColor; UseStyledPanel:Boolean;
+ AreaTextColor:TColor; UseCustomStyle:Boolean;
 begin
  if not FShowFieldPanel then Exit;
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
- UseStyledPanel:=StyleServices.Enabled and (not StyleServices.IsSystemStyle);
+ UseCustomStyle:=StyleServices.Enabled and (not StyleServices.IsSystemStyle);
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
   Canvas.Brush.Style:=bsSolid;
-  if UseStyledPanel then begin
-   { Paint the same themed surface a real VCL TPanel uses.  Picking a single
-     palette color is not enough for dark .vsf styles: some styles use a
-     themed bitmap/gradient for panels and expose a light fallback color. }
-   Details:=StyleServices.GetElementDetails(tpPanelBackground);
-   StyleServices.DrawElement(Canvas.Handle,Details,AR);
-   AreaTextColor:=ThemeHeaderTextColor;
-   StyleServices.GetElementColor(Details,ecTextColor,AreaTextColor);
-   Canvas.Brush.Style:=bsClear;
-   Canvas.Pen.Color:=ThemeGridColor;
-   Canvas.Rectangle(AR);
-   Canvas.Brush.Style:=bsSolid;
+  if UseCustomStyle then begin
+   { Match the actual pivot result surface.  Dark VCL styles such as Carbon
+     and Charcoal Dark Slate can define tpPanelBackground as a light surface,
+     even though the window/cell surface is dark.  ThemeCellColor/ThemeTextColor
+     already use the active style's scWindow palette and are exactly what paints
+     the body below these bands. }
+   Canvas.Brush.Color:=ThemeCellColor;
+   AreaTextColor:=ThemeTextColor;
   end else begin
    Canvas.Brush.Color:=FieldAreaBackgroundColor;
-   Canvas.FillRect(AR);
-   Canvas.Brush.Style:=bsClear;
-   Canvas.Pen.Color:=ThemeGridColor;
-   Canvas.Rectangle(AR);
-   Canvas.Brush.Style:=bsSolid;
    AreaTextColor:=FieldAreaTextColor;
   end;
+  Canvas.FillRect(AR);
+  Canvas.Brush.Style:=bsClear;
+  Canvas.Pen.Color:=ThemeGridColor;
+  Canvas.Rectangle(AR);
+  Canvas.Brush.Style:=bsSolid;
   Canvas.Font.Style:=[fsBold];
   Canvas.Font.Color:=AreaTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
