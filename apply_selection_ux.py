@@ -1,0 +1,74 @@
+from pathlib import Path
+p=Path('Source/LarGridPivot.Grid.pas')
+s=p.read_text(encoding='utf-8')
+def rep(a,b):
+    global s
+    if a not in s: raise SystemExit('missing target: '+a[:100])
+    s=s.replace(a,b,1)
+rep('    FSelectedCells:TStringList;\n    FSelectionAnchor:string;', '    FSelectedCells:TStringList;\n    FSelectionBase:TStringList;\n    FSelectionAnchor:string;')
+rep(" FSelectedCells:=TStringList.Create; FSelectedCells.Sorted:=True; FSelectedCells.Duplicates:=dupIgnore; FSelectionAnchor:=''; FSelectingCells:=False;", " FSelectedCells:=TStringList.Create; FSelectedCells.Sorted:=True; FSelectedCells.Duplicates:=dupIgnore;\n FSelectionBase:=TStringList.Create; FSelectionBase.Sorted:=True; FSelectionBase.Duplicates:=dupIgnore; FSelectionAnchor:=''; FSelectingCells:=False;")
+rep('destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FSelectedCells.Free;', 'destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FSelectionBase.Free; FSelectedCells.Free;')
+rep('ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;', 'ControlStyle:=ControlStyle+[csOpaque,csWantAllKeys]; DoubleBuffered:=True; end;')
+rep('if (VI.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) and VI.Contains(CX,CY) then Exit(VI);', 'if (VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) and VI.Contains(CX,CY) then Exit(VI);')
+rep('''procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
+var VI:TLarPivotViewItem; R:TRect;
+begin
+ if not AAdd then FSelectedCells.Clear;
+ for VI in FViewInfo.Items do
+  if VI.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+   R:=VI.Bounds;
+   if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
+    FSelectedCells.Add(CellSelectionKey(VI));
+  end;
+ Invalidate;
+end;''', '''procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
+var VI:TLarPivotViewItem; R:TRect;
+begin
+ FSelectedCells.Clear;
+ if AAdd then FSelectedCells.Assign(FSelectionBase);
+ for VI in FViewInfo.Items do
+  if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
+   R:=VI.Bounds;
+   if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
+    FSelectedCells.Add(CellSelectionKey(VI));
+  end;
+ Invalidate;
+end;''')
+rep(" Result:=''; if (AItem=nil) then Exit;\n if AItem.Field=nil then Exit(AItem.Caption);", " Result:=''; if (AItem=nil) then Exit;\n if AItem.Kind=pvekRowValue then Exit(AItem.Caption);\n if AItem.Field=nil then Exit(AItem.Caption);")
+rep('''  if (Button=mbLeft) and FAllowCellSelection and
+     (HT.Kind in [pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) then begin
+   SetFocus;
+   VI:=SelectableItemAt(X,Y);
+   if VI<>nil then begin
+    SelectCell(VI,FAllowMultiSelect and (ssCtrl in Shift));''', '''  if (Button=mbLeft) and FAllowCellSelection and
+     (HT.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) then begin
+   SetFocus;
+   VI:=SelectableItemAt(X,Y);
+   if VI<>nil then begin
+    FSelectionBase.Clear;
+    if FAllowMultiSelect and (ssCtrl in Shift) then FSelectionBase.Assign(FSelectedCells);
+    SelectCell(VI,FAllowMultiSelect and (ssCtrl in Shift));''')
+rep(' procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False);', ' procedure DrawCell(const ARect:TRect;const Txt:string;Al:TAlignment;Bold:Boolean=False;Total:Boolean=False;Selected:Boolean=False);')
+rep('  else begin Canvas.Brush.Color:=ThemeCellColor; Canvas.Font.Color:=ThemeTextColor; end;\n  Canvas.FillRect(RR);', '  else begin Canvas.Brush.Color:=ThemeCellColor; Canvas.Font.Color:=ThemeTextColor; end;\n  if Selected then Canvas.Brush.Color:=RGB(225,240,255);\n  Canvas.FillRect(RR);')
+rep("DrawCell(VI.Bounds,'',DefaultAlignment(VI.Field),VI.Level<RFs.Count-1);", "DrawCell(VI.Bounds,'',DefaultAlignment(VI.Field),VI.Level<RFs.Count-1,False,IsCellSelected(VI));")
+rep('DrawCell(VI.Bounds,S,DefaultAlignment(DF));', 'DrawCell(VI.Bounds,S,DefaultAlignment(DF),False,False,IsCellSelected(VI));')
+rep('DrawCell(VI.Bounds,VI.Caption,taLeftJustify,True,True)', 'DrawCell(VI.Bounds,VI.Caption,taLeftJustify,True,True,IsCellSelected(VI))')
+# both total and grand-total value calls have the same original text
+s=s.replace('DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True);', 'DrawCell(VI.Bounds,S,DefaultAlignment(DF),True,True,IsCellSelected(VI));')
+old='''  { Draw selection last in body coordinates so totals keep their colors while
+    the selected cells receive a clear focus frame. }
+  if FAllowCellSelection and (FSelectedCells.Count>0) then begin
+   Canvas.Brush.Style:=bsClear;
+   Canvas.Pen.Color:=StyleServices.GetSystemColor(clHighlight);
+   Canvas.Pen.Width:=2;
+   for VI in FViewInfo.Items do
+    if IsCellSelected(VI) and
+       (VI.Bounds.Right>=VisibleContent.Left) and (VI.Bounds.Left<=VisibleContent.Right) and
+       (VI.Bounds.Bottom>=VisibleContent.Top) and (VI.Bounds.Top<=VisibleContent.Bottom) then begin
+      R:=VI.Bounds; InflateRect(R,-1,-1); Canvas.Rectangle(R);
+    end;
+   Canvas.Pen.Width:=1; Canvas.Brush.Style:=bsSolid;
+  end;
+'''
+rep(old,'')
+p.write_text(s,encoding='utf-8')
