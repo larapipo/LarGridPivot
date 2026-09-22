@@ -1,22 +1,8 @@
-name: Apply printing
+name: Apply printing (disabled)
 on:
-  push:
-    branches: [feature-printing]
-permissions:
-  contents: write
+  workflow_dispatch:
 jobs:
-  patch:
-    if: "!contains(github.event.head_commit.message, '[printing-applied]')"
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: feature-printing
-      - run: python apply_printing.py
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Source/LarGridPivot.Grid.pas
-          git commit -m "Add native pivot printing [printing-applied]"
-          git pull --rebase origin feature-printing
-          git push origin HEAD:feature-printing
+      - run: echo disabled
