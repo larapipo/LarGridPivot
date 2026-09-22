@@ -167,14 +167,20 @@ begin
 end;
 
 procedure TFrmLarGridPivotGestionDemo.CambiarEstilo(Sender:TObject);
-var FN:string;
+var FN,StyleName:string;
 begin
  if FEstilo.ItemIndex<0 then Exit;
  FN:=FStyleFiles[FEstilo.ItemIndex];
+ StyleName:=FEstilo.Items[FEstilo.ItemIndex];
  try
-  if FN='' then TStyleManager.SetStyle('Windows')
+  if FN='' then
+   TStyleManager.SetStyle('Windows')
   else begin
-   TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
+   { Styles are registered globally in the process.  The main demo may have
+     already loaded the same .vsf, so first reuse the registered style instead
+     of calling LoadFromFile again ("Style '...' already registered"). }
+   if not TStyleManager.TrySetStyle(StyleName) then
+    TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
   end;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
