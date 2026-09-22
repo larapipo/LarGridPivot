@@ -72,8 +72,6 @@ type
     procedure CopySelectionToClipboard;
     function PrintPageCount(AWidth,AHeight:Integer; ACanvas:TCanvas):Integer;
     procedure RenderPrintPage(ACanvas:TCanvas; AWidth,AHeight,APageNo:Integer);
-    function PrintPageCount(AWidth,AHeight:Integer; ACanvas:TCanvas):Integer;
-    procedure RenderPrintPage(ACanvas:TCanvas; AWidth,AHeight,APageNo:Integer);
     procedure BeginBusy;
     procedure EndBusy;
     procedure HierarchyExpandClick(Sender:TObject);
@@ -89,7 +87,6 @@ type
     procedure FieldFilterClick(Sender:TObject);
     procedure GridCopyClick(Sender:TObject);
     procedure GridPrintClick(Sender:TObject);
-    procedure GridPrintPreviewClick(Sender:TObject);
     procedure GridPrintPreviewClick(Sender:TObject);
     procedure GridExportExcelClick(Sender:TObject);
     procedure GridExportCSVClick(Sender:TObject);
@@ -196,7 +193,6 @@ type
     procedure PrintPivot;
     function PrintPivotDialog:Boolean;
     procedure PrintPreview;
-    procedure PrintPreview;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
@@ -255,76 +251,9 @@ type
     constructor CreatePreview(AOwner:TComponent; APivot:TLarGridPivot);
   end;
 
-
-type
-  TLarPivotPrintPreviewForm = class(TForm)
-  private
-    FPivot: TLarGridPivot;
-    FPage, FPageCount: Integer;
-    FZoom: Double;
-    FTopPanel: TPanel;
-    FPaint: TPaintBox;
-    FPrev, FNext, FPrint, FClose: TButton;
-    FInfo: TLabel;
-    FZoomBox: TComboBox;
-    procedure PreviewPaint(Sender:TObject);
-    procedure PrevClick(Sender:TObject);
-    procedure NextClick(Sender:TObject);
-    procedure PrintClick(Sender:TObject);
-    procedure CloseClick(Sender:TObject);
-    procedure ZoomChange(Sender:TObject);
-    procedure UpdateState;
-  public
-    constructor CreatePreview(AOwner:TComponent; APivot:TLarGridPivot);
-  end;
-
 constructor TLarPivotDataLink.Create(AOwner: TLarGridPivot); begin inherited Create; FOwner:=AOwner; end;
 procedure TLarPivotDataLink.ActiveChanged; begin inherited; if Assigned(FOwner) then FOwner.DataChanged(Self); end;
 procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner) then FOwner.DataChanged(Self); end;
-
-constructor TLarPivotPrintPreviewForm.CreatePreview(AOwner:TComponent; APivot:TLarGridPivot);
-begin
- inherited CreateNew(AOwner);
- FPivot:=APivot; FPage:=1; FZoom:=0.75;
- Caption:='Vista previa de impresión'; Position:=poScreenCenter; Width:=1000; Height:=760;
- Color:=clBtnFace; DoubleBuffered:=True;
- FTopPanel:=TPanel.Create(Self); FTopPanel.Parent:=Self; FTopPanel.Align:=alTop; FTopPanel.Height:=44; FTopPanel.BevelOuter:=bvNone;
- FPrev:=TButton.Create(Self); FPrev.Parent:=FTopPanel; FPrev.SetBounds(8,8,80,28); FPrev.Caption:='< Anterior'; FPrev.OnClick:=PrevClick;
- FNext:=TButton.Create(Self); FNext.Parent:=FTopPanel; FNext.SetBounds(94,8,80,28); FNext.Caption:='Siguiente >'; FNext.OnClick:=NextClick;
- FInfo:=TLabel.Create(Self); FInfo.Parent:=FTopPanel; FInfo.SetBounds(188,14,130,20);
- FZoomBox:=TComboBox.Create(Self); FZoomBox.Parent:=FTopPanel; FZoomBox.Style:=csDropDownList; FZoomBox.SetBounds(330,9,90,24);
- FZoomBox.Items.Add('50%'); FZoomBox.Items.Add('75%'); FZoomBox.Items.Add('100%'); FZoomBox.Items.Add('125%'); FZoomBox.ItemIndex:=1; FZoomBox.OnChange:=ZoomChange;
- FPrint:=TButton.Create(Self); FPrint.Parent:=FTopPanel; FPrint.SetBounds(440,8,90,28); FPrint.Caption:='Imprimir...'; FPrint.OnClick:=PrintClick;
- FClose:=TButton.Create(Self); FClose.Parent:=FTopPanel; FClose.SetBounds(536,8,80,28); FClose.Caption:='Cerrar'; FClose.OnClick:=CloseClick;
- FPaint:=TPaintBox.Create(Self); FPaint.Parent:=Self; FPaint.Align:=alClient; FPaint.OnPaint:=PreviewPaint;
- FPageCount:=FPivot.PrintPageCount(1120,790,FPaint.Canvas); if FPageCount<1 then FPageCount:=1;
- UpdateState;
-end;
-
-procedure TLarPivotPrintPreviewForm.UpdateState;
-begin
- FInfo.Caption:='Página '+IntToStr(FPage)+' de '+IntToStr(FPageCount);
- FPrev.Enabled:=FPage>1; FNext.Enabled:=FPage<FPageCount; FPaint.Invalidate;
-end;
-procedure TLarPivotPrintPreviewForm.PrevClick(Sender:TObject); begin if FPage>1 then begin Dec(FPage); UpdateState; end; end;
-procedure TLarPivotPrintPreviewForm.NextClick(Sender:TObject); begin if FPage<FPageCount then begin Inc(FPage); UpdateState; end; end;
-procedure TLarPivotPrintPreviewForm.PrintClick(Sender:TObject); begin FPivot.PrintPivotDialog; end;
-procedure TLarPivotPrintPreviewForm.CloseClick(Sender:TObject); begin Close; end;
-procedure TLarPivotPrintPreviewForm.ZoomChange(Sender:TObject);
-begin case FZoomBox.ItemIndex of 0:FZoom:=0.50; 1:FZoom:=0.75; 2:FZoom:=1.0; 3:FZoom:=1.25; end; FPaint.Invalidate; end;
-procedure TLarPivotPrintPreviewForm.PreviewPaint(Sender:TObject);
-var PW,PH,X,Y:Integer; R:TRect; B:TBitmap;
-begin
- FPaint.Canvas.Brush.Color:=clBtnShadow; FPaint.Canvas.FillRect(FPaint.ClientRect);
- PW:=Round(1120*FZoom); PH:=Round(790*FZoom); X:=Max(12,(FPaint.Width-PW) div 2); Y:=18;
- B:=TBitmap.Create;
- try
-  B.SetSize(1120,790); B.PixelFormat:=pf32bit; B.Canvas.Brush.Color:=clWhite; B.Canvas.FillRect(Rect(0,0,B.Width,B.Height));
-  FPivot.RenderPrintPage(B.Canvas,B.Width,B.Height,FPage);
-  R:=Rect(X,Y,X+PW,Y+PH); FPaint.Canvas.StretchDraw(R,B);
-  FPaint.Canvas.Brush.Style:=bsClear; FPaint.Canvas.Pen.Color:=clGray; FPaint.Canvas.Rectangle(R);
- finally B.Free; end;
-end;
 
 constructor TLarPivotPrintPreviewForm.CreatePreview(AOwner:TComponent; APivot:TLarGridPivot);
 begin
@@ -2226,7 +2155,6 @@ begin
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
  AddItem('Vista previa de impresión...',GridPrintPreviewClick);
- AddItem('Vista previa de impresión...',GridPrintPreviewClick);
  AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
@@ -2241,11 +2169,6 @@ end;
 procedure TLarGridPivot.GridPrintClick(Sender:TObject);
 begin
  PrintPivotDialog;
-end;
-
-procedure TLarGridPivot.GridPrintPreviewClick(Sender:TObject);
-begin
- PrintPreview;
 end;
 
 procedure TLarGridPivot.GridPrintPreviewClick(Sender:TObject);
@@ -2313,7 +2236,6 @@ begin
  AddItem('-',nil);
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
- AddItem('Vista previa de impresión...',GridPrintPreviewClick);
  AddItem('Vista previa de impresión...',GridPrintPreviewClick);
  AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
