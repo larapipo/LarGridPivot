@@ -79,3 +79,12 @@ LarGridPivot1.Rebuild;
 Incluye agrupación jerárquica, filas y columnas dinámicas, múltiples campos de datos, filtros, orden, subtotales y total general, selección y copia al portapapeles, vistas guardadas, exportación CSV/XLSX, impresión, vista previa, configuración de impresión y soporte para VCL Styles.
 
 El proyecto `Demo` queda únicamente como aplicación de prueba y ejemplo de uso.
+
+
+## Demo visual
+
+Después de instalar los paquetes, abrir `Demo\LarGridPivotDemo.dproj`.
+
+Los formularios `Demo.Main` y `Demo.Gestion` usan archivos DFM normales. Los botones, paneles, combos, componentes de datos y `TLarGridPivot` están colocados en los formularios en tiempo de diseño, por lo que pueden seleccionarse y modificarse desde el Object Inspector.
+
+El Demo ya no crea controles visuales dinámicamente. El código de los formularios se limita a cargar datos, configurar el pivot y responder a eventos.
