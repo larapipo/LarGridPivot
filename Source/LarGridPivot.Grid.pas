@@ -1478,7 +1478,12 @@ begin
   Canvas.Brush.Style:=bsSolid;
   Canvas.Font.Style:=[fsBold];
   Canvas.Font.Color:=AreaTextColor;
+  { Area captions are labels over the already-painted band.  TextOut uses the
+    current brush as an opaque text background when bsSolid is active, which
+    produced the white rectangles visible with dark VCL styles. }
+  Canvas.Brush.Style:=bsClear;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
+  Canvas.Brush.Style:=bsSolid;
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
   L:=AreaFields(A);
   try
