@@ -1406,7 +1406,7 @@ begin
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
-  if FTheme=ptVclStyle then Canvas.Brush.Color:=ThemePanelColor else Canvas.Brush.Color:=FConfigAreaColor;
+  if FTheme=ptVclStyle then Canvas.Brush.Color:=ThemeHeaderColor else Canvas.Brush.Color:=FConfigAreaColor;
   Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=ThemeHeaderTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
