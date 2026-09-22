@@ -1,0 +1,23 @@
+name: Run selection UX patch
+on:
+  push:
+    branches: [fix-cell-selection-ux]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[selection-ux-applied]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-cell-selection-ux
+      - name: Apply patch
+        run: python apply_selection_ux.py
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Source/LarGridPivot.Grid.pas
+          git commit -m "Improve cell selection copy and drag UX [selection-ux-applied]"
+          git push origin HEAD:fix-cell-selection-ux
