@@ -58,7 +58,7 @@ const
 constructor TFrmLarGridPivotGestionDemo.Create(AOwner:TComponent);
 begin
   inherited CreateNew(AOwner);
-  Caption:='LarGridPivot - conexión Firebird / Gestión';
+  Caption:='LarGridPivot - conexi'+#243+'n Firebird / Gesti'+#243+'n';
   Width:=1280; Height:=720; Position:=poScreenCenter;
 
   FConnection:=TFDConnection.Create(Self);
@@ -110,7 +110,7 @@ begin
 
   FStatus:=TLabel.Create(Self); FStatus.Parent:=FTop;
   FStatus.Left:=895; FStatus.Top:=13;
-  FStatus.Caption:='Gestión local: GESTIONV3.FDB';
+  FStatus.Caption:='Gesti'+#243+'n local: GESTIONV3.FDB';
 
   FPivot:=TLarGridPivot.Create(Self); FPivot.Parent:=Self; FPivot.Align:=alClient;
   FPivot.Font.Name:='Segoe UI'; FPivot.Font.Size:=9;
@@ -252,7 +252,7 @@ begin
  if AConnection=nil then Exit;
  FQuery.Close;
  FQuery.Connection:=AConnection;
- FStatus.Caption:='Conexión FireDAC asignada: '+AConnection.Name;
+ FStatus.Caption:='Conexi'+#243+'n FireDAC asignada: '+AConnection.Name;
 end;
 
 procedure TFrmLarGridPivotGestionDemo.AbrirDatos(Sender:TObject);
@@ -282,7 +282,7 @@ begin
     FStatus.Caption:=Format('%d registros cargados desde Firebird',[FQuery.RecordCount]);
   except
     on E:Exception do begin
-      FStatus.Caption:='Error de conexión/consulta';
+      FStatus.Caption:='Error de conexi'+#243+'n/consulta';
       Application.ShowException(E);
     end;
   end;
@@ -307,7 +307,7 @@ begin
     RowField('RUBRODETALLE','Rubro',0);
     RowField('SUBRUBRODETALL','Subrubro',1);
     RowField('DETALLE_STK','Articulo',2);
-    { NROCPBTE remains available above the pivot: dragging it after Artículo
+    { NROCPBTE remains available above the pivot: dragging it after Articulo
       produces the leaf rows shown in the Gestion/DevExpress reference video. }
     F:=FPivot.FieldByName('MES'); if F<>nil then begin F.Caption:='Mes'; F.Area:=paColumn; F.AreaIndex:=0; end;
     DataField('CANTIDAD','Cantidad','#,##0.000',0);
