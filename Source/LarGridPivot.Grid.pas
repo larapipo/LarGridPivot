@@ -110,6 +110,9 @@ type
     function ThemeTotalTextColor:TColor;
     function ThemeCellColor:TColor;
     function ThemeChipColor:TColor;
+    function ActiveVclStyleFieldAreaColor:TColor;
+    function ActiveVclStyleFieldAreaTextColor:TColor;
+    function HasActiveCustomVclStyle:Boolean;
 
         procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
@@ -630,6 +633,31 @@ begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindow)
  else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite; end;
 function TLarGridPivot.ThemeChipColor:TColor;
 begin Result:=ThemeHeaderColor; end;
+
+function TLarGridPivot.HasActiveCustomVclStyle:Boolean;
+begin
+ Result:=StyleServices.Enabled and (not SameText(TStyleManager.ActiveStyle.Name,'Windows'));
+end;
+
+function TLarGridPivot.ActiveVclStyleFieldAreaColor:TColor;
+var D:TThemedElementDetails; C:TColor;
+begin
+ Result:=StyleServices.GetSystemColor(clBtnFace);
+ if not HasActiveCustomVclStyle then Exit;
+ D:=StyleServices.GetElementDetails(tbPushButtonNormal);
+ if StyleServices.GetElementColor(D,ecFillColor,C) then
+  Result:=C;
+end;
+
+function TLarGridPivot.ActiveVclStyleFieldAreaTextColor:TColor;
+var D:TThemedElementDetails; C:TColor;
+begin
+ Result:=StyleServices.GetSystemColor(clBtnText);
+ if not HasActiveCustomVclStyle then Exit;
+ D:=StyleServices.GetElementDetails(tbPushButtonNormal);
+ if StyleServices.GetElementColor(D,ecTextColor,C) then
+  Result:=C;
+end;
 
 procedure TLarGridPivot.SetShowFieldPanel(const Value:Boolean);
 begin if FShowFieldPanel=Value then Exit; FShowFieldPanel:=Value; FViewDirty:=True; FScrollDirty:=True; Invalidate; end;
@@ -1406,9 +1434,23 @@ begin
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
-  if FTheme=ptVclStyle then Canvas.Brush.Color:=ThemeHeaderColor else Canvas.Brush.Color:=FConfigAreaColor;
+  Canvas.Brush.Style:=bsSolid;
+  { The field-configuration bands must follow the application's active VCL
+    style even when a saved pivot layout contains a different Theme value.
+    GetElementColor uses the actual themed button face; Carbon and other dark
+    styles do not reliably map clWindow/clBtnFace through GetSystemColor. }
+  if HasActiveCustomVclStyle then
+   Canvas.Brush.Color:=ActiveVclStyleFieldAreaColor
+  else if FTheme=ptVclStyle then
+   Canvas.Brush.Color:=ThemeHeaderColor
+  else
+   Canvas.Brush.Color:=FConfigAreaColor;
   Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
-  Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=ThemeHeaderTextColor;
+  Canvas.Font.Style:=[fsBold];
+  if HasActiveCustomVclStyle then
+   Canvas.Font.Color:=ActiveVclStyleFieldAreaTextColor
+  else
+   Canvas.Font.Color:=ThemeHeaderTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
   L:=AreaFields(A);
