@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants, System.Zip, System.IOUtils,
-  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Vcl.Clipbrd, Winapi.Messages, Data.DB,
+  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Vcl.Clipbrd, Vcl.Printers, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo;
@@ -59,6 +59,9 @@ type
     FSelectingCells:Boolean;
     FSelectionStart:TPoint;
     FSelectionRect:TRect;
+    FPrintTitle:string;
+    FPrintLandscape:Boolean;
+    FPrintShowPageNumbers:Boolean;
     function SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
     function CellSelectionKey(AItem:TLarPivotViewItem):string;
     function IsCellSelected(AItem:TLarPivotViewItem):Boolean;
@@ -81,6 +84,7 @@ type
     procedure FieldSortNoneClick(Sender:TObject);
     procedure FieldFilterClick(Sender:TObject);
     procedure GridCopyClick(Sender:TObject);
+    procedure GridPrintClick(Sender:TObject);
     procedure GridExportExcelClick(Sender:TObject);
     procedure GridExportCSVClick(Sender:TObject);
     procedure GridToggleRowTotalsClick(Sender:TObject);
@@ -183,6 +187,8 @@ type
     function HitTestAt(X, Y: Integer): TLarPivotHitTest;
     procedure ClearSelection;
     procedure CopyToClipboard;
+    procedure PrintPivot;
+    function PrintPivotDialog:Boolean;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
@@ -204,6 +210,9 @@ type
     property AllowCellSelection:Boolean read FAllowCellSelection write FAllowCellSelection default True;
     property AllowMultiSelect:Boolean read FAllowMultiSelect write FAllowMultiSelect default True;
     property AllowCopyToClipboard:Boolean read FAllowCopyToClipboard write FAllowCopyToClipboard default True;
+    property PrintTitle:string read FPrintTitle write FPrintTitle;
+    property PrintLandscape:Boolean read FPrintLandscape write FPrintLandscape default True;
+    property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;
     property Theme:TLarPivotTheme read FTheme write SetTheme default ptVclStyle;
     property AutoSaveLayout:Boolean read FAutoSaveLayout write FAutoSaveLayout default True;
     property AutoSaveKey:string read FAutoSaveKey write FAutoSaveKey;
@@ -226,7 +235,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
- FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; TabStop:=True;
+ FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; FPrintTitle:=''; FPrintLandscape:=True; FPrintShowPageNumbers:=True; TabStop:=True;
  FSelectedCells:=TStringList.Create; FSelectedCells.Sorted:=True; FSelectedCells.Duplicates:=dupIgnore;
  FSelectionBase:=TStringList.Create; FSelectionBase.Sorted:=True; FSelectionBase.Duplicates:=dupIgnore; FSelectionAnchor:=''; FSelectingCells:=False;
  FHierarchyMenu:=TPopupMenu.Create(Self);
@@ -1424,6 +1433,90 @@ begin Result:=TList<TLarPivotField>.Create; for I:=0 to FFields.Count-1 do if FF
 function TLarGridPivot.DefaultAlignment(AField:TLarPivotField):TAlignment; begin case AField.Alignment of pvaLeft:Result:=taLeftJustify;pvaCenter:Result:=taCenter;pvaRight:Result:=taRightJustify;else Result:=taLeftJustify;end; end;
 function TLarGridPivot.FormatCellValue(const V:Variant;AField:TLarPivotField):string; begin if VarIsNull(V) or VarIsEmpty(V) then Exit(''); if (AField.DisplayFormat<>'') and VarIsNumeric(V) then Result:=FormatFloat(AField.DisplayFormat,V) else Result:=VarToStr(V); end;
 
+function TLarGridPivot.PrintPivotDialog:Boolean;
+var D:TPrintDialog;
+begin
+ D:=TPrintDialog.Create(Self);
+ try
+  D.Options:=[poPageNums,poWarning];
+  D.MinPage:=1; D.MaxPage:=9999; D.FromPage:=1; D.ToPage:=9999;
+  Result:=D.Execute;
+  if Result then PrintPivot;
+ finally D.Free; end;
+end;
+
+procedure TLarGridPivot.PrintPivot;
+var
+ RFs,DFs:TList<TLarPivotField>; Row,D,I,PageNo,Y,LeftM,TopM,RightM,BottomM,
+ HeaderH,LineH,AvailW,TotalW,X,W:Integer; Scale:Double; S:string;
+ Cell:TLarPivotResultCell; V:Variant; R:TRect;
+ procedure TextCell(const AText:string; const AR:TRect; AAlign:TAlignment; ABold:Boolean=False);
+ var Flags:Cardinal; RR:TRect;
+ begin
+  RR:=AR; Printer.Canvas.Brush.Style:=bsClear;
+  if ABold then Printer.Canvas.Font.Style:=[fsBold] else Printer.Canvas.Font.Style:=[];
+  Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
+  case AAlign of taRightJustify:Flags:=Flags or DT_RIGHT; taCenter:Flags:=Flags or DT_CENTER; else Flags:=Flags or DT_LEFT; end;
+  InflateRect(RR,-4,0); DrawText(Printer.Canvas.Handle,PChar(AText),Length(AText),RR,Flags);
+ end;
+ procedure Box(const AR:TRect);
+ begin Printer.Canvas.Brush.Style:=bsClear; Printer.Canvas.Pen.Color:=clSilver; Printer.Canvas.Rectangle(AR); end;
+ procedure PageHeader;
+ var J,XX,WW:Integer; Cap:string;
+ begin
+  Y:=TopM;
+  Printer.Canvas.Font.Assign(Font); Printer.Canvas.Font.Size:=11; Printer.Canvas.Font.Style:=[fsBold];
+  if FPrintTitle<>'' then S:=FPrintTitle else S:='Pivot';
+  Printer.Canvas.TextOut(LeftM,Y,S); Inc(Y,LineH+4);
+  Printer.Canvas.Font.Size:=8; Printer.Canvas.Font.Style:=[];
+  if FPrintShowPageNumbers then begin
+   S:='Pagina '+IntToStr(PageNo); Printer.Canvas.TextOut(RightM-Printer.Canvas.TextWidth(S),TopM,S);
+  end;
+  XX:=LeftM;
+  for J:=0 to RFs.Count-1 do begin
+   WW:=Round(RFs[J].Width*Scale); R:=Rect(XX,Y,XX+WW,Y+HeaderH); Box(R); Cap:=RFs[J].Caption; if Cap='' then Cap:=RFs[J].FieldName; TextCell(Cap,R,taLeftJustify,True); Inc(XX,WW);
+  end;
+  for J:=0 to FLayoutEngine.Columns.Count-1 do begin
+   WW:=Round(FLayoutEngine.Columns[J].Width*Scale); R:=Rect(XX,Y,XX+WW,Y+HeaderH); Box(R);
+   Cap:=FLayoutEngine.Columns[J].ColumnKey; if FLayoutEngine.Columns[J].DataField<>nil then begin if Cap<>'' then Cap:=Cap+' '; Cap:=Cap+FLayoutEngine.Columns[J].DataField.Caption; end;
+   TextCell(Cap,R,taCenter,True); Inc(XX,WW);
+  end;
+  Inc(Y,HeaderH);
+ end;
+begin
+ if (FEngine=nil) or (FEngine.Model=nil) then Exit;
+ BuildViewInfo;
+ RFs:=AxisFields(paRow); DFs:=DataFields;
+ try
+  if FPrintLandscape then Printer.Orientation:=poLandscape else Printer.Orientation:=poPortrait;
+  Printer.Title:=FPrintTitle;
+  Printer.BeginDoc;
+  try
+   LeftM:=Round(Printer.PageWidth*0.04); RightM:=Printer.PageWidth-LeftM;
+   TopM:=Round(Printer.PageHeight*0.04); BottomM:=Printer.PageHeight-TopM;
+   LineH:=Max(Printer.Canvas.TextHeight('Ag')+8,28); HeaderH:=LineH+4;
+   TotalW:=0; for I:=0 to RFs.Count-1 do Inc(TotalW,RFs[I].Width);
+   for D:=0 to FLayoutEngine.Columns.Count-1 do Inc(TotalW,FLayoutEngine.Columns[D].Width);
+   AvailW:=RightM-LeftM; if TotalW>0 then Scale:=Min(1.0,AvailW/TotalW) else Scale:=1.0;
+   PageNo:=1; PageHeader;
+   for Row:=0 to FEngine.Model.RowKeys.Count-1 do begin
+    if Y+LineH>BottomM then begin Printer.NewPage; Inc(PageNo); PageHeader; end;
+    X:=LeftM;
+    for I:=0 to RFs.Count-1 do begin
+     W:=Round(RFs[I].Width*Scale); R:=Rect(X,Y,X+W,Y+LineH); Box(R); TextCell(KeyPart(FEngine.Model.RowKeys[Row],I),R,taLeftJustify); Inc(X,W);
+    end;
+    for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+     W:=Round(FLayoutEngine.Columns[D].Width*Scale); R:=Rect(X,Y,X+W,Y+LineH); Box(R);
+     Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName);
+     if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null;
+     S:=FormatCellValue(V,FLayoutEngine.Columns[D].DataField); TextCell(S,R,taRightJustify); Inc(X,W);
+    end;
+    Inc(Y,LineH);
+   end;
+  finally Printer.EndDoc; end;
+ finally DFs.Free; RFs.Free; end;
+end;
+
 procedure TLarGridPivot.ExportToCSV(const AFileName:string);
 var SL:TStringList; RFs:TList<TLarPivotField>; Row,D,I:Integer; Line,S:string;
  Cell:TLarPivotResultCell; V:Variant;
@@ -1993,6 +2086,7 @@ begin
  AddItem('-',nil);
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
+ AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
@@ -2001,6 +2095,11 @@ end;
 procedure TLarGridPivot.GridCopyClick(Sender:TObject);
 begin
  CopySelectionToClipboard;
+end;
+
+procedure TLarGridPivot.GridPrintClick(Sender:TObject);
+begin
+ PrintPivotDialog;
 end;
 
 procedure TLarGridPivot.GridExportExcelClick(Sender:TObject);
@@ -2063,6 +2162,7 @@ begin
  AddItem('-',nil);
  if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
   AddItem('Copiar',GridCopyClick);
+ AddItem('Imprimir...',GridPrintClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y));
