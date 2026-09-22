@@ -1,4 +1,4 @@
-unit LarGridPivot.Grid;
+﻿unit LarGridPivot.Grid;
 
 interface
 
@@ -1955,7 +1955,7 @@ begin
     pvekFieldHeader:
      begin
       { Never use a Unicode glyph for sort direction: projects saved/compiled
-        with a legacy source codepage rendered it as "â–²". Draw the marker. }
+        with a legacy source codepage rendered the glyph incorrectly. Draw the marker instead. }
       DrawCell(VI.Bounds,VI.Caption,taCenter,True);
       if (VI.Field<>nil) and (VI.Field.SortOrder<>psoNone) then begin
        R:=VI.Bounds;
