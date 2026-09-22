@@ -592,7 +592,7 @@ begin
 end;
 
 procedure TLarGridPivot.WMHScroll(var Message:TWMHScroll);
-var SI:TScrollInfo; P:Integer;
+var SI:TScrollInfo; P,OldP,Delta,HeaderLevels:Integer; R:TRect; CFs,DFs:TList<TLarPivotField>;
 begin
  FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_HORZ,SI); P:=SI.nPos;
  case Message.ScrollCode of
@@ -603,11 +603,25 @@ begin
  if P<SI.nMin then P:=SI.nMin;
  if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
  if P<0 then P:=0;
- if P<>FHScrollPos then begin FHScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_HORZ,P,True); Invalidate; end;
+ if P<>FHScrollPos then begin
+  OldP:=FHScrollPos; Delta:=OldP-P; FHScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_HORZ,P,True);
+  CFs:=AxisFields(paColumn); DFs:=DataFields;
+  try
+   HeaderLevels:=CFs.Count; if HeaderLevels>0 then Inc(HeaderLevels); if DFs.Count>1 then Inc(HeaderLevels); if HeaderLevels=0 then HeaderLevels:=1;
+  finally DFs.Free; CFs.Free; end;
+  { Reuse pixels already on screen. The row hierarchy is frozen, so only the
+    horizontally scrolling part to its right is shifted. SW_INVALIDATE repaints
+    just the newly exposed strip instead of flashing the whole control. }
+  R:=Rect(FRowHeaderWidth,ResultTop,ClientWidth,ClientHeight);
+  ScrollWindowEx(Handle,Delta,0,@R,@R,0,nil,SW_INVALIDATE);
+  { Header and body share the same horizontal offset; invalidate their exposed
+    edges without background erase. }
+  RedrawWindow(Handle,nil,0,RDW_INVALIDATE or RDW_NOERASE);
+ end;
 end;
 
 procedure TLarGridPivot.WMVScroll(var Message:TWMVScroll);
-var SI:TScrollInfo; P:Integer; R:TRect;
+var SI:TScrollInfo; P,OldP,Delta,HeaderLevels:Integer; R:TRect; CFs,DFs:TList<TLarPivotField>;
 begin
  FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_VERT,SI); P:=SI.nPos;
  case Message.ScrollCode of
@@ -619,23 +633,34 @@ begin
  if P>SI.nMax-Integer(SI.nPage)+1 then P:=SI.nMax-Integer(SI.nPage)+1;
  if P<0 then P:=0;
  if P<>FVScrollPos then begin
-  FVScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,P,True);
-  R:=Rect(0,ResultTop,ClientWidth,ClientHeight); InvalidateRect(Handle,@R,False);
+  OldP:=FVScrollPos; Delta:=OldP-P; FVScrollPos:=P; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,P,True);
+  CFs:=AxisFields(paColumn); DFs:=DataFields;
+  try HeaderLevels:=CFs.Count; if HeaderLevels>0 then Inc(HeaderLevels); if DFs.Count>1 then Inc(HeaderLevels); if HeaderLevels=0 then HeaderLevels:=1;
+  finally DFs.Free; CFs.Free; end;
+  R:=Rect(0,ResultTop+HeaderLevels*FHeaderHeight,ClientWidth,ClientHeight);
+  if (Abs(Delta)<Max(1,R.Bottom-R.Top)) then
+   ScrollWindowEx(Handle,0,Delta,@R,@R,0,nil,SW_INVALIDATE)
+  else InvalidateRect(Handle,@R,False);
  end;
 end;
 
 procedure TLarGridPivot.WMMouseWheel(var Message:TWMMouseWheel);
-var SI:TScrollInfo; MaxPos:Integer; R:TRect;
+var SI:TScrollInfo; MaxPos,NewPos,OldPos,Delta,HeaderLevels:Integer; R:TRect; CFs,DFs:TList<TLarPivotField>;
 begin
- FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL;
- GetScrollInfo(Handle,SB_VERT,SI);
- if Message.WheelDelta>0 then Dec(FVScrollPos,FRowHeight*3)
- else Inc(FVScrollPos,FRowHeight*3);
+ FillChar(SI,SizeOf(SI),0); SI.cbSize:=SizeOf(SI); SI.fMask:=SIF_ALL; GetScrollInfo(Handle,SB_VERT,SI);
+ OldPos:=FVScrollPos; NewPos:=OldPos;
+ if Message.WheelDelta>0 then Dec(NewPos,FRowHeight*3) else Inc(NewPos,FRowHeight*3);
  MaxPos:=SI.nMax-Integer(SI.nPage)+1; if MaxPos<0 then MaxPos:=0;
- if FVScrollPos<0 then FVScrollPos:=0;
- if FVScrollPos>MaxPos then FVScrollPos:=MaxPos;
- FViewDirty:=True; SetScrollPos(Handle,SB_VERT,FVScrollPos,True);
- R:=Rect(0,ResultTop,ClientWidth,ClientHeight); InvalidateRect(Handle,@R,False);
+ if NewPos<0 then NewPos:=0; if NewPos>MaxPos then NewPos:=MaxPos;
+ if NewPos<>OldPos then begin
+  Delta:=OldPos-NewPos; FVScrollPos:=NewPos; FViewDirty:=True; SetScrollPos(Handle,SB_VERT,FVScrollPos,True);
+  CFs:=AxisFields(paColumn); DFs:=DataFields;
+  try HeaderLevels:=CFs.Count; if HeaderLevels>0 then Inc(HeaderLevels); if DFs.Count>1 then Inc(HeaderLevels); if HeaderLevels=0 then HeaderLevels:=1;
+  finally DFs.Free; CFs.Free; end;
+  R:=Rect(0,ResultTop+HeaderLevels*FHeaderHeight,ClientWidth,ClientHeight);
+  if (Abs(Delta)<Max(1,R.Bottom-R.Top)) then ScrollWindowEx(Handle,0,Delta,@R,@R,0,nil,SW_INVALIDATE)
+  else InvalidateRect(Handle,@R,False);
+ end;
  Message.Result:=1;
 end;
 
