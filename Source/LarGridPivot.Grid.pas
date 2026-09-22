@@ -1535,20 +1535,50 @@ begin
 end;
 
 function TLarGridPivot.PrintPageCount(AWidth,AHeight:Integer; ACanvas:TCanvas):Integer;
-var LineH,HeaderH,TopM,BottomM,RowsPerPage:Integer;
+var RFs,CFs:TList<TLarPivotField>; I,D,LineH,HeaderRows,HeaderH,TopM,BottomM,
+ LeftM,RightM,AvailW,FixedW,W,BandW,HCount,RowsPerPage,VCount:Integer;
 begin
- ACanvas.Font.Assign(Font); ACanvas.Font.Size:=8;
- TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0)); BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));
- LineH:=Max(ACanvas.TextHeight('Ag')+8,28); HeaderH:=LineH+4;
- RowsPerPage:=Max(1,(BottomM-(TopM+LineH+4+HeaderH)) div LineH);
- if (FEngine=nil) or (FEngine.Model=nil) or (FEngine.Model.RowKeys.Count=0) then Exit(1);
- Result:=(FEngine.Model.RowKeys.Count+RowsPerPage-1) div RowsPerPage;
+ Result:=1;
+ if (FEngine=nil) or (FEngine.Model=nil) then Exit;
+ RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
+ try
+  ACanvas.Font.Assign(Font); ACanvas.Font.Size:=8;
+  LeftM:=Round(AWidth*(FPrintOptions.MarginLeftMM/210.0));
+  RightM:=AWidth-Round(AWidth*(FPrintOptions.MarginRightMM/210.0));
+  TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0));
+  BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));
+  LineH:=Max(ACanvas.TextHeight('Ag')+8,28);
+  HeaderRows:=Max(1,CFs.Count+1); HeaderH:=HeaderRows*LineH;
+  FixedW:=0;
+  for I:=0 to RFs.Count-1 do begin
+   if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0;
+   if W<=0 then W:=RFs[I].Width; Inc(FixedW,W);
+  end;
+  AvailW:=Max(1,(RightM-LeftM)-FixedW); HCount:=1; BandW:=0;
+  for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+   if (FLayoutEngine.Columns[D].DataField<>nil) and (FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName)<>nil) then W:=FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName).Width else W:=0;
+   if W<=0 then W:=FLayoutEngine.Columns[D].Width;
+   if (BandW>0) and (BandW+W>AvailW) then begin Inc(HCount); BandW:=0; end;
+   Inc(BandW,W);
+  end;
+  RowsPerPage:=Max(1,(BottomM-(TopM+LineH+4+HeaderH)) div LineH);
+  VCount:=Max(1,(FEngine.Model.RowKeys.Count+RowsPerPage-1) div RowsPerPage);
+  Result:=HCount*VCount;
+ finally CFs.Free; RFs.Free; end;
 end;
 
 procedure TLarGridPivot.RenderPrintPage(ACanvas:TCanvas; AWidth,AHeight,APageNo:Integer);
-var RFs:TList<TLarPivotField>; Row,D,I,Y,LeftM,TopM,RightM,BottomM,HeaderH,LineH,
- AvailW,TotalW,X,W,RowsPerPage,FirstRow,LastRow:Integer; Scale:Double; S,Cap:string;
+var RFs,CFs:TList<TLarPivotField>; Row,D,I,L,Y,LeftM,TopM,RightM,BottomM,LineH,
+ HeaderRows,HeaderH,AvailW,FixedW,X,W,RowsPerPage,FirstRow,LastRow,HCount,HPage,VPage,
+ BandStart,BandEnd,BandW,CurBand,GroupStart,GroupEnd,GW:Integer; S,Cap,GroupCap:string;
  Cell:TLarPivotResultCell; V:Variant; R:TRect;
+ function ColWidth(AIndex:Integer):Integer;
+ begin
+  Result:=0;
+  if (FLayoutEngine.Columns[AIndex].DataField<>nil) and (FPrintOptions.Columns.Find(FLayoutEngine.Columns[AIndex].DataField.FieldName)<>nil) then
+   Result:=FPrintOptions.Columns.Find(FLayoutEngine.Columns[AIndex].DataField.FieldName).Width;
+  if Result<=0 then Result:=FLayoutEngine.Columns[AIndex].Width;
+ end;
  procedure TextCell(const AText:string; const AR:TRect; AAlign:TAlignment; ABold:Boolean=False);
  var Flags:Cardinal; RR:TRect;
  begin
@@ -1556,32 +1586,59 @@ var RFs:TList<TLarPivotField>; Row,D,I,Y,LeftM,TopM,RightM,BottomM,HeaderH,LineH
   if ABold then ACanvas.Font.Style:=[fsBold] else ACanvas.Font.Style:=[];
   Flags:=DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS;
   case AAlign of taRightJustify:Flags:=Flags or DT_RIGHT; taCenter:Flags:=Flags or DT_CENTER; else Flags:=Flags or DT_LEFT; end;
-  InflateRect(RR,-4,0); DrawText(ACanvas.Handle,PChar(AText),Length(AText),RR,Flags);
+  InflateRect(RR,-4,0); DrawTextW(ACanvas.Handle,PWideChar(AText),Length(AText),RR,Flags);
  end;
  procedure Box(const AR:TRect); begin ACanvas.Brush.Style:=bsClear; ACanvas.Pen.Color:=clSilver; ACanvas.Rectangle(AR); end;
 begin
  if (FEngine=nil) or (FEngine.Model=nil) then Exit;
- BuildViewInfo; RFs:=AxisFields(paRow);
+ BuildViewInfo; RFs:=AxisFields(paRow); CFs:=AxisFields(paColumn);
  try
   ACanvas.Brush.Color:=clWhite; ACanvas.FillRect(Rect(0,0,AWidth,AHeight)); ACanvas.Font.Assign(Font);
-  LeftM:=Round(AWidth*(FPrintOptions.MarginLeftMM/210.0)); RightM:=AWidth-Round(AWidth*(FPrintOptions.MarginRightMM/210.0)); TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0)); BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));
-  ACanvas.Font.Size:=8; LineH:=Max(ACanvas.TextHeight('Ag')+8,28); HeaderH:=LineH+4;
+  LeftM:=Round(AWidth*(FPrintOptions.MarginLeftMM/210.0)); RightM:=AWidth-Round(AWidth*(FPrintOptions.MarginRightMM/210.0));
+  TopM:=Round(AHeight*(FPrintOptions.MarginTopMM/297.0)); BottomM:=AHeight-Round(AHeight*(FPrintOptions.MarginBottomMM/297.0));
+  ACanvas.Font.Size:=8; LineH:=Max(ACanvas.TextHeight('Ag')+8,28); HeaderRows:=Max(1,CFs.Count+1); HeaderH:=HeaderRows*LineH;
+  FixedW:=0;
+  for I:=0 to RFs.Count-1 do begin if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0; if W<=0 then W:=RFs[I].Width; Inc(FixedW,W); end;
+  AvailW:=Max(1,(RightM-LeftM)-FixedW);
+  HCount:=1; BandW:=0;
+  for D:=0 to FLayoutEngine.Columns.Count-1 do begin W:=ColWidth(D); if (BandW>0) and (BandW+W>AvailW) then begin Inc(HCount); BandW:=0; end; Inc(BandW,W); end;
+  HPage:=(APageNo-1) mod HCount; VPage:=(APageNo-1) div HCount;
+  BandStart:=0; BandEnd:=FLayoutEngine.Columns.Count-1; CurBand:=0; BandW:=0;
+  for D:=0 to FLayoutEngine.Columns.Count-1 do begin
+   W:=ColWidth(D);
+   if (BandW>0) and (BandW+W>AvailW) then begin
+    if CurBand=HPage then begin BandEnd:=D-1; Break; end;
+    Inc(CurBand); BandStart:=D; BandW:=0;
+   end;
+   Inc(BandW,W);
+  end;
+  if CurBand<HPage then BandStart:=FLayoutEngine.Columns.Count;
   Y:=TopM; ACanvas.Font.Size:=11; ACanvas.Font.Style:=[fsBold]; if FPrintTitle<>'' then S:=FPrintTitle else S:='Pivot'; ACanvas.TextOut(LeftM,Y,S);
   if FPrintShowPageNumbers then begin S:='Página '+IntToStr(APageNo)+' de '+IntToStr(PrintPageCount(AWidth,AHeight,ACanvas)); ACanvas.TextOut(RightM-ACanvas.TextWidth(S),Y,S); end;
   Inc(Y,LineH+4); ACanvas.Font.Size:=8;
-  TotalW:=0; for I:=0 to RFs.Count-1 do Inc(TotalW,RFs[I].Width); for D:=0 to FLayoutEngine.Columns.Count-1 do Inc(TotalW,FLayoutEngine.Columns[D].Width);
-  AvailW:=RightM-LeftM; if FPrintOptions.FitToPageWidth and (TotalW>0) then Scale:=Min(1.0,AvailW/TotalW) else Scale:=1.0;
   X:=LeftM;
-  for I:=0 to RFs.Count-1 do begin if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0; if W<=0 then W:=RFs[I].Width; W:=Round(W*Scale); R:=Rect(X,Y,X+W,Y+HeaderH); Box(R); Cap:=RFs[I].Caption; if Cap='' then Cap:=RFs[I].FieldName; TextCell(Cap,R,taLeftJustify,True); Inc(X,W); end;
-  for D:=0 to FLayoutEngine.Columns.Count-1 do begin if (FLayoutEngine.Columns[D].DataField<>nil) and (FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName)<>nil) then W:=FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName).Width else W:=0; if W<=0 then W:=FLayoutEngine.Columns[D].Width; W:=Round(W*Scale); R:=Rect(X,Y,X+W,Y+HeaderH); Box(R); Cap:=FLayoutEngine.Columns[D].ColumnKey; if FLayoutEngine.Columns[D].DataField<>nil then begin if Cap<>'' then Cap:=Cap+' '; Cap:=Cap+FLayoutEngine.Columns[D].DataField.Caption; end; TextCell(Cap,R,taCenter,True); Inc(X,W); end;
-  Inc(Y,HeaderH); RowsPerPage:=Max(1,(BottomM-Y) div LineH); FirstRow:=(APageNo-1)*RowsPerPage; LastRow:=Min(FEngine.Model.RowKeys.Count-1,FirstRow+RowsPerPage-1);
+  for I:=0 to RFs.Count-1 do begin
+   if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0; if W<=0 then W:=RFs[I].Width;
+   R:=Rect(X,Y,X+W,Y+HeaderH); Box(R); Cap:=RFs[I].Caption; if Cap='' then Cap:=RFs[I].FieldName; TextCell(Cap,R,taLeftJustify,True); Inc(X,W);
+  end;
+  for L:=0 to CFs.Count-1 do begin
+   X:=LeftM+FixedW; D:=BandStart;
+   while D<=BandEnd do begin
+    GroupCap:=KeyPart(FLayoutEngine.Columns[D].ColumnKey,L); GroupStart:=D; GW:=0;
+    while (D<=BandEnd) and (KeyPart(FLayoutEngine.Columns[D].ColumnKey,L)=GroupCap) do begin Inc(GW,ColWidth(D)); Inc(D); end;
+    GroupEnd:=D-1; R:=Rect(X,Y+L*LineH,X+GW,Y+(L+1)*LineH); Box(R); TextCell(GroupCap,R,taCenter,True); Inc(X,GW);
+   end;
+  end;
+  X:=LeftM+FixedW;
+  for D:=BandStart to BandEnd do begin W:=ColWidth(D); R:=Rect(X,Y+CFs.Count*LineH,X+W,Y+HeaderH); Box(R); if FLayoutEngine.Columns[D].DataField<>nil then Cap:=FLayoutEngine.Columns[D].DataField.Caption else Cap:=''; TextCell(Cap,R,taCenter,True); Inc(X,W); end;
+  Inc(Y,HeaderH); RowsPerPage:=Max(1,(BottomM-Y) div LineH); FirstRow:=VPage*RowsPerPage; LastRow:=Min(FEngine.Model.RowKeys.Count-1,FirstRow+RowsPerPage-1);
   for Row:=FirstRow to LastRow do begin
    X:=LeftM;
-   for I:=0 to RFs.Count-1 do begin if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0; if W<=0 then W:=RFs[I].Width; W:=Round(W*Scale); R:=Rect(X,Y,X+W,Y+LineH); Box(R); TextCell(KeyPart(FEngine.Model.RowKeys[Row],I),R,taLeftJustify); Inc(X,W); end;
-   for D:=0 to FLayoutEngine.Columns.Count-1 do begin if (FLayoutEngine.Columns[D].DataField<>nil) and (FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName)<>nil) then W:=FPrintOptions.Columns.Find(FLayoutEngine.Columns[D].DataField.FieldName).Width else W:=0; if W<=0 then W:=FLayoutEngine.Columns[D].Width; W:=Round(W*Scale); R:=Rect(X,Y,X+W,Y+LineH); Box(R); Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null; S:=FormatCellValue(V,FLayoutEngine.Columns[D].DataField); TextCell(S,R,taRightJustify); Inc(X,W); end;
+   for I:=0 to RFs.Count-1 do begin if FPrintOptions.Columns.Find(RFs[I].FieldName)<>nil then W:=FPrintOptions.Columns.Find(RFs[I].FieldName).Width else W:=0; if W<=0 then W:=RFs[I].Width; R:=Rect(X,Y,X+W,Y+LineH); Box(R); TextCell(KeyPart(FEngine.Model.RowKeys[Row],I),R,taLeftJustify); Inc(X,W); end;
+   for D:=BandStart to BandEnd do begin W:=ColWidth(D); R:=Rect(X,Y,X+W,Y+LineH); Box(R); Cell:=FEngine.Model.FindCell(FEngine.Model.RowKeys[Row],FLayoutEngine.Columns[D].ColumnKey,FLayoutEngine.Columns[D].DataField.FieldName); if Cell<>nil then V:=Cell.Accumulator.Value(FLayoutEngine.Columns[D].DataField.SummaryType) else V:=Null; S:=FormatCellValue(V,FLayoutEngine.Columns[D].DataField); TextCell(S,R,taRightJustify); Inc(X,W); end;
    Inc(Y,LineH);
   end;
- finally RFs.Free; end;
+ finally CFs.Free; RFs.Free; end;
 end;
 
 procedure TLarGridPivot.PrintPivot;
