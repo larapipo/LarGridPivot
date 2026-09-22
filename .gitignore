@@ -1,0 +1,25 @@
+# Delphi build output
+*.dcu
+*.bpl
+*.dcp
+*.map
+*.local
+*.identcache
+*.stat
+*.~*
+
+# IDE history/recovery
+__history/
+__recovery/
+
+# Platform output folders
+Win32/
+Win64/
+Android/
+Android64/
+
+# Demo generated files
+Demo/*.exe
+Demo/*.res
+Demo/*.dproj.local
+Demo/*.stat
