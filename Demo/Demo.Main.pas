@@ -23,6 +23,7 @@ type
     FLayout:string;
     FStyleCombo:TComboBox;
     FStyleFiles:TStringList;
+    FLoadedStyleNames:TStringList;
     FBtnGestion:TButton;
     procedure AddSale(const AVendedor, AMes, ASucursal: string; AVenta: Currency; ACantidad: Integer; AAnio:Integer=2026; const ARubro:string='GENERAL'; ACosto:Currency=0);
     procedure ConfigurePivot;
@@ -78,6 +79,7 @@ var BDSPath, PublicPath:string;
         if FStyleCombo.Items.IndexOf(DisplayName)>=0 then Continue;
         I:=FStyleCombo.Items.Add(DisplayName);
         while FStyleFiles.Count<=I do FStyleFiles.Add('');
+        while FLoadedStyleNames.Count<=I do FLoadedStyleNames.Add('');
         FStyleFiles[I]:=FileName;
       end;
     except
@@ -142,7 +144,8 @@ begin
   FStyleCombo:=TComboBox.Create(Self); FStyleCombo.Parent:=FTop;
   FStyleCombo.Left:=563; FStyleCombo.Top:=8; FStyleCombo.Width:=175; FStyleCombo.Style:=csDropDownList;
   FStyleFiles:=TStringList.Create;
-  FStyleCombo.Items.Add('Windows'); FStyleFiles.Add('');
+  FLoadedStyleNames:=TStringList.Create;
+  FStyleCombo.Items.Add('Windows'); FStyleFiles.Add(''); FLoadedStyleNames.Add('Windows');
   { Enumerate the actual .vsf files instead of relying on StyleNames. StyleNames
     only reports styles already registered in this executable. }
   LoadStylesFromFolder(TPath.Combine(ExtractFilePath(ParamStr(0)),'Styles'));
@@ -285,14 +288,25 @@ begin
 end;
 
 procedure TFrmLarGridPivotDemo.ChangeVclStyle(Sender:TObject);
-var FN:string;
+var FN,StyleName:string; I:Integer;
 begin
  if FStyleCombo.ItemIndex<0 then Exit;
- FN:=FStyleFiles[FStyleCombo.ItemIndex];
+ I:=FStyleCombo.ItemIndex;
+ FN:=FStyleFiles[I];
  try
-  if FN='' then TStyleManager.SetStyle('Windows')
+  if FN='' then
+   TStyleManager.SetStyle('Windows')
   else begin
-   TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
+   { LoadFromFile registers the style globally. Loading the same .vsf again
+     raises "Style '...' already registered". Remember the real registered
+     style name after the first load and reuse it on later selections. }
+   StyleName:=FLoadedStyleNames[I];
+   if StyleName<>'' then
+    TStyleManager.SetStyle(StyleName)
+   else begin
+    TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
+    FLoadedStyleNames[I]:=TStyleManager.ActiveStyle.Name;
+   end;
   end;
   FPivot.Theme:=ptVclStyle;
   FPivot.Invalidate;
@@ -303,6 +317,7 @@ end;
 
 destructor TFrmLarGridPivotDemo.Destroy;
 begin
+ FLoadedStyleNames.Free;
  FStyleFiles.Free;
  inherited;
 end;
