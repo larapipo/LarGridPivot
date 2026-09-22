@@ -230,7 +230,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FGridMenu:=TPopupMenu.Create(Self); FMenuField:=nil;
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
- FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque,csWantAllKeys]; DoubleBuffered:=True; end;
+ FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
 destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FSelectionBase.Free; FSelectedCells.Free; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 function TLarGridPivot.CellSelectionKey(AItem:TLarPivotViewItem):string;
 begin
