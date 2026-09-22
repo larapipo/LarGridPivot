@@ -539,6 +539,16 @@ begin
  if FRebuilding then Exit;
  FFilterValueCache.Clear;
  FSnapshot:=nil;
+
+ { A pivot snapshot navigates the source dataset.  Doing that while the
+   application is in Edit/Insert forces CheckBrowseMode and can post/cancel the
+   current record, producing "Dataset not in edit or insert mode" in the caller.
+   Wait for the dataset to return to browse state; Post/Cancel will notify the
+   datalink again and the pivot will rebuild from the committed data. }
+ if Assigned(FDataSource) and Assigned(FDataSource.DataSet) and
+    (FDataSource.DataSet.State in [dsEdit, dsInsert]) then
+  Exit;
+
  if FUpdating=0 then Rebuild;
 end;
 
