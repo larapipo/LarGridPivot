@@ -636,7 +636,7 @@ begin Result:=ThemeHeaderColor; end;
 
 function TLarGridPivot.HasActiveCustomVclStyle:Boolean;
 begin
- Result:=StyleServices.Enabled and (not SameText(TStyleManager.ActiveStyle.Name,'Windows'));
+ Result:=StyleServices.Enabled and (not StyleServices.IsSystemStyle);
 end;
 
 function TLarGridPivot.ActiveVclStyleFieldAreaColor:TColor;
