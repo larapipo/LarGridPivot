@@ -8,3 +8,4 @@ impl='procedure TLarGridPivot.SetPrintColumnWidth(const AFieldName:string; AWidt
 while (impl+'\n\n'+impl) in s: s=s.replace(impl+'\n\n'+impl,impl)
 s=s.replace('LeftM:=Round(AWidth*0.04); RightM:=AWidth-LeftM;', 'LeftM:=Round(AWidth*(FPrintOptions.MarginLeftMM/210.0)); RightM:=AWidth-Round(AWidth*(FPrintOptions.MarginRightMM/210.0));')
 p.write_text(s,encoding='utf-8')
+# trigger
