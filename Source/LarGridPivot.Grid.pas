@@ -635,24 +635,26 @@ begin Result:=ThemeHeaderColor; end;
 
 function TLarGridPivot.FieldAreaBackgroundColor:TColor;
 begin
- { TPanel already follows scPanel under VCL Styles.  Using the same style
-   color here makes the configuration bands match the application's skin.
-   Do not query tbPushButtonNormal/ecFillColor: several dark styles (Carbon
-   included) report a light/undefined fill color for that element. }
+ { Use the same styled window background that already paints the pivot body.
+   This is deliberately not scPanel/clBtnFace: several styles can expose a
+   light panel/button color even while the actual pivot window background is
+   dark.  Matching clWindow guarantees the configuration bands follow the
+   visible result area for Carbon and other dark VCL styles. }
  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
-  Result:=StyleServices.GetStyleColor(scPanel)
+  Result:=StyleServices.GetSystemColor(clWindow)
  else if FTheme=ptVclStyle then
-  Result:=StyleServices.GetSystemColor(clBtnFace)
+  Result:=StyleServices.GetSystemColor(clWindow)
  else
   Result:=FConfigAreaColor;
 end;
 
 function TLarGridPivot.FieldAreaTextColor:TColor;
 begin
+ { Text must be paired with the same styled window surface used above. }
  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
-  Result:=StyleServices.GetSystemColor(clBtnText)
+  Result:=StyleServices.GetSystemColor(clWindowText)
  else if FTheme=ptVclStyle then
-  Result:=ThemeHeaderTextColor
+  Result:=StyleServices.GetSystemColor(clWindowText)
  else
   Result:=ThemeHeaderTextColor;
 end;
