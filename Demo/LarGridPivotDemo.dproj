@@ -34,6 +34,7 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>LarGridPivotDemo</SanitizedProjectName>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_CodePage>65001</DCC_CodePage>
         <VerInfo_Locale>11274</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
         <Custom_Styles></Custom_Styles>
