@@ -202,6 +202,8 @@ type
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
     property ParentColor; property PopupMenu; property ShowHint; property Visible;
+    property TabOrder;
+    property TabStop;
     property DataSource: TDataSource read FDataSource write SetDataSource;
     property Fields: TLarPivotFields read FFields write SetFields;
     property HeaderHeight: Integer read FHeaderHeight write SetHeaderHeight default 24;
