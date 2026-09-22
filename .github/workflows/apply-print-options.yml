@@ -1,0 +1,21 @@
+name: Apply print options integration
+on:
+  push:
+    branches: [feature-print-page-setup]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[print-options-applied]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-print-page-setup
+      - run: python apply_print_options.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Source/LarGridPivot.Grid.pas
+          git commit -m "Integrate print page setup and column widths [print-options-applied]"
+          git push origin HEAD:feature-print-page-setup
