@@ -1,0 +1,22 @@
+name: Cleanup printing
+on:
+  push:
+    branches: [feature-printing]
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: "!contains(github.event.head_commit.message, '[printing-cleaned]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-printing
+      - run: python cleanup_printing.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Source/LarGridPivot.Grid.pas
+          git commit -m "Clean native printing implementation [printing-cleaned]"
+          git pull --rebase origin feature-printing
+          git push origin HEAD:feature-printing
