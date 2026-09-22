@@ -63,6 +63,7 @@ type
     FPrintLandscape:Boolean;
     FPrintShowPageNumbers:Boolean;
     FPrintOptions:TLarPivotPrintOptions;
+    FPrintOptions:TLarPivotPrintOptions;
     function SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
     function CellSelectionKey(AItem:TLarPivotViewItem):string;
     function IsCellSelected(AItem:TLarPivotViewItem):Boolean;
@@ -195,6 +196,7 @@ type
     procedure PrintPivot;
     function PrintPivotDialog:Boolean;
     procedure PrintPreview;
+    procedure SetPrintColumnWidth(const AFieldName:string; AWidth:Integer);
     procedure ConfigurePrint;
   published
     property Align; property Anchors; property Color default clWhite; property Font; property ParentFont;
@@ -220,6 +222,7 @@ type
     property PrintTitle:string read FPrintTitle write FPrintTitle;
     property PrintLandscape:Boolean read FPrintLandscape write FPrintLandscape default True;
     property PrintShowPageNumbers:Boolean read FPrintShowPageNumbers write FPrintShowPageNumbers default True;
+    property PrintOptions:TLarPivotPrintOptions read FPrintOptions;
     property PrintOptions:TLarPivotPrintOptions read FPrintOptions;
     property Theme:TLarPivotTheme read FTheme write SetTheme default ptVclStyle;
     property AutoSaveLayout:Boolean read FAutoSaveLayout write FAutoSaveLayout default True;
@@ -322,7 +325,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FCollapsedGroups:=TStringList.Create; FCollapsedGroups.Sorted:=True; FCollapsedGroups.Duplicates:=dupIgnore;
  FDragTargetArea:=paNone; FDragTargetIndex:=-1; FFilterButtonField:=nil; FHotFilterField:=nil; FFields:=TLarPivotFields.Create(Self);
  FEngine:=TLarPivotEngine.Create(FFields); FLayoutEngine:=TLarPivotLayoutEngine.Create; FViewInfo:=TLarPivotViewInfo.Create(FLayoutEngine); FDataLink:=TLarPivotDataLink.Create(Self); ControlStyle:=ControlStyle+[csOpaque]; DoubleBuffered:=True; end;
-destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FPrintOptions.Free; FSelectionBase.Free; FSelectedCells.Free; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
+destructor TLarGridPivot.Destroy; begin SaveAutoLayout; FPrintOptions.Free; FPrintOptions.Free; FSelectionBase.Free; FSelectedCells.Free; FFilterValueCache.Free; FGridMenu.Free; FFieldMenu.Free; FHierarchyMenu.Free; FSavedViews.Free; FCollapsedGroups.Free; FDataLink.Free; FViewInfo.Free; FLayoutEngine.Free; FEngine.Free; FFields.Free; inherited; end;
 function TLarGridPivot.CellSelectionKey(AItem:TLarPivotViewItem):string;
 begin
  if AItem=nil then Exit('');
@@ -1520,6 +1523,9 @@ begin
   if Result then PrintPivot;
  finally D.Free; end;
 end;
+
+procedure TLarGridPivot.SetPrintColumnWidth(const AFieldName:string; AWidth:Integer);
+begin FPrintOptions.Columns.Ensure(AFieldName).Width:=Max(0,AWidth); end;
 
 procedure TLarGridPivot.PrintPreview;
 var F:TLarPivotPrintPreviewForm;
