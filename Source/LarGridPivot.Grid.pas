@@ -246,38 +246,58 @@ function TLarGridPivot.SelectableItemAt(AX,AY:Integer):TLarPivotViewItem;
 var VI:TLarPivotViewItem; CX,CY:Integer;
 begin
  Result:=nil; BuildViewInfo;
- CX:=AX+FHScrollPos; CY:=AY+FVScrollPos;
- for VI in FViewInfo.Items do
+ CY:=AY+FVScrollPos;
+ for VI in FViewInfo.Items do begin
+  if VI.Kind=pvekRowValue then CX:=AX else CX:=AX+FHScrollPos;
   if (VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell]) and VI.Contains(CX,CY) then Exit(VI);
+ end;
 end;
 
 procedure TLarGridPivot.ClearCellSelection;
-begin FSelectedCells.Clear; FSelectionAnchor:=''; Invalidate; end;
+var R:TRect;
+begin
+ FSelectedCells.Clear; FSelectionAnchor:='';
+ if HandleAllocated then begin
+  R:=Rect(0,EffectiveFieldAreaHeight+(FViewInfo.HeaderLevels*FHeaderHeight),ClientWidth,ClientHeight);
+  InvalidateRect(Handle,@R,False);
+ end else Invalidate;
+end;
 procedure TLarGridPivot.ClearSelection;
 begin ClearCellSelection; end;
 
 procedure TLarGridPivot.SelectCell(AItem:TLarPivotViewItem;AAdd:Boolean);
-var K:string; I:Integer;
+var K:string; I:Integer; R:TRect;
 begin
  if AItem=nil then Exit; K:=CellSelectionKey(AItem);
  if not AAdd then FSelectedCells.Clear;
  I:=FSelectedCells.IndexOf(K);
  if AAdd and (I>=0) then FSelectedCells.Delete(I) else FSelectedCells.Add(K);
- FSelectionAnchor:=K; Invalidate;
+ FSelectionAnchor:=K;
+ if HandleAllocated then begin
+  R:=AItem.Bounds;
+  OffsetRect(R,-FHScrollPos,-FVScrollPos);
+  if AItem.Kind=pvekRowValue then OffsetRect(R,FHScrollPos,0);
+  InvalidateRect(Handle,@R,False);
+ end else Invalidate;
 end;
 
 procedure TLarGridPivot.SelectCellsInRect(const ARect:TRect;AAdd:Boolean);
-var VI:TLarPivotViewItem; R:TRect;
+var VI:TLarPivotViewItem; R,PaintR:TRect;
 begin
  FSelectedCells.Clear;
  if AAdd then FSelectedCells.Assign(FSelectionBase);
  for VI in FViewInfo.Items do
   if VI.Kind in [pvekRowValue,pvekDataCell,pvekTotalCell,pvekGrandTotalCell] then begin
    R:=VI.Bounds;
+   { Row hierarchy is frozen horizontally; compare it in screen-X coordinates. }
+   if VI.Kind=pvekRowValue then OffsetRect(R,FHScrollPos,0);
    if (R.Right>ARect.Left) and (R.Left<ARect.Right) and (R.Bottom>ARect.Top) and (R.Top<ARect.Bottom) then
     FSelectedCells.Add(CellSelectionKey(VI));
   end;
- Invalidate;
+ if HandleAllocated then begin
+  PaintR:=Rect(0,EffectiveFieldAreaHeight+(FViewInfo.HeaderLevels*FHeaderHeight),ClientWidth,ClientHeight);
+  InvalidateRect(Handle,@PaintR,False);
+ end else Invalidate;
 end;
 
 function TLarGridPivot.CellText(AItem:TLarPivotViewItem):string;
@@ -2018,7 +2038,7 @@ begin
     if FAllowMultiSelect and (ssCtrl in Shift) then FSelectionBase.Assign(FSelectedCells);
     SelectCell(VI,FAllowMultiSelect and (ssCtrl in Shift));
     FSelectingCells:=FAllowMultiSelect;
-    FSelectionStart:=Point(X+FHScrollPos,Y+FVScrollPos);
+    FSelectionStart:=Point(X,Y+FVScrollPos);
     FSelectionRect:=Rect(FSelectionStart.X,FSelectionStart.Y,FSelectionStart.X+1,FSelectionStart.Y+1);
     MouseCapture:=FSelectingCells;
    end;
@@ -2043,8 +2063,8 @@ var A:TLarPivotArea; N:Integer; Hot:TLarPivotField; R:TRect;
 begin
  inherited;
  if FSelectingCells then begin
-  FSelectionRect:=Rect(Min(FSelectionStart.X,X+FHScrollPos),Min(FSelectionStart.Y,Y+FVScrollPos),
-    Max(FSelectionStart.X,X+FHScrollPos)+1,Max(FSelectionStart.Y,Y+FVScrollPos)+1);
+  FSelectionRect:=Rect(Min(FSelectionStart.X,X),Min(FSelectionStart.Y,Y+FVScrollPos),
+    Max(FSelectionStart.X,X)+1,Max(FSelectionStart.Y,Y+FVScrollPos)+1);
   SelectCellsInRect(FSelectionRect,ssCtrl in Shift); Exit;
  end;
  Hot:=nil;
