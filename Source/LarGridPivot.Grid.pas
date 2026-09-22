@@ -20,6 +20,7 @@ type
     FShowFieldPanel:Boolean;
     FFieldPanelFontSize:Integer;
     FFieldAreaSplitPercent:Integer;
+    FConfigAreaColor:TColor;
     FTheme:TLarPivotTheme;
     FDragField: TLarPivotField;
     FDragStart: TPoint;
@@ -111,6 +112,7 @@ type
     procedure SetShowFieldPanel(const Value:Boolean);
     procedure SetFieldPanelFontSize(const Value:Integer);
     procedure SetFieldAreaSplitPercent(const Value:Integer);
+    procedure SetConfigAreaColor(const Value:TColor);
     procedure WMEraseBkgnd(var Message:TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure WMSetCursor(var Message:TWMSetCursor); message WM_SETCURSOR;
     function SuggestedFieldWidth(AField:TField; const ACaption:string):Integer;
@@ -195,6 +197,7 @@ type
     property ShowFieldPanel:Boolean read FShowFieldPanel write SetShowFieldPanel default True;
     property FieldPanelFontSize:Integer read FFieldPanelFontSize write SetFieldPanelFontSize default 8;
     property FieldAreaSplitPercent:Integer read FFieldAreaSplitPercent write SetFieldAreaSplitPercent default 27;
+    property ConfigAreaColor:TColor read FConfigAreaColor write SetConfigAreaColor default $00FCF8F5;
     property AutoFieldWidth:Boolean read FAutoFieldWidth write FAutoFieldWidth default True;
     property MinAutoFieldWidth:Integer read FMinAutoFieldWidth write FMinAutoFieldWidth default 70;
     property MaxAutoFieldWidth:Integer read FMaxAutoFieldWidth write FMaxAutoFieldWidth default 320;
@@ -219,7 +222,7 @@ procedure TLarPivotDataLink.DataSetChanged; begin inherited; if Assigned(FOwner)
 constructor TLarGridPivot.Create(AOwner:TComponent);
 begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlStyle+[csOpaque]; FHeaderHeight:=24; FRowHeight:=24; FRowHeaderWidth:=180;
  FShowRowTotals:=True; FShowColumnTotals:=True; FShowGrandTotal:=True; FFieldAreaHeight:=128;
- FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
+ FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FConfigAreaColor:=$00FCF8F5; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
  FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
@@ -497,6 +500,13 @@ begin
  if FFieldAreaSplitPercent=N then Exit;
  FFieldAreaSplitPercent:=N;
  FViewDirty:=True; FScrollDirty:=True; Invalidate;
+end;
+
+procedure TLarGridPivot.SetConfigAreaColor(const Value:TColor);
+begin
+ if FConfigAreaColor=Value then Exit;
+ FConfigAreaColor:=Value;
+ Invalidate;
 end;
 
 procedure TLarGridPivot.SetTheme(const Value:TLarPivotTheme);
@@ -1283,7 +1293,7 @@ begin
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
-  Canvas.Brush.Color:=ThemePanelColor; Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
+  Canvas.Brush.Color:=FConfigAreaColor; Canvas.FillRect(AR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(AR);
   Canvas.Font.Style:=[fsBold]; Canvas.Font.Color:=ThemeHeaderTextColor;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
