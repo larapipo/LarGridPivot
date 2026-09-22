@@ -79,6 +79,7 @@ type
     procedure FieldSortDescClick(Sender:TObject);
     procedure FieldSortNoneClick(Sender:TObject);
     procedure FieldFilterClick(Sender:TObject);
+    procedure GridCopyClick(Sender:TObject);
     procedure GridExportExcelClick(Sender:TObject);
     procedure GridExportCSVClick(Sender:TObject);
     procedure GridToggleRowTotalsClick(Sender:TObject);
@@ -1932,9 +1933,16 @@ begin
  end;
  AddTotalsMenuItems(FHierarchyMenu);
  AddItem('-',nil);
+ if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
+  AddItem('Copiar',GridCopyClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y)); FHierarchyMenu.Popup(P.X,P.Y);
+end;
+
+procedure TLarGridPivot.GridCopyClick(Sender:TObject);
+begin
+ CopySelectionToClipboard;
 end;
 
 procedure TLarGridPivot.GridExportExcelClick(Sender:TObject);
@@ -1995,6 +2003,8 @@ begin
  FGridMenu.Items.Clear;
  AddTotalsMenuItems(FGridMenu);
  AddItem('-',nil);
+ if FAllowCopyToClipboard and (FSelectedCells.Count>0) then
+  AddItem('Copiar',GridCopyClick);
  AddItem('Exportar a Excel...',GridExportExcelClick);
  AddItem('Exportar a CSV...',GridExportCSVClick);
  P:=ClientToScreen(Point(X,Y));
