@@ -179,7 +179,7 @@ begin
    { Styles are registered globally in the process.  The main demo may have
      already loaded the same .vsf, so first reuse the registered style instead
      of calling LoadFromFile again ("Style '...' already registered"). }
-   if not TStyleManager.TrySetStyle(StyleName) then
+   if not TStyleManager.TrySetStyle(StyleName,False) then
     TStyleManager.SetStyle(TStyleManager.LoadFromFile(FN));
   end;
   FPivot.Theme:=ptVclStyle;
