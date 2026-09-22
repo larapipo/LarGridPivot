@@ -1,6 +1,5 @@
 package LarGridPivotDesign;
 
-{$R *.res}
 {$DESCRIPTION 'LarGridPivot design-time package'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
@@ -8,20 +7,10 @@ package LarGridPivotDesign;
 requires
   rtl,
   vcl,
-  vcldb,
-  dbrtl;
+  designide,
+  LarGridPivotRuntime;
 
 contains
-  LarGridPivot.Register in '..\Source\LarGridPivot.Register.pas',
-  LarGridPivot.Grid in '..\Source\LarGridPivot.Grid.pas',
-  LarGridPivot.Types in '..\Source\LarGridPivot.Types.pas',
-  LarGridPivot.Fields in '..\Source\LarGridPivot.Fields.pas',
-  LarGridPivot.Filters in '..\Source\LarGridPivot.Filters.pas',
-  LarGridPivot.Layout in '..\Source\LarGridPivot.Layout.pas',
-  LarGridPivot.DataProvider in '..\Source\LarGridPivot.DataProvider.pas',
-  LarGridPivot.Model in '..\Source\LarGridPivot.Model.pas',
-  LarGridPivot.Engine in '..\Source\LarGridPivot.Engine.pas',
-  LarGridPivot.LayoutEngine in '..\Source\LarGridPivot.LayoutEngine.pas',
-  LarGridPivot.ViewInfo in '..\Source\LarGridPivot.ViewInfo.pas';
+  LarGridPivot.Register in '..\Source\LarGridPivot.Register.pas';
 
 end.
