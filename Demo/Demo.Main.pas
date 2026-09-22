@@ -57,8 +57,13 @@ begin
   FStyleFiles := TStringList.Create;
   FLoadedStyleNames := TStringList.Create;
 
-  ClientDataSet1.Close;
-  ClientDataSet1.FieldDefs.Clear;
+  { The pivot is already connected through the DFM.  Batch dataset creation
+    and sample inserts so DataLink notifications do not rebuild the pivot for
+    every appended field/record. }
+  LarGridPivot1.BeginUpdate;
+  try
+    ClientDataSet1.Close;
+    ClientDataSet1.FieldDefs.Clear;
   ClientDataSet1.FieldDefs.Add('VENDEDOR', ftString, 40);
   ClientDataSet1.FieldDefs.Add('MES', ftString, 20);
   ClientDataSet1.FieldDefs.Add('SUCURSAL', ftString, 20);
@@ -98,10 +103,15 @@ begin
   AddSale('ANA', 'JUNIO', 'SUR', 103200, 9, 2025, 'FERRETERIA', 63000);
   AddSale('LUIS', 'JULIO', 'CENTRO', 119700, 10, 2025, 'ELECTRICIDAD', 72000);
   AddSale('PEDRO', 'AGOSTO', 'NORTE', 128800, 11, 2025, 'PINTURAS', 79000);
-  AddSale('JUAN', 'SEPTIEMBRE', 'SUR', 142600, 12, 2025, 'FERRETERIA', 86000);
+    AddSale('JUAN', 'SEPTIEMBRE', 'SUR', 142600, 12, 2025, 'FERRETERIA', 86000);
+
+    LarGridPivot1.RefreshFields;
+    ConfigurePivot;
+  finally
+    LarGridPivot1.EndUpdate;
+  end;
 
   LoadAvailableStyles;
-  ConfigurePivot;
   btnFields.Caption := 'Ocultar campos';
 end;
 
