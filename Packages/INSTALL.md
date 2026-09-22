@@ -60,3 +60,21 @@ Después de hacer `git pull`:
 4. si Delphi no refresca el componente, desinstalar e instalar nuevamente `LarGridPivotDesign`.
 
 El Demo no forma parte del paquete instalado.
+
+
+## Si aparece una Access Violation en rtl290.bpl al instalar
+
+Antes de reinstalar, cerrar Delphi y borrar artefactos viejos de LarGridPivot que
+puedan haber quedado cargados por una versión anterior del paquete:
+
+```text
+C:\Users\Public\Documents\Embarcadero\Studio\23.0\Bpl\LarGridPivot*.bpl
+C:\Users\Public\Documents\Embarcadero\Studio\23.0\Dcp\LarGridPivot*.dcp
+```
+
+También conviene limpiar las carpetas Win32/Win64 generadas dentro del
+repositorio si existen.
+
+Los paquetes usan `LIBSUFFIX 290` para Delphi 12, por lo que los binarios
+nuevos quedan identificados para la RTL 290 y se reduce el riesgo de que el IDE
+cargue un BPL de otra versión de Delphi.
