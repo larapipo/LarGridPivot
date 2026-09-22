@@ -3,6 +3,7 @@ package LarGridPivotDesign;
 {$DESCRIPTION 'LarGridPivot design-time package'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
+{$LIBSUFFIX '290'}
 
 requires
   rtl,
