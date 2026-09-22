@@ -3,10 +3,12 @@ package LarGridPivotRuntime;
 {$DESCRIPTION 'LarGridPivot runtime package'}
 {$RUNONLY}
 {$IMPLICITBUILD ON}
+{$LIBSUFFIX '290'}
 
 requires
   rtl,
   vcl,
+  vclx,
   vcldb,
   dbrtl;
 
