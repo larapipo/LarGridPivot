@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, System.Variants, System.Zip, System.IOUtils,
-  System.Generics.Collections, System.Math, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Vcl.Clipbrd, Vcl.Printers, Winapi.Messages, Data.DB,
+  System.Generics.Collections, System.Math, System.TypInfo, Vcl.Controls, Vcl.Graphics, Vcl.Dialogs, Vcl.Forms, Vcl.StdCtrls, Vcl.CheckLst, Vcl.ExtCtrls, Vcl.Menus, Vcl.Themes, Vcl.Clipbrd, Vcl.Printers, Winapi.Messages, Data.DB,
   LarGridPivot.Types, LarGridPivot.Fields, LarGridPivot.Filters,
   LarGridPivot.Layout, LarGridPivot.DataProvider, LarGridPivot.Model,
   LarGridPivot.Engine, LarGridPivot.LayoutEngine, LarGridPivot.ViewInfo, LarGridPivot.PrintConfig;
@@ -953,15 +953,52 @@ begin
 end;
 
 procedure TLarGridPivot.BuildFieldsFromDataSet;
-var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField;
-begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSource.DataSet; if not DS.Active then Exit;
- FFields.BeginUpdate; try FFields.Clear; for I:=0 to DS.FieldCount-1 do begin DF:=DS.Fields[I]; PF:=FFields.Add; PF.FieldName:=DF.FieldName;
- { The user-facing label always starts from the dataset field caption. FieldName
-   remains only the binding key, so applications can expose friendly captions. }
- if Trim(DF.DisplayLabel)<>'' then PF.Caption:=DF.DisplayLabel else PF.Caption:=DF.FieldName;
- if FAutoFieldWidth then PF.Width:=SuggestedFieldWidth(DF,PF.Caption) else PF.Width:=100;
- case DF.DataType of ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc,ftFloat,ftCurrency,ftBCD,ftFMTBcd,ftSingle,ftExtended:PF.Alignment:=pvaRight;
- ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
+var DS:TDataSet; I:Integer; PF:TLarPivotField; DF:TField; V:Variant;
+begin
+ if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit;
+ DS:=FDataSource.DataSet;
+ if not DS.Active then Exit;
+ FFields.BeginUpdate;
+ try
+  FFields.Clear;
+  for I:=0 to DS.FieldCount-1 do begin
+   DF:=DS.Fields[I];
+   PF:=FFields.Add;
+   PF.FieldName:=DF.FieldName;
+   { The user-facing label always starts from the dataset field caption.
+     FieldName remains only the binding key. }
+   if Trim(DF.DisplayLabel)<>'' then PF.Caption:=DF.DisplayLabel
+   else PF.Caption:=DF.FieldName;
+
+   { Inherit the dataset field's published DisplayFormat when it exists.
+     FireDAC persistent fields such as TFloatField, TCurrencyField, TBCDField,
+     TFMTBCDField and date/time fields expose this property.  Keeping it in the
+     pivot means FormatCellValue can render the same #,##0.00 / date mask the
+     application already configured on the query field. }
+   PF.DisplayFormat:='';
+   if IsPublishedProp(DF,'DisplayFormat') then
+    try
+     V:=GetPropValue(DF,'DisplayFormat',True);
+     if not VarIsNull(V) and not VarIsEmpty(V) then
+      PF.DisplayFormat:=VarToStr(V);
+    except
+     PF.DisplayFormat:='';
+    end;
+
+   if FAutoFieldWidth then PF.Width:=SuggestedFieldWidth(DF,PF.Caption)
+   else PF.Width:=100;
+   case DF.DataType of
+    ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc,ftFloat,ftCurrency,
+    ftBCD,ftFMTBcd,ftSingle,ftExtended:PF.Alignment:=pvaRight;
+    ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter;
+   else
+    PF.Alignment:=pvaLeft;
+   end;
+  end;
+ finally
+  FFields.EndUpdate;
+ end;
+end;
 procedure TLarGridPivot.RefreshFields;
 begin
  if FRebuilding then Exit;
