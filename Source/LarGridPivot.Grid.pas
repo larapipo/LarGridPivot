@@ -1081,16 +1081,21 @@ begin
 end;
 
 function TLarGridPivot.FieldAreaFirstChipX(AArea:TLarPivotArea; ALeft:Integer):Integer;
-var CaptionW:Integer;
+var CaptionW,MinReserve,Gap:Integer;
 begin
  if AArea=paNone then Exit(ALeft+6);
  Canvas.Font.Assign(Font);
  Canvas.Font.Size:=FFieldPanelFontSize;
+ { Measure the caption exactly as it is painted: bold. }
+ Canvas.Font.Style:=Canvas.Font.Style+[fsBold];
  CaptionW:=Canvas.TextWidth(AreaCaption(AArea));
- { Keep a measured gap after DATOS/COLUMNAS/FILAS instead of relying on the
-   old fixed 72px start.  The fixed value overlapped COLUMNAS at some fonts,
-   DPI settings and application themes. }
- Result:=Max(ALeft+80,ALeft+6+CaptionW+18);
+
+ { The previous correction only moved the first chip from 72 to about 80 px,
+   which was visually almost unchanged. Reserve a real title column and scale
+   it with DPI, while still growing further for long captions. }
+ MinReserve:=MulDiv(110,CurrentPPI,96);
+ Gap:=MulDiv(24,CurrentPPI,96);
+ Result:=Max(ALeft+MinReserve,ALeft+6+CaptionW+Gap);
 end;
 
 function TLarGridPivot.AreaFields(AArea:TLarPivotArea):TList<TLarPivotField>;
