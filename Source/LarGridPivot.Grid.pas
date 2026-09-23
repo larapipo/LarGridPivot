@@ -553,7 +553,12 @@ begin
 end;
 
 procedure TLarGridPivot.RestoreAutoLayout;
-var FN:string;
+var
+ FN:string;
+ SavedTheme:TLarPivotTheme;
+ I:Integer;
+ Formats:TDictionary<string,string>;
+ S:string;
 begin
  if not FAutoSaveLayout or (csDesigning in ComponentState) then begin
   FAutoLayoutPending:=False;
@@ -574,14 +579,38 @@ begin
   Exit;
  end;
 
- { Clear before loading because LoadLayoutFromFile -> EndUpdate -> Rebuild.
-   This prevents the nested rebuild from trying to restore the same file again. }
- FAutoLayoutPending:=False;
+ { Auto layout restores the user's pivot arrangement, filters and widths, but
+   it must not override the component appearance selected by the application
+   nor an explicit DisplayFormat inherited from the active dataset.  Older
+   auto-layout JSON files often contain theme=ptVclStyle and displayFormat=''
+   and were silently undoing both the selected native theme and FireDAC masks. }
+ SavedTheme:=FTheme;
+ Formats:=TDictionary<string,string>.Create;
  try
-  LoadLayoutFromFile(FN);
- except
-  { Keep startup robust if an old/corrupt layout cannot be read. }
+  for I:=0 to FFields.Count-1 do
+   if FFields[I].DisplayFormat<>'' then
+    Formats.AddOrSetValue(UpperCase(FFields[I].FieldName),FFields[I].DisplayFormat);
+
+  { Clear before loading because LoadLayoutFromFile -> EndUpdate -> Rebuild.
+    This prevents the nested rebuild from trying to restore the same file again. }
+  FAutoLayoutPending:=False;
+  try
+   LoadLayoutFromFile(FN);
+  except
+   { Keep startup robust if an old/corrupt layout cannot be read. }
+  end;
+
+  FTheme:=SavedTheme;
+  for I:=0 to FFields.Count-1 do
+   if Formats.TryGetValue(UpperCase(FFields[I].FieldName),S) then
+    FFields[I].DisplayFormat:=S;
+ finally
+  Formats.Free;
  end;
+
+ FViewDirty:=True;
+ FScrollDirty:=True;
+ Invalidate;
 end;
 
 procedure TLarGridPivot.Loaded;
