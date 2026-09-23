@@ -1145,8 +1145,8 @@ begin
  { The previous correction only moved the first chip from 72 to about 80 px,
    which was visually almost unchanged. Reserve a real title column and scale
    it with DPI, while still growing further for long captions. }
- MinReserve:=MulDiv(110,CurrentPPI,96);
- Gap:=MulDiv(24,CurrentPPI,96);
+ MinReserve:=MulDiv(96,CurrentPPI,96);
+ Gap:=MulDiv(16,CurrentPPI,96);
  Result:=Max(ALeft+MinReserve,ALeft+6+CaptionW+Gap);
 end;
 
