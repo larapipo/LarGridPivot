@@ -1836,13 +1836,13 @@ begin
     end;
     if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
-    if F=FDragField then begin
-     if FTheme=ptVclStyle then Canvas.Brush.Color:=StyleServices.GetSystemColor(clHighlight)
-     else Canvas.Brush.Color:=$00E8F2FF;
-    end else Canvas.Brush.Color:=ThemeChipColor;
+    if F=FDragField then
+     Canvas.Brush.Color:=ThemeSelectionColor
+    else
+     Canvas.Brush.Color:=ThemeChipColor;
     Canvas.Pen.Color:=ThemeGridColor; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
-    if (F=FDragField) and (FTheme=ptVclStyle) then
-     Canvas.Font.Color:=StyleServices.GetSystemColor(clHighlightText)
+    if F=FDragField then
+     Canvas.Font.Color:=ThemeSelectionTextColor
     else
      Canvas.Font.Color:=ThemeHeaderTextColor;
     { Subtle sort marker at the left of the field caption. }
