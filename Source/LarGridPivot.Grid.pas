@@ -42,6 +42,7 @@ type
     FHierarchyHit:TLarPivotHitTest;
     FAutoSaveLayout:Boolean;
     FAutoSaveKey:string;
+    FAutoLayoutPending:Boolean;
     FViewDirty:Boolean;
     FScrollDirty:Boolean;
     FFilterValueCache:TStringList;
@@ -318,7 +319,7 @@ begin inherited; Width:=640; Height:=360; Color:=clWhite; ControlStyle:=ControlS
  FShowFieldPanel:=True; FFieldPanelFontSize:=8; FFieldAreaSplitPercent:=27; FConfigAreaColor:=$00FCF8F5; FAutoFieldWidth:=True; FMinAutoFieldWidth:=70; FMaxAutoFieldWidth:=320; FTheme:=ptVclStyle; FHScrollPos:=0; FVScrollPos:=0; FContentWidth:=0; FContentHeight:=0;
  FSavedViews:=TStringList.Create; FSavedViews.NameValueSeparator:='=';
  FFilterValueCache:=TStringList.Create; FFilterValueCache.NameValueSeparator:='=';
- FAutoSaveLayout:=True; FAutoSaveKey:=''; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
+ FAutoSaveLayout:=True; FAutoSaveKey:=''; FAutoLayoutPending:=False; FBusyDepth:=0; FBusySavedCursor:=crDefault; FViewDirty:=True; FScrollDirty:=True;
  FAllowCellSelection:=True; FAllowMultiSelect:=True; FAllowCopyToClipboard:=True; FPrintTitle:=''; FPrintLandscape:=True; FPrintShowPageNumbers:=True; FPrintOptions:=TLarPivotPrintOptions.Create(Self); TabStop:=True;
  FSelectedCells:=TStringList.Create; FSelectedCells.Sorted:=True; FSelectedCells.Duplicates:=dupIgnore;
  FSelectionBase:=TStringList.Create; FSelectionBase.Sorted:=True; FSelectionBase.Duplicates:=dupIgnore; FSelectionAnchor:=''; FSelectingCells:=False;
@@ -551,10 +552,33 @@ end;
 procedure TLarGridPivot.RestoreAutoLayout;
 var FN:string;
 begin
- if not FAutoSaveLayout or (csDesigning in ComponentState) then Exit;
+ if not FAutoSaveLayout or (csDesigning in ComponentState) then begin
+  FAutoLayoutPending:=False;
+  Exit;
+ end;
+
  FN:=AutoLayoutFileName;
- if FileExists(FN) then
-  try LoadLayoutFromFile(FN); except end;
+ if not FileExists(FN) then begin
+  FAutoLayoutPending:=False;
+  Exit;
+ end;
+
+ { During Loaded the DataSource can still be inactive, so Fields has not been
+   built yet.  Do not consume the saved layout against an empty field list:
+   remember it and apply it when the dataset becomes active. }
+ if FFields.Count=0 then begin
+  FAutoLayoutPending:=True;
+  Exit;
+ end;
+
+ { Clear before loading because LoadLayoutFromFile -> EndUpdate -> Rebuild.
+   This prevents the nested rebuild from trying to restore the same file again. }
+ FAutoLayoutPending:=False;
+ try
+  LoadLayoutFromFile(FN);
+ except
+  { Keep startup robust if an old/corrupt layout cannot be read. }
+ end;
 end;
 
 procedure TLarGridPivot.Loaded;
@@ -586,6 +610,17 @@ begin
  if Assigned(FDataSource) and Assigned(FDataSource.DataSet) and
     (FDataSource.DataSet.State in [dsEdit, dsInsert]) then
   Exit;
+
+ { A streamed DataSource is frequently inactive during Loaded.  When it later
+   opens, build Fields and apply the layout that RestoreAutoLayout postponed. }
+ if FAutoLayoutPending and Assigned(FDataSource) and
+    Assigned(FDataSource.DataSet) and FDataSource.DataSet.Active then begin
+  if FFields.Count=0 then
+   RefreshFields
+  else
+   RestoreAutoLayout;
+  if not FAutoLayoutPending then Exit; { restore already rebuilt the pivot }
+ end;
 
  if FUpdating=0 then Rebuild;
 end;
@@ -927,7 +962,24 @@ begin if (FDataSource=nil) or (FDataSource.DataSet=nil) then Exit; DS:=FDataSour
  if FAutoFieldWidth then PF.Width:=SuggestedFieldWidth(DF,PF.Caption) else PF.Width:=100;
  case DF.DataType of ftSmallint,ftInteger,ftWord,ftLargeint,ftAutoInc,ftFloat,ftCurrency,ftBCD,ftFMTBcd,ftSingle,ftExtended:PF.Alignment:=pvaRight;
  ftDate,ftTime,ftDateTime,ftTimeStamp,ftTimeStampOffset:PF.Alignment:=pvaCenter; else PF.Alignment:=pvaLeft; end; end; finally FFields.EndUpdate; end; end;
-procedure TLarGridPivot.RefreshFields; begin if FRebuilding then Exit; FRebuilding:=True; try BuildFieldsFromDataSet; Invalidate; finally FRebuilding:=False; end; end;
+procedure TLarGridPivot.RefreshFields;
+begin
+ if FRebuilding then Exit;
+ FRebuilding:=True;
+ try
+  BuildFieldsFromDataSet;
+ finally
+  FRebuilding:=False;
+ end;
+
+ { If Loaded deferred the automatic layout, this is the first safe point at
+   which every dataset field exists and can receive its saved Area/Index/etc. }
+ if FAutoLayoutPending and (FFields.Count>0) then begin
+  RestoreAutoLayout;
+  Exit;
+ end;
+ Invalidate;
+end;
 procedure TLarGridPivot.Rebuild;
 var P:ILarPivotDataProvider;
 begin
