@@ -111,6 +111,9 @@ type
     function ThemeTotalTextColor:TColor;
     function ThemeCellColor:TColor;
     function ThemeChipColor:TColor;
+    function ThemeAccentColor:TColor;
+    function ThemeSelectionColor:TColor;
+    function ThemeSelectionTextColor:TColor;
     function FieldAreaBackgroundColor:TColor;
     function FieldAreaTextColor:TColor;
     function FieldAreaFirstChipX(AArea:TLarPivotArea; ALeft:Integer):Integer;
@@ -694,14 +697,36 @@ begin
    Result:=StyleServices.GetStyleColor(scPanel)
   else
    Result:=StyleServices.GetSystemColor(clBtnFace);
- end else
- case FTheme of ptClassicBlue:Result:=$00F2E3D5; ptLight:Result:=$00F5F5F5;
- ptSilver:Result:=$00E8E8E8; ptOffice:Result:=$00F0E6D6; ptDark:Result:=$00383838;
- else Result:=clBtnFace; end;
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(220,232,245);
+  ptLight:       Result:=RGB(245,247,250);
+  ptSilver:      Result:=RGB(224,228,233);
+  ptOffice:      Result:=RGB(244,234,214);
+  ptDark:        Result:=RGB(48,54,61);
+ else
+  Result:=clBtnFace;
+ end;
 end;
+
 function TLarGridPivot.ThemeTotalColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlight)
- else if FTheme=ptDark then Result:=$00505050 else Result:=$00E6D4BE; end;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clHighlight);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(205,222,240);
+  ptLight:       Result:=RGB(232,236,241);
+  ptSilver:      Result:=RGB(205,211,218);
+  ptOffice:      Result:=RGB(236,214,170);
+  ptDark:        Result:=RGB(54,68,82);
+ else
+  Result:=clBtnFace;
+ end;
+end;
+
 function TLarGridPivot.ThemeGridColor:TColor;
 begin
  if FTheme=ptVclStyle then begin
@@ -709,8 +734,19 @@ begin
    Result:=StyleServices.GetStyleColor(scBorder)
   else
    Result:=StyleServices.GetSystemColor(clBtnShadow);
- end else if FTheme=ptDark then Result:=$00606060 else Result:=$00C8C8C8;
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(171,195,218);
+  ptLight:       Result:=RGB(219,223,228);
+  ptSilver:      Result:=RGB(174,181,188);
+  ptOffice:      Result:=RGB(208,187,149);
+  ptDark:        Result:=RGB(73,81,90);
+ else
+  Result:=clSilver;
+ end;
 end;
+
 function TLarGridPivot.ThemePanelColor:TColor;
 begin
  if FTheme=ptVclStyle then begin
@@ -718,17 +754,70 @@ begin
    Result:=StyleServices.GetStyleColor(scWindow)
   else
    Result:=StyleServices.GetSystemColor(clWindow);
- end else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite;
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(238,245,251);
+  ptLight:       Result:=RGB(250,251,252);
+  ptSilver:      Result:=RGB(239,242,245);
+  ptOffice:      Result:=RGB(251,247,239);
+  ptDark:        Result:=RGB(38,43,49);
+ else
+  Result:=clWindow;
+ end;
 end;
+
 function TLarGridPivot.ThemeTextColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clWindowText)
- else if FTheme=ptDark then Result:=$00E8E8E8 else Result:=clWindowText; end;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clWindowText);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(37,51,65);
+  ptLight:       Result:=RGB(41,45,50);
+  ptSilver:      Result:=RGB(47,52,58);
+  ptOffice:      Result:=RGB(70,58,40);
+  ptDark:        Result:=RGB(224,229,234);
+ else
+  Result:=clWindowText;
+ end;
+end;
+
 function TLarGridPivot.ThemeHeaderTextColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clBtnText)
- else Result:=ThemeTextColor; end;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clBtnText);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(31,78,121);
+  ptLight:       Result:=RGB(53,61,70);
+  ptSilver:      Result:=RGB(53,61,69);
+  ptOffice:      Result:=RGB(102,73,25);
+  ptDark:        Result:=RGB(246,248,250);
+ else
+  Result:=ThemeTextColor;
+ end;
+end;
+
 function TLarGridPivot.ThemeTotalTextColor:TColor;
-begin if FTheme=ptVclStyle then Result:=StyleServices.GetSystemColor(clHighlightText)
- else Result:=ThemeTextColor; end;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clHighlightText);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(25,64,99);
+  ptLight:       Result:=RGB(42,49,57);
+  ptSilver:      Result:=RGB(40,47,54);
+  ptOffice:      Result:=RGB(92,63,17);
+  ptDark:        Result:=RGB(248,250,252);
+ else
+  Result:=ThemeTextColor;
+ end;
+end;
+
 function TLarGridPivot.ThemeCellColor:TColor;
 begin
  if FTheme=ptVclStyle then begin
@@ -736,31 +825,112 @@ begin
    Result:=StyleServices.GetStyleColor(scWindow)
   else
    Result:=StyleServices.GetSystemColor(clWindow);
- end else if FTheme=ptDark then Result:=$002B2B2B else Result:=clWhite;
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(255,255,255);
+  ptLight:       Result:=RGB(255,255,255);
+  ptSilver:      Result:=RGB(249,250,251);
+  ptOffice:      Result:=RGB(255,253,248);
+  ptDark:        Result:=RGB(30,34,39);
+ else
+  Result:=clWhite;
+ end;
 end;
+
 function TLarGridPivot.ThemeChipColor:TColor;
-begin Result:=ThemeHeaderColor; end;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=ThemeHeaderColor;
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(211,228,244);
+  ptLight:       Result:=RGB(235,239,244);
+  ptSilver:      Result:=RGB(211,216,222);
+  ptOffice:      Result:=RGB(239,221,184);
+  ptDark:        Result:=RGB(56,64,73);
+ else
+  Result:=ThemeHeaderColor;
+ end;
+end;
+
+function TLarGridPivot.ThemeAccentColor:TColor;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clHighlight);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(49,106,170);
+  ptLight:       Result:=RGB(84,110,142);
+  ptSilver:      Result:=RGB(101,111,122);
+  ptOffice:      Result:=RGB(200,143,45);
+  ptDark:        Result:=RGB(74,144,226);
+ else
+  Result:=clHighlight;
+ end;
+end;
+
+function TLarGridPivot.ThemeSelectionColor:TColor;
+begin
+ if FTheme=ptVclStyle then begin
+  Result:=StyleServices.GetSystemColor(clHighlight);
+  Exit;
+ end;
+ case FTheme of
+  ptClassicBlue: Result:=RGB(204,229,250);
+  ptLight:       Result:=RGB(219,236,255);
+  ptSilver:      Result:=RGB(210,225,241);
+  ptOffice:      Result:=RGB(255,232,183);
+  ptDark:        Result:=RGB(53,87,121);
+ else
+  Result:=RGB(225,240,255);
+ end;
+end;
+
+function TLarGridPivot.ThemeSelectionTextColor:TColor;
+begin
+ if FTheme=ptVclStyle then
+  Result:=StyleServices.GetSystemColor(clHighlightText)
+ else if FTheme=ptDark then
+  Result:=RGB(255,255,255)
+ else
+  Result:=ThemeTextColor;
+end;
 
 function TLarGridPivot.FieldAreaBackgroundColor:TColor;
 begin
- { Custom-painted controls should use the VCL Style palette directly.
-   GetSystemColor can legitimately map to the Windows system palette even
-   while a custom .vsf style is active.  scWindow is the style-defined window
-   surface and therefore follows dark styles such as Carbon reliably. }
- if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
-  Result:=StyleServices.GetStyleColor(scWindow)
- else if FTheme=ptVclStyle then
-  Result:=StyleServices.GetSystemColor(clWindow)
- else
+ if FTheme=ptVclStyle then begin
+  if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
+   Result:=StyleServices.GetStyleColor(scWindow)
+  else
+   Result:=StyleServices.GetSystemColor(clWindow);
+  Exit;
+ end;
+
+ { ConfigAreaColor remains an explicit application override.  Its historical
+   default acts as "use the built-in theme palette" so the five native themes
+   are visually different without requiring extra configuration. }
+ if FConfigAreaColor<>$00FCF8F5 then begin
   Result:=FConfigAreaColor;
+  Exit;
+ end;
+
+ case FTheme of
+  ptClassicBlue: Result:=RGB(238,245,251);
+  ptLight:       Result:=RGB(248,250,252);
+  ptSilver:      Result:=RGB(235,238,242);
+  ptOffice:      Result:=RGB(249,242,228);
+  ptDark:        Result:=RGB(36,41,47);
+ else
+  Result:=ThemePanelColor;
+ end;
 end;
 
 function TLarGridPivot.FieldAreaTextColor:TColor;
 begin
- { Text must be paired with the same styled window surface used above. }
- if StyleServices.Enabled and (not StyleServices.IsSystemStyle) then
-  Result:=StyleServices.GetSystemColor(clWindowText)
- else if FTheme=ptVclStyle then
+ if FTheme=ptVclStyle then
   Result:=StyleServices.GetSystemColor(clWindowText)
  else
   Result:=ThemeHeaderTextColor;
@@ -1613,7 +1783,10 @@ var I,J,X,Y,ChipW,Count,FirstX:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivot
 begin
  if not FShowFieldPanel then Exit;
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
- UseCustomStyle:=StyleServices.Enabled and (not StyleServices.IsSystemStyle);
+ { Native LarGridPivot themes must remain independent from the active VCL
+   style.  Only ptVclStyle delegates its palette to StyleServices. }
+ UseCustomStyle:=(FTheme=ptVclStyle) and StyleServices.Enabled and
+   (not StyleServices.IsSystemStyle);
  for I:=0 to High(Areas) do begin
   A:=Areas[I]; AR:=AreaRect(A);
   Canvas.Brush.Style:=bsSolid;
@@ -1636,11 +1809,16 @@ begin
   Canvas.Brush.Style:=bsSolid;
   Canvas.Font.Style:=[fsBold];
   Canvas.Font.Color:=AreaTextColor;
-  { Area captions are labels over the already-painted band.  TextOut uses the
-    current brush as an opaque text background when bsSolid is active, which
-    produced the white rectangles visible with dark VCL styles. }
+  { A thin accent marker gives the work areas the same visual hierarchy used
+    by mature pivot grids: area surface, field buttons, content and totals are
+    visibly separate layers instead of one flat color. }
+  if A<>paNone then begin
+   Canvas.Brush.Color:=ThemeAccentColor;
+   Canvas.FillRect(Rect(AR.Left+1,AR.Top+4,AR.Left+4,Min(AR.Bottom-4,AR.Top+20)));
+  end;
+  { Area captions are labels over the already-painted band. }
   Canvas.Brush.Style:=bsClear;
-  if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
+  if A<>paNone then Canvas.TextOut(AR.Left+8,AR.Top+7,AreaCaption(A));
   Canvas.Brush.Style:=bsSolid;
   Canvas.Font.Style:=[];
   FirstX:=FieldAreaFirstChipX(A,AR.Left);
@@ -1658,13 +1836,13 @@ begin
     end;
     if FDraggingField and (A=FDragTargetArea) and (J=FDragTargetIndex) then begin Canvas.Pen.Color:=clRed; Canvas.Pen.Width:=3; Canvas.MoveTo(X-2,Y-1); Canvas.LineTo(X-2,Y+21); Canvas.Pen.Width:=1; end;
     R:=Rect(X,Y,X+ChipW,Y+20);
-    if F=FDragField then begin
-     if FTheme=ptVclStyle then Canvas.Brush.Color:=StyleServices.GetSystemColor(clHighlight)
-     else Canvas.Brush.Color:=$00E8F2FF;
-    end else Canvas.Brush.Color:=ThemeChipColor;
+    if F=FDragField then
+     Canvas.Brush.Color:=ThemeSelectionColor
+    else
+     Canvas.Brush.Color:=ThemeChipColor;
     Canvas.Pen.Color:=ThemeGridColor; Canvas.RoundRect(R.Left,R.Top,R.Right,R.Bottom,4,4);
-    if (F=FDragField) and (FTheme=ptVclStyle) then
-     Canvas.Font.Color:=StyleServices.GetSystemColor(clHighlightText)
+    if F=FDragField then
+     Canvas.Font.Color:=ThemeSelectionTextColor
     else
      Canvas.Font.Color:=ThemeHeaderTextColor;
     { Subtle sort marker at the left of the field caption. }
@@ -2097,9 +2275,16 @@ var Row,D,Lvl,X,Y,HeaderLevels,RowHeaderTotal:Integer;
   if Total then begin Canvas.Brush.Color:=ThemeTotalColor; Canvas.Font.Color:=ThemeTotalTextColor; end
   else if Bold then begin Canvas.Brush.Color:=ThemeHeaderColor; Canvas.Font.Color:=ThemeHeaderTextColor; end
   else begin Canvas.Brush.Color:=ThemeCellColor; Canvas.Font.Color:=ThemeTextColor; end;
-  if Selected then Canvas.Brush.Color:=RGB(225,240,255);
-  Canvas.FillRect(RR); Canvas.Pen.Color:=ThemeGridColor; Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
-  if Total then Canvas.Font.Color:=ThemeTotalTextColor
+  if Selected then begin
+   Canvas.Brush.Color:=ThemeSelectionColor;
+   Canvas.Font.Color:=ThemeSelectionTextColor;
+  end;
+  Canvas.FillRect(RR);
+  if Selected then Canvas.Pen.Color:=ThemeAccentColor
+  else Canvas.Pen.Color:=ThemeGridColor;
+  Canvas.Rectangle(RR); InflateRect(RR,-6,-2);
+  if Selected then Canvas.Font.Color:=ThemeSelectionTextColor
+  else if Total then Canvas.Font.Color:=ThemeTotalTextColor
   else if Bold then Canvas.Font.Color:=ThemeHeaderTextColor
   else Canvas.Font.Color:=ThemeTextColor;
   Canvas.Font.Name:=Font.Name; Canvas.Font.Size:=Font.Size;
