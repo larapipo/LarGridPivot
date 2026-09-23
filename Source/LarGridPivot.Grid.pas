@@ -112,6 +112,7 @@ type
     function ThemeChipColor:TColor;
     function FieldAreaBackgroundColor:TColor;
     function FieldAreaTextColor:TColor;
+    function FieldAreaFirstChipX(AArea:TLarPivotArea; ALeft:Integer):Integer;
 
         procedure WMHScroll(var Message:TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message:TWMVScroll); message WM_VSCROLL;
@@ -1079,6 +1080,19 @@ begin
  end;
 end;
 
+function TLarGridPivot.FieldAreaFirstChipX(AArea:TLarPivotArea; ALeft:Integer):Integer;
+var CaptionW:Integer;
+begin
+ if AArea=paNone then Exit(ALeft+6);
+ Canvas.Font.Assign(Font);
+ Canvas.Font.Size:=FFieldPanelFontSize;
+ CaptionW:=Canvas.TextWidth(AreaCaption(AArea));
+ { Keep a measured gap after DATOS/COLUMNAS/FILAS instead of relying on the
+   old fixed 72px start.  The fixed value overlapped COLUMNAS at some fonts,
+   DPI settings and application themes. }
+ Result:=Max(ALeft+80,ALeft+6+CaptionW+18);
+end;
+
 function TLarGridPivot.AreaFields(AArea:TLarPivotArea):TList<TLarPivotField>;
 var I,J:Integer; T:TLarPivotField;
 begin
@@ -1093,18 +1107,19 @@ begin
 end;
 
 function TLarGridPivot.WorkAreaRows(AArea:TLarPivotArea;AWidth:Integer):Integer;
-var L:TList<TLarPivotField>; I,X,W,Usable:Integer; S:string;
+var L:TList<TLarPivotField>; I,X,W,Usable,FirstX:Integer; S:string;
 begin
  Result:=1;
  if AWidth<=80 then Exit;
  L:=AreaFields(AArea);
  try
   Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
-  X:=72; Usable:=AWidth-6;
+  FirstX:=FieldAreaFirstChipX(AArea,0);
+  X:=FirstX; Usable:=AWidth-6;
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
-   if (X+W>Usable) and (X>72) then begin Inc(Result); X:=6; end;
+   if (X+W>Usable) and (X>FirstX) then begin Inc(Result); X:=6; end;
    Inc(X,W+4);
   end;
  finally
@@ -1141,19 +1156,19 @@ begin
 end;
 
 function TLarGridPivot.FieldChipRect(AField:TLarPivotField;out R:TRect):Boolean;
-var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,Y,W:Integer; S:string; AR:TRect;
+var A:TLarPivotArea; L:TList<TLarPivotField>; I,X,Y,W,FirstX:Integer; S:string; AR:TRect;
 begin
  Result:=False; R:=Rect(0,0,0,0); if AField=nil then Exit;
  A:=AField.Area; AR:=AreaRect(A);
  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
- X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
+ FirstX:=FieldAreaFirstChipX(A,AR.Left);
+ X:=FirstX; Y:=AR.Top+3;
  L:=AreaFields(A);
  try
   for I:=0 to L.Count-1 do begin
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    W:=Canvas.TextWidth(S)+44; if W<82 then W:=82;
-   if (X+W>AR.Right-6) and
-      (((A=paNone) and (X>AR.Left+6)) or ((A<>paNone) and (X>AR.Left+72))) then
+   if (X+W>AR.Right-6) and (X>FirstX) then
    begin
     X:=AR.Left+6;
     Inc(Y,24);
@@ -1177,19 +1192,19 @@ begin
 end;
 
 function TLarGridPivot.DropIndexAtPoint(AArea:TLarPivotArea;AX:Integer;AY:Integer):Integer;
-var L:TList<TLarPivotField>; I,X,Y,ChipW:Integer; S:string; AR:TRect;
+var L:TList<TLarPivotField>; I,X,Y,ChipW,FirstX:Integer; S:string; AR:TRect;
 begin
- Result:=0; AR:=AreaRect(AArea); X:=AR.Left+6; Y:=AR.Top+3;
- if AArea<>paNone then X:=AR.Left+72;
+ Result:=0; AR:=AreaRect(AArea); Y:=AR.Top+3;
+ Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
+ FirstX:=FieldAreaFirstChipX(AArea,AR.Left);
+ X:=FirstX;
  L:=AreaFields(AArea);
  try
-  Canvas.Font.Assign(Font); Canvas.Font.Size:=FFieldPanelFontSize;
   for I:=0 to L.Count-1 do begin
    if L[I]=FDragField then Continue;
    S:=L[I].Caption; if S='' then S:=L[I].FieldName;
    ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
-   if (X+ChipW>AR.Right-6) and
-      (((AArea=paNone) and (X>AR.Left+6)) or ((AArea<>paNone) and (X>AR.Left+72))) then
+   if (X+ChipW>AR.Right-6) and (X>FirstX) then
    begin
     X:=AR.Left+6;
     Inc(Y,24);
@@ -1499,7 +1514,7 @@ end;
 
 procedure TLarGridPivot.DrawFieldAreas;
 const Areas:array[0..3] of TLarPivotArea=(paNone,paData,paColumn,paRow);
-var I,J,X,Y,ChipW,Count:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; Fil:TLarPivotFilter; S:string; L:TList<TLarPivotField>;
+var I,J,X,Y,ChipW,Count,FirstX:Integer; A:TLarPivotArea; R,AR:TRect; F:TLarPivotField; Fil:TLarPivotFilter; S:string; L:TList<TLarPivotField>;
  AreaTextColor:TColor; UseCustomStyle:Boolean;
 begin
  if not FShowFieldPanel then Exit;
@@ -1533,15 +1548,16 @@ begin
   Canvas.Brush.Style:=bsClear;
   if A<>paNone then Canvas.TextOut(AR.Left+6,AR.Top+7,AreaCaption(A));
   Canvas.Brush.Style:=bsSolid;
-  Canvas.Font.Style:=[]; X:=AR.Left+6; Y:=AR.Top+3; if A<>paNone then X:=AR.Left+72;
+  Canvas.Font.Style:=[];
+  FirstX:=FieldAreaFirstChipX(A,AR.Left);
+  X:=FirstX; Y:=AR.Top+3;
   L:=AreaFields(A);
   try
    Count:=L.Count;
    for J:=0 to Count-1 do begin
     F:=L[J]; S:=F.Caption; if S='' then S:=F.FieldName;
     ChipW:=Canvas.TextWidth(S)+44; if ChipW<82 then ChipW:=82;
-    if (X+ChipW>AR.Right-6) and
-       (((A=paNone) and (X>AR.Left+6)) or ((A<>paNone) and (X>AR.Left+72))) then
+    if (X+ChipW>AR.Right-6) and (X>FirstX) then
     begin
      X:=AR.Left+6;
      Inc(Y,24);
